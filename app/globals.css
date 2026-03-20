@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --azul: #094780;
+    --azul-escuro: #063357;
+    --azul-claro: #1a6ab5;
+    --laranja: #E67A0E;
+    --laranja-escuro: #b85f08;
+    --cinza: #939393;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background-color: #f0f4f8;
+    color: #1a2535;
+  }
+}
+
+@layer components {
+  /* Scan animation for QR */
+  @keyframes scan {
+    0%   { top: 0; }
+    100% { top: 100%; }
+  }
+  .qr-scan-line {
+    animation: scan 2s linear infinite;
+  }
+
+  /* Sidebar active */
+  .nav-active {
+    background: rgba(230, 122, 14, 0.15);
+    border-left-color: #E67A0E;
+    color: #fff;
+  }
+}
