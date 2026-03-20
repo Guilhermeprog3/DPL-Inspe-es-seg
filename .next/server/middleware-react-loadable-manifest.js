@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST="{\"app\\\\qr-codes\\\\page.tsx -> qrcode.react\":{\"id\":\"app\\\\qr-codes\\\\page.tsx -> qrcode.react\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_qrcode_react_lib_esm_index_js.js\"]}}"

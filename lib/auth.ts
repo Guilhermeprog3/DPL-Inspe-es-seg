@@ -9,25 +9,24 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Senha', type: 'password' },
+        uf: { label: 'UF', type: 'text' },
+        regional: { label: 'Regional', type: 'text' },
       },
       async authorize(credentials) {
-        // Em produção: buscar do banco e comparar hash com bcrypt
-        // const user = await db.user.findUnique({ where: { email: credentials?.email } })
-        // const valid = await bcrypt.compare(credentials?.password ?? '', user.passwordHash)
-
-        // Demo: aceita qualquer credencial
-        if (credentials?.email && credentials?.password) {
-          return {
-            id: mockUser.id,
-            name: `${mockUser.nome} ${mockUser.sobrenome}`,
-            email: mockUser.email,
-            // campos extras propagados pelo callback jwt
-            uf: mockUser.uf,
-            regional: mockUser.regional,
-            role: mockUser.role,
-          }
+        // Validação básica para garantir que todos os campos do formulário chegaram
+        if (!credentials?.email || !credentials?.password || !credentials?.uf || !credentials?.regional) {
+          return null
         }
-        return null
+
+        // Simulação de utilizador (Demo)
+        return {
+          id: mockUser.id,
+          name: `${mockUser.nome} ${mockUser.sobrenome}`,
+          email: mockUser.email,
+          uf: credentials.uf,
+          regional: credentials.regional,
+          role: mockUser.role,
+        }
       },
     }),
   ],

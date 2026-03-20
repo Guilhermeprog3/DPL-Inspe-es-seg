@@ -18,38 +18,59 @@ export default function LoginPage() {
     register,
     handleSubmit,
     setValue,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange' // Valida conforme o usuário digita, mas vamos controlar os selects
   })
 
   async function onSubmit(data: LoginInput) {
     setError('')
-    const res = await signIn('credentials', {
-      email: data.email,
-      password: data.senha,
-      redirect: false,
-    })
-    if (res?.ok) {
-      router.push('/modulos')
-    } else {
-      setError('E-mail ou senha inválidos.')
+    try {
+      const res = await signIn('credentials', {
+        email: data.email,
+        password: data.senha, 
+        uf: data.uf,
+        regional: data.regional,
+        redirect: false,
+      })
+
+      if (res?.error) {
+        if (res.error === 'Configuration') {
+          setError('Erro de configuração: Verifique o arquivo .env.local e reinicie o servidor.')
+        } else {
+          setError('E-mail ou senha inválidos.')
+        }
+        return
+      }
+
+      if (res?.ok) {
+        window.location.href = '/modulos'
+      }
+    } catch (err) {
+      setError('Ocorreu um erro inesperado ao realizar o login.')
     }
   }
 
   function handleUfChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value as UF
     setUfSel(val)
-    setValue('uf', val)
-    setValue('regional', '')
+    
+    // Atualiza a UF e valida apenas este campo
+    setValue('uf', val, { shouldValidate: true })
+    
+    // Reseta a regional para vazio SEM disparar a validação de erro (vermelho)
+    setValue('regional', '', { shouldValidate: false })
+    
+    // Limpa explicitamente qualquer erro visual que existia na regional
+    clearErrors('regional')
   }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#d6dde6] px-4">
-      {/* Card */}
       <div className="bg-white rounded-lg shadow-md w-full max-w-[400px] px-8 py-8">
         
-        {/* Logo Interna */}
         <div className="mb-6 text-center">
           <span className="font-condensed text-[32px] font-bold text-[#094780] tracking-[1px]">SIGS</span>
           <span className="font-condensed text-[32px] font-normal text-[#555] tracking-[1px] ml-2">Gestor</span>
@@ -63,13 +84,12 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-
           {/* Email */}
           <div className="relative">
             <input
               type="email"
               placeholder="E-mail"
-              className="w-full pl-4 pr-10 py-3 border border-[#ccd3db] rounded text-sm text-[#333] bg-[#f4f7fb] focus:outline-none focus:border-[#094780] transition-colors"
+              className={`w-full pl-4 pr-10 py-3 border rounded text-sm text-[#333] bg-[#f4f7fb] focus:outline-none focus:border-[#094780] transition-colors ${errors.email ? 'border-red-500' : 'border-[#ccd3db]'}`}
               {...register('email')}
             />
             <Mail size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
@@ -83,7 +103,7 @@ export default function LoginPage() {
             <input
               type="password"
               placeholder="Senha"
-              className="w-full pl-4 pr-10 py-3 border border-[#ccd3db] rounded text-sm text-[#333] bg-[#f4f7fb] focus:outline-none focus:border-[#094780] transition-colors"
+              className={`w-full pl-4 pr-10 py-3 border rounded text-sm text-[#333] bg-[#f4f7fb] focus:outline-none focus:border-[#094780] transition-colors ${errors.senha ? 'border-red-500' : 'border-[#ccd3db]'}`}
               {...register('senha')}
             />
             <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
@@ -95,7 +115,7 @@ export default function LoginPage() {
           {/* Estado (UF) */}
           <div className="relative">
             <select
-              className="w-full appearance-none pl-4 pr-10 py-3 border border-[#ccd3db] rounded text-sm bg-white text-[#333] focus:outline-none focus:border-[#094780] transition-colors cursor-pointer"
+              className={`w-full appearance-none pl-4 pr-10 py-3 border rounded text-sm bg-white text-[#333] focus:outline-none focus:border-[#094780] transition-colors cursor-pointer ${errors.uf ? 'border-red-500' : 'border-[#ccd3db]'}`}
               value={ufSel}
               onChange={handleUfChange}
             >
@@ -112,7 +132,7 @@ export default function LoginPage() {
           {/* Regional */}
           <div className="relative">
             <select
-              className="w-full appearance-none pl-4 pr-10 py-3 border border-[#ccd3db] rounded text-sm bg-white text-[#333] focus:outline-none focus:border-[#094780] transition-colors cursor-pointer disabled:bg-[#f4f7fb] disabled:text-[#aaa] disabled:cursor-not-allowed"
+              className={`w-full appearance-none pl-4 pr-10 py-3 border rounded text-sm bg-white text-[#333] focus:outline-none focus:border-[#094780] transition-colors cursor-pointer disabled:bg-[#f4f7fb] disabled:text-[#aaa] disabled:cursor-not-allowed ${errors.regional ? 'border-red-500' : 'border-[#ccd3db]'}`}
               disabled={!ufSel}
               {...register('regional')}
             >
@@ -128,7 +148,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Botão Logar */}
           <button
             type="submit"
             disabled={isSubmitting}
@@ -141,18 +160,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Links inferiores */}
         <div className="mt-6 pt-6 border-t border-[#eee] flex items-center justify-between">
-          <Link
-            href="/cadastro"
-            className="text-sm font-semibold text-[#094780] hover:underline"
-          >
+          <Link href="/cadastro" className="text-sm font-semibold text-[#094780] hover:underline">
             Solicitar Acesso
           </Link>
-          <Link
-            href="/recuperar-senha"
-            className="text-sm font-semibold text-[#094780] hover:underline"
-          >
+          <Link href="/recuperar-senha" className="text-sm font-semibold text-[#094780] hover:underline">
             Esqueceu a senha?
           </Link>
         </div>
