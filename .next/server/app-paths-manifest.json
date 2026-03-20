@@ -1,5 +1,5 @@
 {
-  "/login/page": "app/login/page.js",
-  "/cadastro/page": "app/cadastro/page.js",
-  "/recuperar-senha/page": "app/recuperar-senha/page.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js"
 }
