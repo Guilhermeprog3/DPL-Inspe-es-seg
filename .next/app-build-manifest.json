@@ -26,35 +26,35 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
-    "/inspecao/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/inspecao/page.js"
-    ],
     "/equipamentos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/equipamentos/page.js"
     ],
-    "/qr-codes/page": [
+    "/inspecao/nova/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/qr-codes/page.js"
-    ],
-    "/relatorios/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/relatorios/page.js"
+      "static/chunks/app/inspecao/nova/page.js"
     ],
     "/usuarios/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/usuarios/page.js"
     ],
-    "/_not-found/page": [
+    "/relatorios/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/relatorios/page.js"
+    ],
+    "/inspecao/lista/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/inspecao/lista/page.js"
+    ],
+    "/qr-codes/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/qr-codes/page.js"
     ]
   }
 }

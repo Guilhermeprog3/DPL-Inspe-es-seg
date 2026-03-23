@@ -43,8 +43,9 @@ export interface Equipamento {
   id: string
   uuid: string
   codigo: string          // ex: EXT-001
-  tipo: TipoEquipamento
+  tipo: TipoEquipamento | string // Permitindo string para flexibilidade com mocks
   capacidade: string      // ex: 6kg, 10L
+  base: string            // <--- ADICIONADO: Unidade Operacional/Base
   pontoInstalacao: string
   fabricacao: string      // ISO date
   proximaInspecao: string // ISO date

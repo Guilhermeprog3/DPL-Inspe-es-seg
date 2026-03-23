@@ -1,12 +1,31 @@
 'use client'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, LogOut, ChevronRight } from 'lucide-react'
+import { ClipboardList, LogOut, ChevronRight, Search } from 'lucide-react'
+import { useState } from 'react'
+
+const modulos = [
+  {
+    id: 1,
+    icon: <ClipboardList size={26} color="#fff" strokeWidth={1.8} />,
+    badge: '3 pendentes',
+    title: 'Inspeção de Equipamentos de Segurança',
+    subtitle: 'Gerencie inspeções, acompanhe pendências e registre ocorrências.',
+    route: '/dashboard',
+  },
+  // Adicione mais módulos aqui futuramente
+]
 
 export default function ModulosPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user as any
+  const [search, setSearch] = useState('')
+
+  const filteredModulos = modulos.filter(m =>
+    m.title.toLowerCase().includes(search.toLowerCase()) ||
+    m.subtitle.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <>
@@ -25,7 +44,6 @@ export default function ModulosPage() {
           overflow: hidden;
         }
 
-        /* Decorative background shapes */
         .page::before {
           content: '';
           position: fixed;
@@ -178,11 +196,62 @@ export default function ModulosPage() {
           font-weight: 800;
           color: #0d1e33;
           letter-spacing: -0.5px;
-          margin-bottom: 48px;
+          margin-bottom: 32px;
           text-align: center;
         }
-        .title span {
-          color: #094780;
+        .title span { color: #094780; }
+
+        /* SEARCH BAR */
+        .search-wrap {
+          position: relative;
+          width: 100%;
+          max-width: 340px;
+          margin-bottom: 32px;
+        }
+        .search-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #8896ab;
+          pointer-events: none;
+          display: flex;
+          align-items: center;
+        }
+        .search-input {
+          width: 100%;
+          height: 44px;
+          padding: 0 16px 0 42px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          background: #fff;
+          font-size: 13px;
+          font-family: 'DM Sans', sans-serif;
+          color: #1a2535;
+          outline: none;
+          box-shadow: 0 2px 10px rgba(9,71,128,0.05);
+          transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .search-input::placeholder { color: #b0bac8; }
+        .search-input:focus {
+          border-color: rgba(9,71,128,0.35);
+          box-shadow: 0 0 0 3px rgba(9,71,128,0.08), 0 2px 10px rgba(9,71,128,0.06);
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+          color: #8896ab;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+        .empty-state strong {
+          display: block;
+          font-size: 15px;
+          font-weight: 600;
+          color: #4a5568;
+          margin-bottom: 6px;
         }
 
         /* MODULE CARD */
@@ -310,7 +379,16 @@ export default function ModulosPage() {
         }
         .body > *:nth-child(2) { animation-delay: 0.05s; }
         .body > *:nth-child(3) { animation-delay: 0.12s; }
-        .body > *:nth-child(4) { animation-delay: 0.2s; }
+        .body > *:nth-child(4) { animation-delay: 0.18s; }
+        .body > *:nth-child(5) { animation-delay: 0.24s; }
+
+        /* highlight match */
+        mark {
+          background: rgba(230,122,14,0.18);
+          color: #b85c00;
+          border-radius: 3px;
+          padding: 0 2px;
+        }
       `}</style>
 
       <div className="page">
@@ -345,25 +423,54 @@ export default function ModulosPage() {
             Selecione um <span>módulo</span>
           </h1>
 
-          <button className="card" onClick={() => router.push('/dashboard')}>
-            <div className="card-icon-wrap">
-              <ClipboardList size={26} color="#fff" strokeWidth={1.8} />
-            </div>
+          {/* Search bar */}
+          <div className="search-wrap">
+            <span className="search-icon">
+              <Search size={15} />
+            </span>
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Buscar módulo..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
 
-            <div className="card-badge">
-              <span className="badge-dot" />
-              3 pendentes
+          {/* Results */}
+          {filteredModulos.length === 0 ? (
+            <div className="empty-state">
+              <strong>Nenhum módulo encontrado</strong>
+              Tente buscar por outro termo.
             </div>
+          ) : (
+            filteredModulos.map(modulo => (
+              <button
+                key={modulo.id}
+                className="card"
+                onClick={() => router.push(modulo.route)}
+              >
+                <div className="card-icon-wrap">
+                  {modulo.icon}
+                </div>
 
-            <p className="card-title">Inspeção de Equipamentos de Segurança</p>
-            <p className="card-subtitle">Gerencie inspeções, acompanhe pendências e registre ocorrências.</p>
+                <div className="card-badge">
+                  <span className="badge-dot" />
+                  {modulo.badge}
+                </div>
 
-            <div className="card-cta">
-              <span className="card-cta-line" />
-              Acessar módulo
-              <ChevronRight size={14} />
-            </div>
-          </button>
+                <p className="card-title">{modulo.title}</p>
+                <p className="card-subtitle">{modulo.subtitle}</p>
+
+                <div className="card-cta">
+                  <span className="card-cta-line" />
+                  Acessar módulo
+                  <ChevronRight size={14} />
+                </div>
+              </button>
+            ))
+          )}
         </main>
       </div>
     </>
