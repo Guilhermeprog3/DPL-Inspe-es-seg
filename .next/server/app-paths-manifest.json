@@ -1,8 +1,8 @@
 {
-  "/equipamentos/page": "app/equipamentos/page.js",
   "/inspecao/nova/page": "app/inspecao/nova/page.js",
-  "/relatorios/page": "app/relatorios/page.js",
-  "/qr-codes/page": "app/qr-codes/page.js",
-  "/inspecao/lista/page": "app/inspecao/lista/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/modulos/page": "app/modulos/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/equipamentos/page": "app/equipamentos/page.js",
+  "/login/page": "app/login/page.js"
 }

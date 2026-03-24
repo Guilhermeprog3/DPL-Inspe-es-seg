@@ -40,18 +40,19 @@ export interface User {
 }
 
 export interface Equipamento {
-  id: string
-  uuid: string
-  codigo: string          // ex: EXT-001
-  tipo: TipoEquipamento | string // Permitindo string para flexibilidade com mocks
-  capacidade: string      // ex: 6kg, 10L
-  base: string            // <--- ADICIONADO: Unidade Operacional/Base
-  pontoInstalacao: string
-  fabricacao: string      // ISO date
-  proximaInspecao: string // ISO date
-  uf: UF
-  regional: Regional
-  status: 'ativo' | 'manutencao' | 'vencido'
+  id: string;
+  uuid: string;
+  codigo: string;       // ADICIONE ESTA LINHA
+  codigoGalao?: string;  // ADICIONE ESTA LINHA (com ? pois é opcional)
+  tipo: string;
+  capacidade: string;
+  pontoInstalacao: string;
+  base: string;
+  fabricacao: string;
+  proximaInspecao: string;
+  uf: string;
+  regional: string;
+  status: 'ativo' | 'manutencao' | 'vencido';
 }
 
 export interface ChecklistItem {

@@ -51,15 +51,17 @@ export type RecuperarSenhaInput = z.infer<typeof recuperarSenhaSchema>
 
 // ---- Novo Equipamento ----
 export const equipamentoSchema = z.object({
-  tipo: z.string().min(1, 'Tipo obrigatório'),
-  capacidade: z.string().min(1, 'Capacidade obrigatória'),
-  pontoInstalacao: z.string().min(3, 'Informe o ponto de instalação'),
-  // ADICIONADO: Campo Base
-  base: z.string().min(1, 'Informe a base operacional'), 
-  fabricacao: z.string().min(1, 'Data de fabricação obrigatória'),
-  proximaInspecao: z.string().min(1, 'Data da próxima inspeção obrigatória'),
-  uf: z.enum(['PI', 'MA']),
-  regional: z.string().min(1, 'Regional obrigatória'),
+  codigo: z.string().min(1, "Obrigatório"),
+  tipo: z.string().min(1, "Selecione um tipo"),
+  // Adicione esta linha:
+  codigoGalao: z.string().optional(), 
+  capacidade: z.string().optional(),
+  pontoInstalacao: z.string().min(1, "Obrigatório"),
+  uf: z.string().length(2),
+  regional: z.string().min(1, "Obrigatório"),
+  base: z.string().min(1, "Obrigatório"),
+  fabricacao: z.string(),
+  proximaInspecao: z.string(),
 })
 
 export type EquipamentoInput = z.infer<typeof equipamentoSchema>
