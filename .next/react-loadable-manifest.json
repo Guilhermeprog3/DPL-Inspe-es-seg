@@ -1,10 +1,4 @@
 {
-  "app\\equipamentos\\page.tsx -> qrcode.react": {
-    "id": "app\\equipamentos\\page.tsx -> qrcode.react",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_qrcode_react_lib_esm_index_js.js"
-    ]
-  },
   "app\\inspecao\\nova\\page.tsx -> @/components/inspecao/QrScanner": {
     "id": "app\\inspecao\\nova\\page.tsx -> @/components/inspecao/QrScanner",
     "files": [

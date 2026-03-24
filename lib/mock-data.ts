@@ -1,3 +1,4 @@
+// lib/mock-data.ts
 import type { Equipamento, Inspecao, User, ChecklistTemplate, MetricaConformidade } from '@/types'
 
 export const mockUser: User = {
@@ -19,16 +20,6 @@ export const mockUsers: User[] = [
     email: 'maria@empresa.com', uf: 'PI', regional: 'SUL',
     role: 'sesmt', ativo: true, criadoEm: '2024-02-10T00:00:00Z',
   },
-  {
-    id: 'usr-003', nome: 'Pedro', sobrenome: 'Alves',
-    email: 'pedro@empresa.com', uf: 'MA', regional: 'NORTE',
-    role: 'inspetor', ativo: false, criadoEm: '2024-03-05T00:00:00Z',
-  },
-  {
-    id: 'usr-004', nome: 'Ana', sobrenome: 'Ferreira',
-    email: 'ana@empresa.com', uf: 'PI', regional: 'Metropolitana',
-    role: 'admin', ativo: true, criadoEm: '2023-12-01T00:00:00Z',
-  },
 ]
 
 export const mockEquipamentos: Equipamento[] = [
@@ -36,7 +27,11 @@ export const mockEquipamentos: Equipamento[] = [
     id: 'eq-001',
     uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     codigo: 'EXT-001',
-    codigoGalao: 'PQS-99821-B', // Código do Cilindro
+    codigoGalao: 'PQS-99821-B', 
+    // Novos campos adicionados aqui:
+    carga: '6kg',
+    agente: 'PQS (Pó Químico Seco)',
+    numeroSerieCilindro: 'PQS-99821-B', 
     tipo: 'Extintor PQS',
     capacidade: '6kg',
     pontoInstalacao: 'Corredor A — Bloco 2',
@@ -51,7 +46,11 @@ export const mockEquipamentos: Equipamento[] = [
     id: 'eq-002',
     uuid: 'e5f6g7h8-i9j0-1234-klmn-op5678901234',
     codigo: 'EXT-002',
-    codigoGalao: 'CO2-44102-X', // Código do Cilindro
+    codigoGalao: 'CO2-44102-X',
+    // Novos campos adicionados aqui:
+    carga: '4kg',
+    agente: 'CO2 (Dióxido de Carbono)',
+    numeroSerieCilindro: 'CO2-44102-X',
     tipo: 'Extintor CO2',
     capacidade: '4kg',
     pontoInstalacao: 'Sala de Servidores',
@@ -66,7 +65,6 @@ export const mockEquipamentos: Equipamento[] = [
     id: 'eq-003',
     uuid: 'i9j0k1l2-m3n4-5678-opqr-st9012345678',
     codigo: 'HID-003',
-    // Sem codigoGalao (Hidrante)
     tipo: 'Hidrante',
     capacidade: '—',
     pontoInstalacao: 'Saída de Emergência N2',
@@ -78,25 +76,14 @@ export const mockEquipamentos: Equipamento[] = [
     status: 'ativo',
   },
   {
-    id: 'eq-004',
-    uuid: 'm3n4o5p6-q7r8-9012-stuv-wx3456789012',
-    codigo: 'SPK-007',
-    // Sem codigoGalao (Sprinkler)
-    tipo: 'Sprinkler',
-    capacidade: '—',
-    pontoInstalacao: 'Depósito — Piso 3',
-    base: 'Picos',
-    fabricacao: '2020-11-01',
-    proximaInspecao: '2025-07-10',
-    uf: 'PI',
-    regional: 'SUL',
-    status: 'ativo',
-  },
-  {
     id: 'eq-005',
     uuid: 'q7r8s9t0-u1v2-3456-wxyz-ab7890123456',
     codigo: 'EXT-012',
-    codigoGalao: 'AP-55229-C', // Código do Cilindro
+    codigoGalao: 'AP-55229-C',
+    // Novos campos adicionados aqui:
+    carga: '10L',
+    agente: 'Água Pressurizada',
+    numeroSerieCilindro: 'AP-55229-C',
     tipo: 'Extintor Água',
     capacidade: '10L',
     pontoInstalacao: 'Recepção Principal',
@@ -109,16 +96,33 @@ export const mockEquipamentos: Equipamento[] = [
   },
 ]
 
+// No seu arquivo lib/mock-data.ts
 export const mockChecklistTemplates: ChecklistTemplate[] = [
   {
-    id: 'tpl-extintor',
-    tipoEquipamento: 'Extintor PQS',
+    id: 'tpl-extintor-oficial',
+    tipoEquipamento: 'Extintor PQS', // Aplique aos outros tipos de extintor também
     itens: [
-      { id: 'i1', pergunta: 'Validade da carga', descricao: 'Verificar data no manômetro', obrigatorio: true },
-      { id: 'i2', pergunta: 'Pressão do manômetro', descricao: 'Agulha na zona verde', obrigatorio: true },
-      { id: 'i3', pergunta: 'Sinalização de piso', descricao: 'Fita amarela visível', obrigatorio: true },
-      { id: 'i4', pergunta: 'Pino de segurança', descricao: 'Lacre intacto', obrigatorio: true },
-      { id: 'i5', pergunta: 'Estado do cilindro', descricao: 'Sem amassados ou ferrugem', obrigatorio: true },
+      { id: '1', pergunta: 'Teste Hidrostático', obrigatorio: true },
+      { id: '2', pergunta: 'Lacre / Anel / Trava', obrigatorio: true },
+      { id: '3', pergunta: 'Manômetro', obrigatorio: true },
+      { id: '4', pergunta: 'Bico', obrigatorio: true },
+      { id: '5', pergunta: 'Mangote', obrigatorio: true },
+      { id: '6', pergunta: 'Pintura', obrigatorio: true },
+      { id: '7', pergunta: 'Difusor', obrigatorio: true },
+      { id: '8', pergunta: 'Acesso Desobstruído', obrigatorio: true },
+      { id: '9', pergunta: 'Equipamento Sinalizado', obrigatorio: true },
+      { id: '10', pergunta: 'Sobre pedestais', obrigatorio: true },
+      { id: '11', pergunta: 'Parede a 1,60m', obrigatorio: true },
+      { id: '12', pergunta: 'Localização Adequada', obrigatorio: true },
+    ],
+  },
+  {
+    id: 'tpl-extintor-co2',
+    tipoEquipamento: 'Extintor CO2',
+    itens: [
+      { id: 'c1', pergunta: 'Peso do cilindro', descricao: 'Verificar se há perda de carga', obrigatorio: true },
+      { id: 'c2', pergunta: 'Difusor e Mangueira', descricao: 'Sem obstruções ou rachaduras', obrigatorio: true },
+      { id: 'c3', pergunta: 'Lacre de segurança', descricao: 'Pino travado e lacrado', obrigatorio: true },
     ],
   },
   {
@@ -127,8 +131,6 @@ export const mockChecklistTemplates: ChecklistTemplate[] = [
     itens: [
       { id: 'h1', pergunta: 'Mangueira sem danos', descricao: 'Verificar integridade física', obrigatorio: true },
       { id: 'h2', pergunta: 'Registro de abertura', descricao: 'Gira sem dificuldade', obrigatorio: true },
-      { id: 'h3', pergunta: 'Sinalização visível', descricao: 'Placa e pintura', obrigatorio: true },
-      { id: 'h4', pergunta: 'Esguicho no local', descricao: 'Acoplado e sem danos', obrigatorio: true },
     ],
   },
 ]
@@ -140,27 +142,12 @@ export const mockInspecoes: Inspecao[] = [
     data: new Date().toISOString(),
     status: 'aprovado',
     respostas: [
-      { itemId: 'i1', resposta: 'ok' },
-      { itemId: 'i2', resposta: 'ok' },
-      { itemId: 'i3', resposta: 'ok' },
-      { itemId: 'i4', resposta: 'ok' },
-      { itemId: 'i5', resposta: 'ok' },
+      { idItem: 'i1', resposta: 'ok', valor: 'OK' },
+      { idItem: 'i2', resposta: 'ok', valor: 'OK' },
+      { idItem: 'i3', resposta: 'ok', valor: 'OK' },
+      { idItem: 'i4', resposta: 'ok', valor: 'OK' },
+      { idItem: 'i5', resposta: 'ok', valor: 'OK' },
     ],
-    latitude: -5.0892, longitude: -42.8016,
-    uf: 'PI', regional: 'Metropolitana',
-  },
-  {
-    id: 'ins-002', equipamentoId: 'eq-003', equipamentoCodigo: 'HID-003',
-    inspetorId: 'usr-001', inspetorNome: 'João Silva',
-    data: new Date(Date.now() - 3600000).toISOString(),
-    status: 'atencao',
-    respostas: [
-      { itemId: 'h1', resposta: 'ok' },
-      { itemId: 'h2', resposta: 'nao_conforme', observacao: 'Registro com dificuldade de abertura' },
-      { itemId: 'h3', resposta: 'ok' },
-      { itemId: 'h4', resposta: 'ok' },
-    ],
-    latitude: -5.0901, longitude: -42.8022,
     uf: 'PI', regional: 'Metropolitana',
   },
 ]
@@ -168,9 +155,4 @@ export const mockInspecoes: Inspecao[] = [
 export const mockMetricas: MetricaConformidade[] = [
   { uf: 'PI', regional: 'Metropolitana', totalEquipamentos: 124, totalInspecoes: 512, percentualConformidade: 96, ultimaNaoConformidade: '2025-05-02' },
   { uf: 'PI', regional: 'SUL',           totalEquipamentos: 88,  totalInspecoes: 320, percentualConformidade: 89, ultimaNaoConformidade: '2025-05-15' },
-  { uf: 'PI', regional: 'NORTE',         totalEquipamentos: 62,  totalInspecoes: 198, percentualConformidade: 78, ultimaNaoConformidade: '2025-05-18' },
-  { uf: 'MA', regional: 'SUL',           totalEquipamentos: 94,  totalInspecoes: 415, percentualConformidade: 93, ultimaNaoConformidade: '2025-05-10' },
-  { uf: 'MA', regional: 'NORTE',         totalEquipamentos: 71,  totalInspecoes: 280, percentualConformidade: 88, ultimaNaoConformidade: '2025-05-12' },
-  { uf: 'MA', regional: 'SUDESTE',       totalEquipamentos: 56,  totalInspecoes: 210, percentualConformidade: 82, ultimaNaoConformidade: '2025-05-20' },
-  { uf: 'MA', regional: 'NOROESTE',      totalEquipamentos: 38,  totalInspecoes: 142, percentualConformidade: 65, ultimaNaoConformidade: '2025-05-21' },
 ]

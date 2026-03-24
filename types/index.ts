@@ -39,12 +39,20 @@ export interface User {
   criadoEm: string
 }
 
+// types/index.ts
+
 export interface Equipamento {
   id: string;
   uuid: string;
-  codigo: string;       // ADICIONE ESTA LINHA
-  codigoGalao?: string;  // ADICIONE ESTA LINHA (com ? pois é opcional)
-  tipo: string;
+  codigo: string;       
+  codigoGalao?: string; 
+  tipo: string | TipoEquipamento; // Usar o tipo para lógica condicional
+  
+  // Novos campos solicitados para extintores (institores)
+  carga?: string;           // Ex: 6kg, 10L
+  agente?: string;          // Ex: PQS, CO2, Água
+  numeroSerieCilindro?: string; 
+
   capacidade: string;
   pontoInstalacao: string;
   base: string;
@@ -53,6 +61,7 @@ export interface Equipamento {
   uf: string;
   regional: string;
   status: 'ativo' | 'manutencao' | 'vencido';
+  validadeRecarga?: string;
 }
 
 export interface ChecklistItem {
