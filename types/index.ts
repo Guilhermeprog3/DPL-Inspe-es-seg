@@ -69,9 +69,10 @@ export interface ChecklistTemplate {
 }
 
 export interface RespostaChecklist {
-  itemId: string
+  idItem: string;
   resposta: 'ok' | 'nao_conforme' | null
   observacao?: string
+  valor: 'OK' | 'NC';  // O valor da resposta
 }
 
 export interface Inspecao {

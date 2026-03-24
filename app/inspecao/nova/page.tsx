@@ -1,169 +1,201 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+// Layout e Utils
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { Card, CardHeader, CardTitle, Button, Alert, Modal, Badge } from '@/components/ui'
-import { ChecklistForm } from '@/components/inspecao/ChecklistForm'
 import { mockEquipamentos, mockChecklistTemplates } from '@/lib/mock-data'
 import { useGeolocation } from '@/hooks/useGeolocation'
-import { formatDateTime, gerarCodigoInspecao } from '@/lib/utils'
-import type { Equipamento, RespostaChecklist } from '@/types'
-import { MapPin, CheckCircle, QrCode, RotateCcw, ChevronLeft } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { gerarCodigoInspecao } from '@/lib/utils'
 
-// Import dinâmico crucial para evitar erro 'window is not defined'
-import dynamic from 'next/dynamic'
-const QrScanner = dynamic(() => import('@/components/inspecao/QrScanner').then(m => m.QrScanner), { 
-  ssr: false 
+// Tipos e Ícones
+import { MapPin, CheckCircle, RotateCcw, ChevronLeft, Zap } from 'lucide-react'
+import type { Equipamento, RespostaChecklist, ChecklistTemplate } from '@/types'
+
+const QrScanner = dynamic(() => import('@/components/inspecao/QrScanner').then(m => m.QrScanner), {
+  ssr: false
 })
 
 export default function InspecaoPage() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  
+  // Estados
   const [equipamento, setEquipamento] = useState<Equipamento | null>(null)
   const [respostas, setRespostas] = useState<RespostaChecklist[]>([])
   const [successModal, setSuccessModal] = useState(false)
   const [codigoGerado, setCodigoGerado] = useState('')
+  const [scanKey, setScanKey] = useState(0)
+
   const { coords, capture: captureGeo, loading: geoLoading } = useGeolocation()
+  const equipamentoRef = useRef<Equipamento | null>(null)
+
+  // Garante que o componente só renderize no cliente (mata o erro de Hydration)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Lógica de Seleção corrigida para a sua interface RespostaChecklist
+  const handleToggleResposta = useCallback((idItem: string, valor: 'OK' | 'NC') => {
+    setRespostas(prev => {
+      const existeIndex = prev.findIndex(r => r.idItem === idItem)
+      // Mapeando para bater com sua interface: 'ok' | 'nao_conforme' e valor: 'OK' | 'NC'
+      const novaResposta: RespostaChecklist = {
+        idItem,
+        valor,
+        resposta: valor === 'OK' ? 'ok' : 'nao_conforme'
+      }
+
+      if (existeIndex > -1) {
+        const novoArray = [...prev]
+        novoArray[existeIndex] = novaResposta
+        return novoArray
+      }
+      return [...prev, novaResposta]
+    })
+  }, [])
 
   const handleScan = useCallback((scannedValue: string) => {
-    if (equipamento) return;
-
+    if (equipamentoRef.current) return
     const found = mockEquipamentos.find(
       (e) => e.uuid === scannedValue || e.codigo.toLowerCase() === scannedValue.toLowerCase()
-    )
-
+    ) as Equipamento
+    
     if (found) {
+      equipamentoRef.current = found
       setEquipamento(found)
       captureGeo()
-      if (navigator.vibrate) navigator.vibrate(200)
     }
-  }, [equipamento, captureGeo])
+  }, [captureGeo])
 
-  function handleSalvar() {
-    setCodigoGerado(gerarCodigoInspecao())
-    setSuccessModal(true)
+  const handleReset = () => {
+    equipamentoRef.current = null
+    setEquipamento(null)
+    setRespostas([])
+    setScanKey(k => k + 1)
+    setSuccessModal(false)
   }
 
-  const template = equipamento
-    ? mockChecklistTemplates.find((t) => t.tipoEquipamento === equipamento.tipo) || mockChecklistTemplates[0]
-    : null
+  const template = useMemo(() => {
+    if (!equipamento) return null
+    return (mockChecklistTemplates.find((t) => t.tipoEquipamento === equipamento.tipo) || mockChecklistTemplates[0]) as ChecklistTemplate
+  }, [equipamento])
+
+  const totalItens = template?.itens?.length || 0
+  const respondidosCount = respostas.length
+  const progresso = totalItens > 0 ? (respondidosCount / totalItens) * 100 : 0
+
+  // Se não estiver montado, não renderiza nada para evitar erro de servidor/cliente
+  if (!mounted) return null
 
   return (
     <DashboardLayout title="Nova Inspeção" breadcrumb="SIGS / Inspeção / Nova">
-      <div className="max-w-[600px] mx-auto space-y-4 pb-10">
-        
-        {/* Botão de Voltar Geral (sempre visível no topo) */}
-        {!equipamento && (
-          <button 
-            onClick={() => router.back()}
-            className="flex items-center gap-1 text-sm font-semibold text-[#6b7a90] hover:text-[#094780] transition-colors mb-2"
-          >
-            <ChevronLeft size={18} />
-            Voltar ao início
-          </button>
-        )}
+      <style>{`
+        .btn-option { padding: 8px 16px; border-radius: 10px; font-size: 11px; font-weight: 800; border: 1px solid #e2e8f0; color: #94a3b8; transition: 0.2s; cursor: pointer; background: white; }
+        .active-ok { background: #dcfce7 !important; border-color: #22c55e !important; color: #16a34a !important; }
+        .active-nc { background: #fee2e2 !important; border-color: #ef4444 !important; color: #dc2626 !important; }
+        .check-card { background: white; border: 1px solid #f1f5f9; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+      `}</style>
 
+      <div className="max-w-[560px] mx-auto pb-12 font-sans">
         {!equipamento ? (
-          <Card className="border-none shadow-none bg-transparent">
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-[#0d1e33]">Leitura de Equipamento</h2>
-              <p className="text-sm text-[#6b7a90]">Aproxime a câmera do adesivo QR Code</p>
-            </div>
-            
-            <QrScanner onScan={handleScan} />
-
-            {/* Botão secundário de cancelamento/voltar abaixo do scanner */}
-            <div className="mt-6">
-              <Button 
-                variant="ghost" 
-                className="w-full text-[#6b7a90]" 
-                onClick={() => router.push('/equipamentos')}
-              >
-                Cancelar e voltar ao inventário
-              </Button>
-            </div>
-          </Card>
-        ) : (
-          <div className="flex justify-start">
-            <Button 
-              variant="ghost" 
-              className="text-xs flex gap-2 items-center text-[#094780] hover:bg-blue-50"
-              onClick={() => { setEquipamento(null); setRespostas([]); }}
-            >
-              <RotateCcw size={14} /> Escanear outro item
-            </Button>
+          <div className="p-8 bg-[#020b18] rounded-[28px]">
+            <h2 className="text-white font-black text-2xl mb-4 uppercase tracking-tighter">Leitura de Campo</h2>
+            <QrScanner key={scanKey} onScan={handleScan} />
+            <button className="w-full mt-6 py-3 border border-white/10 rounded-xl text-white/40 text-xs font-bold" onClick={() => router.back()}>CANCELAR</button>
           </div>
-        )}
-
-        {equipamento && template && (
-          <Card className="overflow-hidden border-none shadow-xl animate-in fade-in zoom-in-95 duration-300">
-            {/* Cabeçalho do Equipamento */}
-            <div className="bg-[#094780] p-6 text-white">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <Badge className="bg-white/20 text-white border-none mb-2 px-3 py-1">
-                    {equipamento.status === 'vencido' ? 'VENCIDO' : 'EM DIA'}
-                  </Badge>
-                  <h2 className="text-3xl font-black tracking-tighter leading-none">{equipamento.codigo}</h2>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs opacity-70 font-bold uppercase tracking-widest text-white/80">Regional</p>
-                  <p className="font-bold">{equipamento.regional}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
-                 <div>
-                    <p className="text-[10px] uppercase opacity-60 font-bold tracking-widest">Base</p>
-                    <p className="text-sm font-semibold">{equipamento.base}</p>
-                 </div>
-                 <div>
-                    <p className="text-[10px] uppercase opacity-60 font-bold tracking-widest">Tipo</p>
-                    <p className="text-sm font-semibold">{equipamento.tipo}</p>
-                 </div>
+        ) : (
+          <div className="rounded-[24px] overflow-hidden border border-slate-200 shadow-2xl bg-white">
+            <div className="bg-[#041628] p-8 text-white">
+              <span className="text-[10px] opacity-50 uppercase font-bold tracking-widest">Equipamento Identificado</span>
+              <h1 className="text-4xl font-black tracking-tighter">{equipamento.codigo}</h1>
+              <div className="flex gap-4 mt-4 pt-4 border-t border-white/10 text-[11px] font-bold opacity-70">
+                <span>BASE: {equipamento.base}</span>
+                <span>TIPO: {equipamento.tipo}</span>
               </div>
             </div>
 
-            <div className="p-6">
-              <ChecklistForm itens={template.itens} onChange={setRespostas} />
-
-              <div className="mt-8 space-y-4">
-                <Alert variant={coords ? "success" : "info"} className="border-none bg-gray-50">
-                  <MapPin size={16} className={coords ? "text-green-600" : "text-blue-600"} />
-                  <span className="text-xs font-bold text-gray-600 ml-2">
-                    {coords 
-                      ? `GPS: ${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`
-                      : "Capturando localização precisa..."}
-                  </span>
-                </Alert>
-
-                <Button
-                  variant="orange"
-                  size="lg"
-                  className="w-full py-7 text-lg font-black uppercase tracking-wide shadow-lg"
-                  onClick={handleSalvar}
-                  disabled={respostas.length < template.itens.length}
-                  loading={geoLoading}
-                >
-                  Confirmar Inspeção
-                </Button>
+            <div className="p-6 bg-slate-50">
+              {/* Barra de Progresso */}
+              <div className="flex justify-between items-end mb-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase">Progresso da Inspeção</span>
+                <span className="text-sm font-black text-blue-600 font-mono">{respondidosCount}/{totalItens}</span>
               </div>
+              <div className="h-2 w-full bg-slate-200 rounded-full mb-8 overflow-hidden">
+                <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${progresso}%` }} />
+              </div>
+
+              {/* LISTA DE PERGUNTAS CORRIGIDA */}
+              <div className="space-y-3 mb-8">
+                {template?.itens.map((item) => {
+                  const r = respostas.find(res => res.idItem === item.id)
+                  return (
+                    <div key={item.id} className="check-card">
+                      <div className="max-w-[65%]">
+                        <h4 className="text-sm font-bold text-slate-800 leading-tight">{item.pergunta}</h4>
+                        {item.descricao && <p className="text-[10px] text-slate-400 mt-1 uppercase">{item.descricao}</p>}
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          type="button"
+                          onClick={() => handleToggleResposta(item.id, 'OK')}
+                          className={`btn-option ${r?.valor === 'OK' ? 'active-ok' : ''}`}
+                        >OK</button>
+                        <button 
+                          type="button"
+                          onClick={() => handleToggleResposta(item.id, 'NC')}
+                          className={`btn-option ${r?.valor === 'NC' ? 'active-nc' : ''}`}
+                        >NC</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* GPS */}
+              <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl mb-6 shadow-sm">
+                <MapPin size={18} className={coords ? "text-green-500" : "text-blue-500"} />
+                <div className="text-[10px]">
+                  <p className="text-slate-400 font-bold uppercase">Coordenadas de Campo</p>
+                  <p className="text-slate-900 font-mono">{coords ? `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}` : 'Sincronizando satélites...'}</p>
+                </div>
+              </div>
+
+              <button 
+                className={`w-full py-5 rounded-2xl font-black text-white flex items-center justify-center gap-2 transition-all ${
+                  respondidosCount < totalItens ? 'bg-slate-300' : 'bg-orange-600 shadow-lg shadow-orange-200'
+                }`}
+                disabled={respondidosCount < totalItens || geoLoading}
+                onClick={() => {
+                  setCodigoGerado(gerarCodigoInspecao())
+                  setSuccessModal(true)
+                }}
+              >
+                <Zap size={18} fill="currentColor" />
+                {respondidosCount < totalItens ? 'PREENCHA TODO O CHECKLIST' : 'CONFIRMAR INSPEÇÃO'}
+              </button>
             </div>
-          </Card>
+          </div>
         )}
       </div>
 
-      <Modal open={successModal} onClose={() => window.location.reload()} title="Registrado!">
-        <div className="text-center p-2">
-           <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-green-500">
-              <CheckCircle size={40} className="text-green-600" />
-           </div>
-           <h3 className="text-xl font-black text-[#0d1e33] uppercase tracking-tight">Inspeção Finalizada</h3>
-           <p className="text-sm text-[#6b7a90] mt-2 mb-6">
-             Relatório enviado para a base <strong>{equipamento?.base}</strong>.
-           </p>
-           <Button className="w-full py-6" onClick={() => window.location.reload()}>Próximo Equipamento</Button>
+      {/* MODAL DE SUCESSO */}
+      {successModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/90 backdrop-blur-md">
+          <div className="bg-white rounded-[32px] w-full max-w-sm p-8 text-center shadow-2xl scale-in-center">
+             <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-xl">
+               <CheckCircle size={40} />
+             </div>
+             <p className="text-[10px] font-mono text-slate-400 mb-2 uppercase tracking-widest">Registro Gerado: #{codigoGerado}</p>
+             <h3 className="text-2xl font-black uppercase text-slate-900 leading-none mb-6">Inspeção Finalizada</h3>
+             <button className="w-full py-4 bg-[#041628] text-white rounded-2xl font-bold uppercase text-xs tracking-widest" onClick={handleReset}>
+               Próximo Equipamento →
+             </button>
+          </div>
         </div>
-      </Modal>
+      )}
     </DashboardLayout>
   )
 }
