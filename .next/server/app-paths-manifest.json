@@ -1,5 +1,8 @@
 {
-  "/inspecao/lista/page": "app/inspecao/lista/page.js",
-  "/equipamentos/page": "app/equipamentos/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/inspecao/nova/page": "app/inspecao/nova/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/medida-administrativa/page": "app/medida-administrativa/page.js",
+  "/medida-administrativa/nova/page": "app/medida-administrativa/nova/page.js",
+  "/login/page": "app/login/page.js"
 }

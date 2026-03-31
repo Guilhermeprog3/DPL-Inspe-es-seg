@@ -1,8 +1,8 @@
 {
-  "components\\modules\\EquipamentosClient.tsx -> qrcode.react": {
-    "id": "components\\modules\\EquipamentosClient.tsx -> qrcode.react",
+  "app\\inspecao\\nova\\page.tsx -> @/components/inspecao/QrScanner": {
+    "id": "app\\inspecao\\nova\\page.tsx -> @/components/inspecao/QrScanner",
     "files": [
-      "static/chunks/_app-pages-browser_node_modules_qrcode_react_lib_esm_index_js.js"
+      "static/chunks/_app-pages-browser_components_inspecao_QrScanner_tsx.js"
     ]
   }
 }
