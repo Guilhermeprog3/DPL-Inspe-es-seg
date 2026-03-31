@@ -24,9 +24,38 @@ export default function CadastroPage() {
   }
 
   async function onSubmit(data: CadastroInput) {
-    console.log('Cadastro:', data)
-    router.push('/login')
+  try {
+    const response = await fetch('http://localhost:3001/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nome: data.nome,
+        sobrenome: data.sobrenome,
+        email: data.email,
+        password: data.senha, 
+        uf: data.uf,
+        regional: data.regional,
+        role: data.role,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao realizar cadastro');
+    }
+
+    const result = await response.json();
+    console.log('Usuário criado com sucesso:', result);
+    
+    alert('Cadastro realizado com sucesso!');
+    router.push('/login');
+  } catch (error: any) {
+    console.error('Erro no cadastro:', error);
+    alert(error.message);
   }
+}
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#d6dde6] px-4 py-10">
@@ -77,14 +106,15 @@ export default function CadastroPage() {
           </div>
 
           <div className="relative">
-            <select {...register('role')} className="w-full appearance-none pl-4 pr-10 py-3 border border-[#ccd3db] rounded text-sm bg-white focus:outline-none focus:border-[#094780] cursor-pointer">
-              <option value="">Selecione o Perfil</option>
-              <option value="inspetor">Inspetor</option>
-              <option value="sesmt">SESMT</option>
-              <option value="admin">Administrador</option>
-            </select>
-            <Briefcase size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-          </div>
+  <select {...register('role')} className="w-full appearance-none pl-4 pr-10 py-3 border border-[#ccd3db] rounded text-sm bg-white focus:outline-none focus:border-[#094780] cursor-pointer">
+    <option value="">Selecione o Perfil</option>
+    <option value="inspetor">Inspetor</option>
+    <option value="sesmt">SESMT</option>
+    <option value="agente_cobli">Agente Cobli</option>
+    <option value="admin">Administrador</option>
+  </select>
+  <Briefcase size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+</div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="relative">

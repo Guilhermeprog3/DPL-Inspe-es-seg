@@ -2,9 +2,10 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { ClipboardList, LogOut, ChevronRight, Search, ShieldAlert } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
-const modulos = [
+// Definição dos módulos com as roles que possuem permissão de acesso
+const ALL_MODULOS = [
   {
     id: 1,
     icon: <ClipboardList size={26} color="#fff" strokeWidth={1.8} />,
@@ -12,6 +13,7 @@ const modulos = [
     title: 'Inspeção de Equipamentos de Segurança',
     subtitle: 'Gerencie inspeções, acompanhe pendências e registre ocorrências.',
     route: '/dashboard',
+    roles: ['inspetor', 'admin'], // Permitido para inspetores e administradores
   },
   {
     id: 2,
@@ -20,19 +22,35 @@ const modulos = [
     title: 'Medida Administrativa',
     subtitle: 'Registre advertências, suspensões e conversas pedagógicas vinculadas ao colaborador.',
     route: '/medida-administrativa',
+    roles: ['agente_cobli', 'admin'], // Permitido para agentes cobli e administradores
   },
 ]
 
 export default function ModulosPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  
+  // Mapeamento para acessar os dados aninhados conforme seu log do console
+  const userData = (session?.user as any)?.user;
+  
   const [search, setSearch] = useState('')
 
-  const filteredModulos = modulos.filter(m =>
-    m.title.toLowerCase().includes(search.toLowerCase()) ||
-    m.subtitle.toLowerCase().includes(search.toLowerCase())
-  )
+  // Lógica de filtragem baseada em Role e Busca textual
+  const filteredModulos = useMemo(() => {
+    const userRole = userData?.role?.toLowerCase()
+
+    return ALL_MODULOS.filter((modulo) => {
+      // 1. Verifica se o usuário tem a role necessária
+      const hasPermission = modulo.roles.includes(userRole)
+
+      // 2. Verifica se o termo de busca bate com o título ou subtítulo
+      const matchesSearch =
+        modulo.title.toLowerCase().includes(search.toLowerCase()) ||
+        modulo.subtitle.toLowerCase().includes(search.toLowerCase())
+
+      return hasPermission && matchesSearch
+    })
+  }, [userData?.role, search])
 
   return (
     <>
@@ -70,7 +88,6 @@ export default function ModulosPage() {
           pointer-events: none;
         }
 
-        /* HEADER */
         .header {
           background: #fff;
           border-bottom: 1px solid rgba(9,71,128,0.08);
@@ -122,7 +139,7 @@ export default function ModulosPage() {
           flex-shrink: 0;
         }
         .user-info p:first-child { font-size: 13px; font-weight: 600; color: #1a2535; line-height: 1.2; }
-        .user-info p:last-child  { font-size: 11px; color: #8896ab; margin-top: 1px; }
+        .user-info p:last-child  { font-size: 11px; color: #8896ab; margin-top: 1px; text-transform: capitalize; }
         .divider-v { width: 1px; height: 28px; background: #e2e8f0; }
         .btn-sair {
           display: flex; align-items: center; gap: 6px;
@@ -137,7 +154,6 @@ export default function ModulosPage() {
         }
         .btn-sair:hover { background: #fff8f3; color: #E67A0E; border-color: rgba(230,122,14,0.3); }
 
-        /* BODY */
         .body {
           flex: 1;
           display: flex;
@@ -167,7 +183,6 @@ export default function ModulosPage() {
         }
         .title span { color: #094780; }
 
-        /* SEARCH */
         .search-wrap {
           position: relative;
           width: 100%; max-width: 480px;
@@ -196,7 +211,6 @@ export default function ModulosPage() {
           box-shadow: 0 0 0 3px rgba(9,71,128,0.08), 0 2px 10px rgba(9,71,128,0.06);
         }
 
-        /* GRID — lado a lado */
         .cards-grid {
           display: grid;
           grid-template-columns: repeat(2, 340px);
@@ -212,7 +226,6 @@ export default function ModulosPage() {
           }
         }
 
-        /* EMPTY STATE */
         .empty-state {
           text-align: center; padding: 40px 20px;
           color: #8896ab; font-size: 13px; line-height: 1.6;
@@ -222,7 +235,6 @@ export default function ModulosPage() {
           display: block; font-size: 15px; font-weight: 600; color: #4a5568; margin-bottom: 6px;
         }
 
-        /* CARD */
         .card {
           background: #fff;
           border-radius: 20px;
@@ -305,7 +317,6 @@ export default function ModulosPage() {
         }
         .card:hover .card-cta-line { width: 32px; }
 
-        /* animations */
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -328,13 +339,23 @@ export default function ModulosPage() {
             SIGS<span className="logo-dot" />
           </div>
           <div className="user-area">
-            <div className="avatar">{user?.name?.charAt(0) ?? 'U'}</div>
+            {/* Inicial baseada no email do userData */}
+            <div className="avatar">
+              {userData?.email?.charAt(0).toUpperCase() ?? 'U'}
+            </div>
             <div className="user-info">
-              <p>{user?.name ?? 'Usuário'}</p>
-              <p>{user?.role ?? 'inspetor'} · {user?.uf ?? 'PI'} · {user?.regional ?? 'Metropolitana'}</p>
+              {/* Email na parte de cima conforme solicitado */}
+              <p>{userData?.email ?? 'carregando...'}</p>
+              <p>
+                {userData?.role?.replace('_', ' ') ?? 'Acesso restrito'} ·{' '}
+                {userData?.uf ?? 'PI'} · {userData?.regional ?? 'Metropolitana'}
+              </p>
             </div>
             <div className="divider-v" />
-            <button className="btn-sair" onClick={() => signOut({ callbackUrl: '/login' })}>
+            <button
+              className="btn-sair"
+              onClick={() => signOut({ callbackUrl: '/login' })}
+            >
               <LogOut size={13} />
               Sair
             </button>
@@ -361,28 +382,27 @@ export default function ModulosPage() {
               type="text"
               placeholder="Buscar módulo..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               autoComplete="off"
             />
           </div>
 
-          {/* GRID LADO A LADO */}
           <div className="cards-grid">
             {filteredModulos.length === 0 ? (
               <div className="empty-state">
                 <strong>Nenhum módulo encontrado</strong>
-                Tente buscar por outro termo.
+                {search
+                  ? 'Tente buscar por outro termo.'
+                  : 'Seu perfil não possui acesso a módulos nesta regional.'}
               </div>
             ) : (
-              filteredModulos.map(modulo => (
+              filteredModulos.map((modulo) => (
                 <button
                   key={modulo.id}
                   className="card"
                   onClick={() => router.push(modulo.route)}
                 >
-                  <div className="card-icon-wrap">
-                    {modulo.icon}
-                  </div>
+                  <div className="card-icon-wrap">{modulo.icon}</div>
                   <div className="card-badge">
                     <span className="badge-dot" />
                     {modulo.badge}

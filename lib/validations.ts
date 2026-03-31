@@ -26,7 +26,7 @@ export const cadastroSchema = z
     email: z.string().email('E-mail inválido'),
     uf: z.enum(['PI', 'MA'], { required_error: 'Selecione o estado' }),
     regional: z.string().min(1, 'Selecione a regional'),
-    role: z.enum(['inspetor', 'sesmt', 'rh', 'admin']),
+    role: z.enum(['inspetor', 'sesmt', 'rh', 'admin', 'agente_cobli']),
     senha: z.string().min(8, 'Mínimo 8 caracteres'),
     confirmarSenha: z.string(),
   })

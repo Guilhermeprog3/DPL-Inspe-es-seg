@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"app\\\\inspecao\\\\nova\\\\page.tsx -> @/components/inspecao/QrScanner\":{\"id\":\"app\\\\inspecao\\\\nova\\\\page.tsx -> @/components/inspecao/QrScanner\",\"files\":[\"static/chunks/_app-pages-browser_components_inspecao_QrScanner_tsx.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"
