@@ -15,9 +15,6 @@ const navItems = [
   { label: 'Nova Medida',          href: '/medida-administrativa/nova',      icon: PlusCircle },
   { label: 'Lista de Medidas',     href: '/medida-administrativa/lista',     icon: List },
   { label: 'Pendentes / Em Aberto',href: '/medida-administrativa/pendentes', icon: Clock },
-  { section: 'Relatórios' },
-  { label: 'Relatório Geral',      href: '/medida-administrativa/relatorios',icon: BarChart2 },
-  { label: 'Por Colaborador',      href: '/medida-administrativa/colaborador',icon: FileWarning },
 ]
 
 interface SidebarProps {
