@@ -4,17 +4,17 @@ import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
-  ShieldAlert, PlusCircle, List, BarChart2,
-  LogOut, Grid2x2, FileWarning, Clock,
+  ShieldAlert, PlusCircle, List, 
+  LogOut, Grid2x2, Clock,
 } from 'lucide-react'
 
 const navItems = [
   { section: 'Principal' },
-  { label: 'Dashboard',            href: '/medida-administrativa',           icon: ShieldAlert },
+  { label: 'Dashboard',             href: '/medida-administrativa',           icon: ShieldAlert },
   { section: 'Medidas' },
-  { label: 'Nova Medida',          href: '/medida-administrativa/nova',      icon: PlusCircle },
-  { label: 'Lista de Medidas',     href: '/medida-administrativa/lista',     icon: List },
-  { label: 'Pendentes / Em Aberto',href: '/medida-administrativa/pendentes', icon: Clock },
+  { label: 'Nova Medida',           href: '/medida-administrativa/nova',      icon: PlusCircle },
+  { label: 'Lista de Medidas',      href: '/medida-administrativa/lista',      icon: List },
+  { label: 'Pendentes / Em Aberto', href: '/medida-administrativa/pendentes', icon: Clock },
 ]
 
 interface SidebarProps {
@@ -25,7 +25,11 @@ interface SidebarProps {
 export function MedidaSidebar({ expanded, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  
+  // Integração com os dados da sessão (userData agora na raiz do user)
   const user = session?.user as any
+
+  const primaryColor = '#094780'
 
   return (
     <>
@@ -42,11 +46,11 @@ export function MedidaSidebar({ expanded, onToggle }: SidebarProps) {
         <div className="flex items-center shrink-0 h-[60px] px-5 border-b border-white/5">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', boxShadow: '0 4px 12px rgba(29,78,216,0.35)' }}>
+              style={{ background: primaryColor, boxShadow: `0 4px 12px ${primaryColor}55` }}>
               <ShieldAlert size={14} className="text-white" />
             </div>
             <div className="overflow-hidden">
-              <p className="font-black text-[14px] tracking-widest whitespace-nowrap text-white uppercase" style={{ fontFamily: 'inherit' }}>
+              <p className="font-black text-[14px] tracking-widest whitespace-nowrap text-white uppercase">
                 SESMT
               </p>
               <p className="text-[9px] text-white/25 uppercase tracking-[2px] mt-0.5 whitespace-nowrap font-bold">
@@ -76,11 +80,11 @@ export function MedidaSidebar({ expanded, onToggle }: SidebarProps) {
                 className={cn(
                   'flex items-center gap-3 px-5 py-2.5 text-sm font-medium border-l-[3px] border-transparent transition-all whitespace-nowrap',
                   active
-                    ? 'border-l-blue-500 font-semibold'
+                    ? 'font-semibold'
                     : 'hover:bg-white/5',
                 )}
                 style={active
-                  ? { background: 'rgba(59,130,246,0.1)', color: 'white' }
+                  ? { borderLeftColor: primaryColor, background: 'rgba(9,71,128,0.15)', color: 'white' }
                   : { color: 'rgba(255,255,255,0.4)' }}
               >
                 <Icon size={16} className="shrink-0"
@@ -94,16 +98,17 @@ export function MedidaSidebar({ expanded, onToggle }: SidebarProps) {
         {/* Footer */}
         <div className="p-4 border-t border-white/5 shrink-0 space-y-2">
           <div className="flex items-center gap-2.5 px-1">
+            {/* Avatar com inicial dinâmica do nome corrigido */}
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold text-white shrink-0"
               style={{ background: 'linear-gradient(135deg,#E67A0E,#f4a04a)' }}>
-              {user?.name?.charAt(0) ?? 'U'}
+              {(user?.nome ?? 'U').charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
               <p className="text-[12px] font-semibold truncate whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                {user?.name ?? 'Usuário'}
+                {user?.nome ?? 'Usuário'}
               </p>
-              <p className="text-[10px] truncate whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                {user?.role ?? 'inspetor'} · {user?.uf ?? 'PI'}
+              <p className="text-[10px] truncate whitespace-nowrap uppercase font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {user?.role?.replace('_', ' ') ?? 'Acesso'} · {user?.uf ?? '--'}
               </p>
             </div>
           </div>
