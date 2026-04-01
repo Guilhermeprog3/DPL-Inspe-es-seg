@@ -1,6 +1,6 @@
 'use client'
 import { useSession } from 'next-auth/react'
-import { Bell, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 
 interface MedidaTopbarProps {
   title: string
@@ -11,6 +11,8 @@ interface MedidaTopbarProps {
 
 export function MedidaTopbar({ title, breadcrumb, sidebarExpanded, onToggleSidebar }: MedidaTopbarProps) {
   const { data: session } = useSession()
+  
+  // Dados vindos diretamente da raiz de session.user conforme seu route.ts
   const user = session?.user as any
 
   return (
@@ -29,16 +31,27 @@ export function MedidaTopbar({ title, breadcrumb, sidebarExpanded, onToggleSideb
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <span className="text-xs text-[#8896ab] hidden sm:block">
-          {user?.uf ?? 'PI'} · {user?.regional ?? 'Metropolitana'}
+      <div className="flex items-center gap-4">
+        {/* Exibição da Localização/Regional */}
+        <span className="text-[11px] font-bold text-[#8896ab] uppercase tracking-wider hidden sm:block">
+          {user?.uf ?? '--'} · {user?.regional ?? 'Sem Regional'}
         </span>
-        <div className="relative">
-          <Bell size={18} className="text-[#8896ab]" />
-          <span className="absolute -top-1 -right-1 bg-[#E67A0E] text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">3</span>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-[#E67A0E] flex items-center justify-center text-[12px] font-bold text-white">
-          {user?.name?.charAt(0) ?? 'U'}
+
+        {/* Área do Perfil */}
+        <div className="flex items-center gap-2.5 pl-4 border-l border-[#e8edf3]">
+          <div className="text-right hidden md:block">
+            <p className="text-[11px] font-bold text-[#1a2535] leading-none">
+              {user?.nome ?? 'Usuário'}
+            </p>
+            <p className="text-[9px] text-[#8896ab] font-medium mt-1 uppercase tracking-tighter">
+              {user?.role?.replace('_', ' ') ?? 'Perfil'}
+            </p>
+          </div>
+          
+          {/* Avatar com Inicial dinâmica */}
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E67A0E] to-[#ff9d3d] flex items-center justify-center text-[12px] font-bold text-white shadow-sm shadow-[#E67A0E]/20 ring-2 ring-white">
+            {(user?.nome ?? 'U').charAt(0).toUpperCase()}
+          </div>
         </div>
       </div>
     </header>

@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/modulos/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/modulos/page.js"
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -11,35 +11,30 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/dashboard/page.js"
-    ],
     "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/login/page.js"
     ],
-    "/cadastro/page": [
+    "/modulos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/cadastro/page.js"
+      "static/chunks/app/modulos/page.js"
     ],
     "/medida-administrativa/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/medida-administrativa/page.js"
     ],
-    "/medida-administrativa/lista/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/medida-administrativa/lista/page.js"
-    ],
     "/medida-administrativa/nova/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/medida-administrativa/nova/page.js"
+    ],
+    "/medida-administrativa/lista/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/medida-administrativa/lista/page.js"
     ]
   }
 }

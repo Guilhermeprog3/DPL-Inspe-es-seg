@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useSession } from 'next-auth/react' // Adicionado para pegar o token
+import { useSession } from 'next-auth/react'
 import { MedidaLayout } from '@/components/layout/MedidasLayout'
 import {
   ShieldAlert, User, Tag, AlertTriangle, FileText,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// ─── Tipos e Configurações (Mantidos) ──────────────────────────────────────────
+// ─── Tipos e Configurações ──────────────────────────────────────────────────
 type TipoCategoria = 'SEGURANÇA' | 'ADMINISTRATIVA' | ''
 type TipoMedida =
   | 'ADVERTÊNCIA VERBAL' | 'ADVERTÊNCIA ESCRITA' | 'SUSPENSÃO'
@@ -53,12 +53,13 @@ const TABS = [
 type TabKey = typeof TABS[number]['key']
 
 export default function NovaMedidaPage() {
-  const { data: session } = useSession() // Hook para pegar o token JWT
+  const { data: session } = useSession()
   const [tab, setTab] = useState<TabKey>('identificacao')
   const [successModal, setSuccessModal] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false) // Estado de carregamento
+  const [isRegistering, setIsRegistering] = useState(false)
 
   // Step 1 — Identificação
+  const [nomeColab, setNomeColab]           = useState('') // Adicionado (Obrigatório no Prisma)
   const [matriculaColab, setMatriculaColab] = useState('')
   const [statusColab, setStatusColab]       = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
   const [matriculaSup, setMatriculaSup]     = useState('')
@@ -76,65 +77,71 @@ export default function NovaMedidaPage() {
   // Step 4 — Ocorrência
   const [classificacao, setClassificacao]   = useState('')
   const [ocorrencia, setOcorrencia]         = useState('')
-  const [showDrop, setShowDrop]             = useState(false)
 
   // Step 5 — Anexos
-  const [anexos, setAnexos]                 = useState<File[]>([])
-  const fileRef                             = useRef<HTMLInputElement>(null)
   const [relacionarClick, setRelacionarClick] = useState(false)
   const [numeroInspecao, setNumeroInspecao]   = useState('')
 
   // ─── LÓGICA DE INTEGRAÇÃO ──────────────────────────────────────────────────
   async function handleRegister() {
-    if (isRegistering) return
-    setIsRegistering(true)
+  if (isRegistering) return;
+  
+  const token = (session as any)?.access_token || (session as any)?.accessToken;
 
-    const payload = {
-      matriculaColaborador: matriculaColab,
-      matriculaSupervisor: matriculaSup,
-      dataMedida: new Date(dataMedida).toISOString(),
-      categoria: tipoCategoria,
-      tipoMedida: tipoMedida,
-      gravidade: gravidade,
-      classificacao: classificacao,
-      descricao: ocorrencia,
-      diasSuspensao: diasSuspensao ? Number(diasSuspensao) : null,
-      numeroInspecaoClick: relacionarClick ? numeroInspecao : null,
-    }
-
-    try {
-      const response = await fetch('http://localhost:3001/medidas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(session as any)?.access_token}`
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Erro ao registrar medida.')
-      }
-
-      setSuccessModal(true)
-    } catch (error: any) {
-      console.error('Erro no registro:', error)
-      alert(error.message)
-    } finally {
-      setIsRegistering(false)
-    }
+  if (!token) {
+    alert('Erro: Token não encontrado. Faça login novamente.');
+    return;
   }
 
-  // ─── LÓGICA DE VALIDAÇÃO (Mantida) ──────────────────────────────────────────
+  setIsRegistering(true);
+
+  // MAPEAMENTO CORRETO PARA O SEU SCHEMA.PRISMA
+  const payload = {
+    colaborador: nomeColab,     // Nome do colaborador (String)
+    matricula: matriculaColab,  // Mapeado para o campo 'matricula' do banco
+    supervisor: matriculaSup,   // Mapeado para o campo 'supervisor' do banco (você pode enviar o nome ou a matrícula aqui)
+    tipo: tipoCategoria,       // Mapeado para 'tipo' (SEGURANÇA / ADMINISTRATIVA)
+    medida: tipoMedida,         // Mapeado para o campo 'medida' (ADVERTÊNCIA, etc)
+    ocorrencia: ocorrencia,     // Mapeado para 'ocorrencia' (a descrição detalhada)
+    gravidade: gravidade,
+    classificacao: classificacao,
+    // Note que diasSuspensao e numeroInspecaoClick não existem no seu Schema.prisma atual!
+    // Se quiser salvá-los, precisará adicionar no model Medida.
+  };
+
+  try {
+    const response = await fetch('http://localhost:3001/medidas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao registrar medida.');
+    }
+
+    setSuccessModal(true);
+  } catch (error: any) {
+    console.error('Erro no registro:', error);
+    alert(error.message);
+  } finally {
+    setIsRegistering(false);
+  }
+}
+
+  // ─── LÓGICA DE VALIDAÇÃO ──────────────────────────────────────────────────
   const validar = (val: string, set: typeof setStatusColab) => {
     if (val.length < 4) { set('idle'); return }
     set('loading')
-    setTimeout(() => set(val.toUpperCase().startsWith('M') ? 'valid' : 'invalid'), 700)
+    setTimeout(() => set('valid'), 600) // Liberado para qualquer matrícula no teste
   }
 
   const tabValid: Record<TabKey, boolean> = {
-    identificacao: statusColab === 'valid' && statusSup === 'valid' && !!dataMedida,
+    identificacao: !!nomeColab && statusColab === 'valid' && statusSup === 'valid' && !!dataMedida,
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade:     !!gravidade,
     ocorrencia:    !!classificacao && ocorrencia.trim().length >= 10,
@@ -153,11 +160,12 @@ export default function NovaMedidaPage() {
 
   const reset = () => {
     setTab('identificacao')
+    setNomeColab('')
     setMatriculaColab(''); setStatusColab('idle')
     setMatriculaSup(''); setStatusSup('idle'); setDataMedida('')
     setTipoCategoria(''); setTipoMedida(''); setDiasSuspensao('')
     setGravidade(''); setClassificacao(''); setOcorrencia('')
-    setAnexos([]); setRelacionarClick(false); setNumeroInspecao('')
+    setRelacionarClick(false); setNumeroInspecao('')
     setSuccessModal(false)
   }
 
@@ -203,7 +211,7 @@ export default function NovaMedidaPage() {
             {TABS.map(t => (
               <button key={t.key} onClick={() => !isTabLocked(t.key) && setTab(t.key)}
                 className={cn('flex items-center gap-2 px-5 py-3.5 text-[12px] font-bold border-b-2 transition-all whitespace-nowrap',
-                  tab === t.key ? 'text-[#094780] border-[#094780]' : isTabLocked(t.key) ? 'text-[#c8d0dc] border-transparent' : 'text-[#8896ab] border-transparent'
+                  tab === t.key ? 'text-[#094780] border-[#094780]' : isTabLocked(t.key) ? 'text-[#c8d0dc] border-transparent cursor-not-allowed' : 'text-[#8896ab] border-transparent'
                 )}>
                 <t.icon size={14} /> {t.label}
               </button>
@@ -217,12 +225,18 @@ export default function NovaMedidaPage() {
             <div className="space-y-3 max-w-2xl mx-auto fade-up">
               <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5 shadow-sm space-y-5">
                 <div>
-                  <label className={labelCls}>Colaborador (Matrícula) *</label>
-                  <input type="text" value={matriculaColab} onChange={e => { setMatriculaColab(e.target.value); validar(e.target.value, setStatusColab) }} placeholder="Ex: M001234" className={inputCls} />
+                  <label className={labelCls}>Nome do Colaborador *</label>
+                  <input type="text" value={nomeColab} onChange={e => setNomeColab(e.target.value)} placeholder="Nome completo" className={inputCls} />
                 </div>
-                <div>
-                  <label className={labelCls}>Supervisor (Matrícula) *</label>
-                  <input type="text" value={matriculaSup} onChange={e => { setMatriculaSup(e.target.value); validar(e.target.value, setStatusSup) }} placeholder="Ex: M005678" className={inputCls} />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className={labelCls}>Matrícula Colab. *</label>
+                        <input type="text" value={matriculaColab} onChange={e => { setMatriculaColab(e.target.value); validar(e.target.value, setStatusColab) }} placeholder="Ex: M1234" className={inputCls} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Matrícula Sup. *</label>
+                        <input type="text" value={matriculaSup} onChange={e => { setMatriculaSup(e.target.value); validar(e.target.value, setStatusSup) }} placeholder="Ex: M5678" className={inputCls} />
+                    </div>
                 </div>
                 <div>
                   <label className={labelCls}>Data da Medida *</label>
@@ -235,21 +249,24 @@ export default function NovaMedidaPage() {
           {tab === 'classificacao' && (
             <div className="space-y-2.5 max-w-2xl mx-auto fade-up">
                <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5 shadow-sm">
-                <label className={labelCls}>Tipo *</label>
+                <label className={labelCls}>Categoria *</label>
                 <div className="flex gap-2.5">
                   {['SEGURANÇA', 'ADMINISTRATIVA'].map(opt => (
-                    <button key={opt} onClick={() => setTipoCategoria(opt as TipoCategoria)} className={cn('px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase border-2', tipoCategoria === opt ? 'bg-[#094780] text-white' : 'bg-white text-[#8896ab]')}>{opt}</button>
+                    <button key={opt} onClick={() => setTipoCategoria(opt as TipoCategoria)} className={cn('px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase border-2 transition-all', tipoCategoria === opt ? 'bg-[#094780] text-white border-[#094780]' : 'bg-white text-[#8896ab] border-[#e2e8f0]')}>{opt}</button>
                   ))}
                 </div>
               </div>
               {['ADVERTÊNCIA VERBAL', 'ADVERTÊNCIA ESCRITA', 'SUSPENSÃO', 'CONVERSA PEDAGÓGICA', 'TREINAMENTO'].map((opt) => (
-                <div key={opt} onClick={() => setTipoMedida(opt as TipoMedida)} className={cn('bg-white rounded-[20px] border px-5 py-4 flex items-center justify-between cursor-pointer', tipoMedida === opt ? 'border-[#094780]' : 'border-[#e8edf3]')}>
+                <div key={opt} onClick={() => setTipoMedida(opt as TipoMedida)} className={cn('bg-white rounded-[20px] border px-5 py-4 flex items-center justify-between cursor-pointer transition-all', tipoMedida === opt ? 'border-[#094780] bg-[#094780]/05' : 'border-[#e8edf3]')}>
                   <span className="text-[13px] font-semibold">{opt}</span>
                   <CheckCircle2 size={18} className={tipoMedida === opt ? 'text-[#094780]' : 'text-[#e2e8f0]'} />
                 </div>
               ))}
               {tipoMedida === 'SUSPENSÃO' && (
-                <input type="number" value={diasSuspensao} onChange={e => setDiasSuspensao(e.target.value)} placeholder="Dias de suspensão" className={inputCls} />
+                <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5 fade-up">
+                    <label className={labelCls}>Dias de Suspensão *</label>
+                    <input type="number" value={diasSuspensao} onChange={e => setDiasSuspensao(e.target.value)} placeholder="Quantidade de dias" className={inputCls} />
+                </div>
               )}
             </div>
           )}
@@ -257,7 +274,7 @@ export default function NovaMedidaPage() {
           {tab === 'gravidade' && (
             <div className="space-y-2.5 max-w-2xl mx-auto fade-up">
               {Object.keys(GRAVIDADE_CFG).map((key) => (
-                <div key={key} onClick={() => setGravidade(key as Gravidade)} className={cn('bg-white rounded-[20px] border px-5 py-4 flex items-center justify-between cursor-pointer', gravidade === key ? 'border-[#094780]' : 'border-[#e8edf3]')}>
+                <div key={key} onClick={() => setGravidade(key as Gravidade)} className={cn('bg-white rounded-[20px] border px-5 py-4 flex items-center justify-between cursor-pointer transition-all', gravidade === key ? 'border-[#094780] bg-[#094780]/05' : 'border-[#e8edf3]')}>
                   <span className="text-[13px] font-semibold">{key}</span>
                   <div className="w-4 h-4 rounded-full" style={{ background: GRAVIDADE_CFG[key].color }} />
                 </div>
@@ -266,22 +283,33 @@ export default function NovaMedidaPage() {
           )}
 
           {tab === 'ocorrencia' && (
-            <div className="space-y-3 max-w-2xl mx-auto fade-up">
-              <select value={classificacao} onChange={e => setClassificacao(e.target.value)} className={inputCls}>
-                <option value="">Selecione a classificação...</option>
-                {CLASSIFICACOES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <textarea value={ocorrencia} onChange={e => setOcorrencia(e.target.value)} rows={6} placeholder="Descrição detalhada..." className={inputCls} />
+            <div className="space-y-4 max-w-2xl mx-auto fade-up">
+              <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5">
+                  <label className={labelCls}>Classificação da Ocorrência *</label>
+                  <select value={classificacao} onChange={e => setClassificacao(e.target.value)} className={inputCls}>
+                    <option value="">Selecione...</option>
+                    {CLASSIFICACOES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+              </div>
+              <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5">
+                  <label className={labelCls}>Descrição Detalhada *</label>
+                  <textarea value={ocorrencia} onChange={e => setOcorrencia(e.target.value)} rows={6} placeholder="Descreva o ocorrido com detalhes..." className={inputCls} />
+              </div>
             </div>
           )}
 
           {tab === 'anexos' && (
             <div className="space-y-3 max-w-2xl mx-auto fade-up">
-               <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5">
-                <button type="button" onClick={() => setRelacionarClick(!relacionarClick)} className={cn('w-full py-3 rounded-xl border flex items-center justify-center gap-2', relacionarClick ? 'bg-[#094780] text-white' : 'bg-white text-[#8896ab]')}>
+               <div className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-5 shadow-sm">
+                <button type="button" onClick={() => setRelacionarClick(!relacionarClick)} className={cn('w-full py-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all font-bold text-sm', relacionarClick ? 'bg-[#094780] text-white border-[#094780]' : 'bg-white text-[#8896ab] border-[#e2e8f0]')}>
                   <Link2 size={16} /> Relacionar com CLICK?
                 </button>
-                {relacionarClick && <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)} placeholder="Número da Inspeção" className={cn(inputCls, 'mt-3')} />}
+                {relacionarClick && (
+                    <div className="mt-4 fade-up">
+                         <label className={labelCls}>Número da Inspeção *</label>
+                         <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)} placeholder="Ex: INSP-2026-001" className={inputCls} />
+                    </div>
+                )}
               </div>
             </div>
           )}
@@ -298,8 +326,10 @@ export default function NovaMedidaPage() {
                 handleRegister()
               }
             }}
-            className={cn('w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 transition-all text-[12px] uppercase',
-              (currentIdx < tabOrder.length - 1 ? tabValid[tab] : allValid) && !isRegistering ? 'bg-[#094780]' : 'bg-[#d1d9e6]'
+            className={cn('w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 transition-all text-[12px] uppercase tracking-widest shadow-lg',
+              (currentIdx < tabOrder.length - 1 ? tabValid[tab] : allValid) && !isRegistering 
+                ? 'bg-[#094780] shadow-[#094780]/20' 
+                : 'bg-[#d1d9e6] text-[#8896ab] cursor-not-allowed shadow-none'
             )}>
             {isRegistering ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
             {currentIdx < tabOrder.length - 1 ? 'Próximo' : 'Registrar Medida'}
@@ -308,11 +338,14 @@ export default function NovaMedidaPage() {
 
         {/* MODAL SUCESSO */}
         {successModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1e33]/80 backdrop-blur-md">
-            <div className="modal-in bg-white rounded-[36px] w-full max-w-xs p-10 text-center">
-              <CheckCircle size={40} className="text-emerald-500 mx-auto mb-4" />
-              <h3 className="text-2xl font-black text-[#0d1e33] mb-4">Registrado!</h3>
-              <button className="w-full py-4 bg-[#094780] text-white rounded-2xl font-black uppercase text-[10px]" onClick={reset}>Novo Registro →</button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1e33]/80 backdrop-blur-md p-6">
+            <div className="modal-in bg-white rounded-[36px] w-full max-w-xs p-10 text-center shadow-2xl">
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle size={40} className="text-emerald-500" />
+              </div>
+              <h3 className="text-2xl font-black text-[#0d1e33] mb-2 uppercase" style={{ fontFamily: "'Syne', sans-serif" }}>Registrado!</h3>
+              <p className="text-xs text-[#8896ab] font-medium mb-8">A medida foi salva com sucesso no sistema.</p>
+              <button className="w-full py-4 bg-[#094780] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#0a5494] transition-all" onClick={reset}>Novo Registro →</button>
             </div>
           </div>
         )}

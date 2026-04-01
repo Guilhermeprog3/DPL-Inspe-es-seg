@@ -31,7 +31,7 @@ export default function ModulosPage() {
   const router = useRouter()
   
   // Mapeamento para acessar os dados aninhados conforme seu log do console
-  const userData = (session?.user as any)?.user;
+  const userData = session?.user as any;
   
   const [search, setSearch] = useState('')
 

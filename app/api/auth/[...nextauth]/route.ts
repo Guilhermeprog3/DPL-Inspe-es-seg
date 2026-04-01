@@ -43,10 +43,20 @@ const handler = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
-      return { ...token, ...user };
+      // Se o usuário acabou de logar, 'user' contém o retorno do seu backend (access_token + user object)
+      if (user) {
+        return {
+          ...token,
+          accessToken: (user as any).access_token,
+          userData: (user as any).user, // Aqui guardamos nome, email, role, uf...
+        };
+      }
+      return token;
     },
     async session({ session, token }) {
-      session.user = token as any;
+      // Repassamos os dados do token para a sessão do cliente
+      (session as any).access_token = token.accessToken;
+      session.user = token.userData as any; 
       return session;
     },
   },
