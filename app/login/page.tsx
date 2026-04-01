@@ -1,60 +1,90 @@
 'use client'
+
+import './login.css'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { loginSchema, type LoginInput } from '@/lib/validations'
 import { REGIONAIS_POR_UF, type UF } from '@/types'
-import { Mail, Lock, ChevronDown, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ChevronDown, LogIn, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [error, setError] = useState('')
-  const [ufSel, setUfSel] = useState<UF | ''>('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [emailLookup, setEmailLookup] = useState<'idle' | 'loading' | 'found' | 'not-found'>('idle')
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    clearErrors,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-    mode: 'onChange'
-  })
+const {
+  register,
+  handleSubmit,
+  setValue,
+  watch,
+  clearErrors,
+  formState: { errors, isSubmitting },
+} = useForm<LoginInput>({
+  resolver: zodResolver(loginSchema),
+  mode: 'onBlur',
+  shouldUnregister: false, // <--- ADICIONE ESTA LINHA
+  defaultValues: {
+    email: '',
+    senha: '',
+    uf: '' as UF,
+    regional: '',
+  },
+})
 
-  // Monitora o campo de e-mail
-  const emailValue = watch('email')
+  // Observa os valores em tempo real — sem useState separado
+  const ufAtual = watch('uf')
+  const regionalAtual = watch('regional')
+  const autoFilled = emailLookup === 'found'
 
-  // Lógica de Autopreenchimento
-  useEffect(() => {
-    const fetchUserData = async () => {
-      // Regra simples: só busca se for um e-mail minimamente válido
-      if (emailValue && emailValue.includes('@') && emailValue.length > 5) {
-        try {
-          // Aqui você faria um fetch: await fetch(`/api/user-metadata?email=${emailValue}`)
-          // Simulação de resposta baseada no seu banco:
-          if (emailValue === 'gui@exemplo.com') {
-            const autoUf = 'PI' as UF
-            const autoRegional = 'Metropolitana'
-            
-            setUfSel(autoUf)
-            setValue('uf', autoUf, { shouldValidate: true })
-            setValue('regional', autoRegional, { shouldValidate: true })
-            clearErrors(['uf', 'regional'])
-          }
-        } catch (e) {
-          console.error("Erro ao buscar metadados do usuário");
-        }
-      }
+  async function handleEmailBlur() {
+  const email = watch('email')
+  if (!email || !email.includes('@')) return
+
+  setEmailLookup('loading')
+  try {
+    const res = await fetch(`http://localhost:3001/users/by-email?email=${encodeURIComponent(email)}`)
+    if (!res.ok) { 
+      setEmailLookup('not-found')
+      return 
     }
 
-    const timer = setTimeout(fetchUserData, 1000) // Debounce para não disparar a cada tecla
-    return () => clearTimeout(timer)
-  }, [emailValue, setValue, clearErrors])
+    const data = await res.json()
+    if (data.uf && data.regional) {
+      // 1. Definimos os valores
+      setValue('uf', data.uf, { shouldValidate: true, shouldDirty: true })
+      setValue('regional', data.regional, { shouldValidate: true, shouldDirty: true })
+      
+      // 2. Limpamos erros manualmente para garantir
+      clearErrors(['uf', 'regional'])
+      
+      setEmailLookup('found')
+    } else {
+      setEmailLookup('not-found')
+    }
+  } catch (error) {
+    setEmailLookup('not-found')
+  }
+}
+
+  function handleUfChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    setValue('uf', e.target.value as UF, { shouldValidate: true })
+    setValue('regional', '', { shouldValidate: false })
+    clearErrors('regional')
+  }
+
+  function handleRegionalChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    setValue('regional', e.target.value, { shouldValidate: true })
+  }
+
+  function handleAlterar() {
+    setEmailLookup('idle')
+    setValue('uf', '' as UF, { shouldValidate: false })
+    setValue('regional', '', { shouldValidate: false })
+    clearErrors(['uf', 'regional'])
+  }
 
   async function onSubmit(data: LoginInput) {
     setError('')
@@ -68,144 +98,166 @@ export default function LoginPage() {
       })
 
       if (res?.error) {
-        setError(res.error === 'Configuration' 
-          ? 'Erro de configuração no servidor.' 
-          : 'E-mail, senha ou localidade incorretos.')
+        setError(
+          res.error === 'Configuration'
+            ? 'Erro de configuração: verifique o arquivo .env.local e reinicie o servidor.'
+            : 'E-mail ou senha inválidos. Verifique suas credenciais e tente novamente.'
+        )
         return
       }
 
-      if (res?.ok) router.push('/modulos')
-    } catch (err) {
-      setError('Ocorreu um erro inesperado ao realizar o login.')
+      if (res?.ok) window.location.href = '/modulos'
+    } catch {
+      setError('Não foi possível conectar ao servidor. Tente novamente em instantes.')
     }
   }
 
-  function handleUfChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const val = e.target.value as UF
-    setUfSel(val)
-    setValue('uf', val, { shouldValidate: true })
-    setValue('regional', '', { shouldValidate: false })
-    clearErrors('regional')
-  }
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#d6dde6] px-4 font-sans">
-      <div className={`bg-white rounded-2xl shadow-xl w-full max-w-[400px] px-8 py-10 transition-all ${error ? 'border-2 border-red-500 animate-shake' : 'border border-transparent'}`}>
-        
-        <div className="mb-8 text-center">
-          <div className="flex justify-center items-center gap-2 mb-2">
-            <span className="text-[36px] font-black text-[#094780] tracking-tighter">SIGS</span>
-            <span className="text-[36px] font-light text-slate-400 tracking-tighter">Gestor</span>
-          </div>
-          <p className="text-slate-500 text-sm font-medium">Controle de Medidas Administrativas</p>
+    <div className="page">
+      <div className="card">
+        <div className="brand">
+          <div className="logo">SIGS<span className="logo-dot" /></div>
+          <p className="brand-sub">Faça login para iniciar sua sessão</p>
         </div>
 
-        {/* Exibição de Erro no Card */}
+        <div className="sep" />
+
         {error && (
-          <div className="mb-6 flex items-center gap-3 px-4 py-3 bg-red-50 border-l-4 border-red-500 rounded text-sm text-red-700">
-            <AlertCircle size={18} className="shrink-0" />
-            <p className="font-semibold">{error}</p>
+          <div className="error-banner">
+            <AlertCircle size={15} className="error-banner-icon" />
+            <p className="error-banner-text">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Email */}
-          <div className="space-y-1">
-            <div className="relative">
-              <input
-                type="email"
-                placeholder="E-mail funcional"
-                className={`w-full pl-4 pr-10 py-3.5 border rounded-xl text-sm transition-all outline-none ${errors.email ? 'border-red-500 bg-red-50/30' : 'border-[#ccd3db] bg-[#f4f7fb] focus:border-[#094780] focus:ring-2 focus:ring-[#094780]/10'}`}
-                {...register('email')}
-              />
-              <Mail size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 ${errors.email ? 'text-red-400' : 'text-[#94a3b8]'}`} />
-            </div>
-            {errors.email && <p className="text-[11px] text-red-500 font-bold ml-1">{errors.email.message}</p>}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="fields">
 
-          {/* Senha */}
-          <div className="space-y-1">
-            <div className="relative">
-              <input
-                type="password"
-                placeholder="Sua senha"
-                className={`w-full pl-4 pr-10 py-3.5 border rounded-xl text-sm transition-all outline-none ${errors.senha ? 'border-red-500 bg-red-50/30' : 'border-[#ccd3db] bg-[#f4f7fb] focus:border-[#094780] focus:ring-2 focus:ring-[#094780]/10'}`}
-                {...register('senha')}
-              />
-              <Lock size={18} className={`absolute right-3 top-1/2 -translate-y-1/2 ${errors.senha ? 'text-red-400' : 'text-[#94a3b8]'}`} />
-            </div>
-            {errors.senha && <p className="text-[11px] text-red-500 font-bold ml-1">{errors.senha.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-             {/* Estado (UF) */}
-            <div className="space-y-1">
-              <div className="relative">
-                <select
-                  className={`w-full appearance-none pl-4 pr-10 py-3.5 border rounded-xl text-sm transition-all outline-none bg-white cursor-pointer ${errors.uf ? 'border-red-500 bg-red-50/30' : 'border-[#ccd3db] focus:border-[#094780]'}`}
-                  value={ufSel}
-                  onChange={handleUfChange}
-                >
-                  <option value="">UF</option>
-                  <option value="PI">PI</option>
-                  <option value="MA">MA</option>
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+            {/* E-mail */}
+            <div className="field">
+              <div className="field-label-row">
+                <label className="field-label">E-mail</label>
+                {emailLookup === 'loading' && (
+                  <span className="field-hint-loading">
+                    <Loader2 size={10} style={{ animation: 'spin 0.7s linear infinite' }} />
+                    Buscando...
+                  </span>
+                )}
+                {emailLookup === 'found' && (
+                  <span className="field-hint">✓ Dados preenchidos</span>
+                )}
               </div>
-            </div>
-
-            {/* Regional */}
-            <div className="space-y-1">
-              <div className="relative">
-                <select
-                  className={`w-full appearance-none pl-4 pr-10 py-3.5 border rounded-xl text-sm transition-all outline-none bg-white cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 ${errors.regional ? 'border-red-500 bg-red-50/30' : 'border-[#ccd3db] focus:border-[#094780]'}`}
-                  disabled={!ufSel}
-                  {...register('regional')}
-                >
-                  <option value="">Regional</option>
-                  {ufSel && REGIONAIS_POR_UF[ufSel].map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              <div className="field-wrap">
+                <input
+                  type="email"
+                  placeholder="seu@email.com"
+                  className={`field-input${errors.email ? ' has-error' : ''}`}
+                  {...register('email', { onBlur: handleEmailBlur })}
+                />
+                <span className="field-icon"><Mail size={15} /></span>
               </div>
+              {errors.email && (
+                <p className="field-error"><AlertCircle size={11} />{errors.email.message}</p>
+              )}
             </div>
-          </div>
-          {(errors.uf || errors.regional) && (
-            <p className="text-[11px] text-red-500 font-bold text-center">Informe o Estado e a Regional</p>
-          )}
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-4 bg-[#094780] hover:bg-[#073661] text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3 mt-4"
-          >
-            {isSubmitting ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : 'ENTRAR NO SISTEMA'}
+            {/* Senha */}
+            <div className="field">
+              <label className="field-label">Senha</label>
+              <div className="field-wrap">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  className={`field-input${errors.senha ? ' has-error' : ''}`}
+                  {...register('senha')}
+                />
+                <span
+                  className="field-icon clickable"
+                  onClick={() => setShowPassword(p => !p)}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </span>
+              </div>
+              {errors.senha && (
+                <p className="field-error"><AlertCircle size={11} />{errors.senha.message}</p>
+              )}
+            </div>
+
+            {/* UF + Regional */}
+            {autoFilled ? (
+              <div className="field">
+                <div className="field-label-row">
+                  <span className="field-label">Estado · Regional</span>
+                </div>
+                <div className="auto-fill-block">
+                  <div className="auto-fill-info">
+                    <span className="auto-fill-label">Preenchido automaticamente</span>
+                    <span className="auto-fill-value">{ufAtual} · {regionalAtual}</span>
+                  </div>
+                  <button type="button" className="auto-fill-change" onClick={handleAlterar}>
+                    Alterar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="field">
+                  <label className="field-label">Estado</label>
+                  <div className="field-wrap">
+                    <select
+                      className={`field-select${errors.uf ? ' has-error' : ''}`}
+                      value={ufAtual}
+                      onChange={handleUfChange}
+                    >
+                      <option value="">Selecione o Estado</option>
+                      <option value="PI">PI — Piauí</option>
+                      <option value="MA">MA — Maranhão</option>
+                    </select>
+                    <span className="field-icon"><ChevronDown size={15} /></span>
+                  </div>
+                  {errors.uf && (
+                    <p className="field-error"><AlertCircle size={11} />{errors.uf.message}</p>
+                  )}
+                </div>
+
+                <div className="field">
+                  <label className="field-label">Regional</label>
+                  <div className="field-wrap">
+                    <select
+                      className={`field-select${errors.regional ? ' has-error' : ''}`}
+                      disabled={!ufAtual}
+                      value={regionalAtual}
+                      onChange={handleRegionalChange}
+                    >
+                      <option value="">Selecione a Regional</option>
+                      {ufAtual && REGIONAIS_POR_UF[ufAtual as UF].map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                    <span className="field-icon"><ChevronDown size={15} /></span>
+                  </div>
+                  {errors.regional && (
+                    <p className="field-error"><AlertCircle size={11} />{errors.regional.message}</p>
+                  )}
+                </div>
+              </>
+            )}
+
+          </div>
+
+          <button type="submit" disabled={isSubmitting} className="btn">
+            {isSubmitting
+              ? <><span className="spinner" /> Entrando...</>
+              : <><LogIn size={15} /> Entrar</>
+            }
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between px-2">
-          <Link href="/cadastro" className="text-[13px] font-bold text-[#094780] hover:text-blue-700">
-            Solicitar Acesso
-          </Link>
-          <Link href="/recuperar-senha" className="text-[13px] font-bold text-[#094780] hover:text-blue-700">
-            Esqueceu a senha?
-          </Link>
+        <div className="footer">
+          <Link href="/cadastro">Solicitar Acesso</Link>
+          <span className="footer-dot" />
+          <Link href="/recuperar-senha">Esqueceu a senha?</Link>
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .animate-shake {
-          animation: shake 0.2s ease-in-out 0s 2;
-        }
-      `}</style>
     </div>
   )
 }

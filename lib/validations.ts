@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { REGIONAIS_POR_UF } from '@/types'
+import { REGIONAIS_POR_UF, type UF } from '@/types'
 
 // ---- Login ----
 export const loginSchema = z
@@ -11,11 +11,26 @@ export const loginSchema = z
   })
   .refine(
     (data) => {
-      const regionais = REGIONAIS_POR_UF[data.uf] as string[]
-      return regionais.includes(data.regional)
+      // 1. Verificação de segurança básica
+      if (!data.uf || !data.regional) return false;
+
+      // 2. Acesso tipado ao objeto de constantes
+      // Usamos 'as UF' para garantir ao TS que a chave é válida
+      const listaRegionais = REGIONAIS_POR_UF[data.uf as UF] as string[];
+
+      if (!listaRegionais) return false;
+
+      // 3. Comparação ignorando maiúsculas/minúsculas e espaços extras
+      return listaRegionais.some(
+        (r) => r.toUpperCase().trim() === data.regional.toUpperCase().trim()
+      );
     },
-    { message: 'Regional inválida para o estado selecionado', path: ['regional'] }
+    {
+      message: 'Regional inválida para o estado selecionado',
+      path: ['regional'],
+    }
   )
+
 export type LoginInput = z.infer<typeof loginSchema>
 
 // ---- Cadastro ----
@@ -36,8 +51,13 @@ export const cadastroSchema = z
   })
   .refine(
     (data) => {
-      const regionais = REGIONAIS_POR_UF[data.uf] as string[]
-      return regionais.includes(data.regional)
+      // Repetindo a lógica robusta no cadastro também
+      const listaRegionais = REGIONAIS_POR_UF[data.uf as UF] as string[];
+      if (!listaRegionais) return false;
+
+      return listaRegionais.some(
+        (r) => r.toUpperCase().trim() === data.regional.toUpperCase().trim()
+      );
     },
     { message: 'Regional inválida para o estado selecionado', path: ['regional'] }
   )

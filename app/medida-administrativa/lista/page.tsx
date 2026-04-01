@@ -8,7 +8,7 @@ import { MedidaLayout } from '@/components/layout/MedidasLayout'
 import {
   Search, Plus, MoreVertical, Eye,
   Loader2, Trash2, Edit2, AlertCircle, X, SlidersHorizontal,
-  Download,
+  Download, Link2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -20,26 +20,34 @@ const GRAVIDADE_CONFIG: Record<string, { color: string; bg: string; border: stri
   GRAVÍSSIMA: { color: '#a855f7', bg: '#faf5ff', border: '#e9d5ff' },
 }
 
+const MEDIDA_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
+  'ADVERTÊNCIA VERBAL':  { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'ADVERTÊNCIA ESCRITA': { color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'SUSPENSÃO':           { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  'CONVERSA PEDAGÓGICA': { color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
+  'TREINAMENTO':         { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+}
+
 function exportToExcel(data: any[]) {
   const rows = data.map(m => ({
     'ID':                m.id ?? '',
     'Colaborador':       m.colaborador ?? '',
-    'Matrícula':         m.matricula ?? '',
-    'Supervisor':        m.supervisor ?? '',
+    'Matrícula Colab.':  m.matricula ?? '',
+    'Matrícula Sup.':    m.supervisor ?? '',
+    'Nome Supervisor':   m.nomeSupervisor ?? '',
     'Data':              m.data ? new Date(m.data).toLocaleDateString('pt-BR') : '',
     'Categoria':         m.tipo ?? '',
     'Tipo de Medida':    m.medida ?? '',
+    'Dias Suspensão':    m.diasSuspensao ?? '',
     'Gravidade':         m.gravidade ?? '',
     'Classificação':     m.classificacao ?? '',
     'Descrição':         m.ocorrencia ?? '',
-    'Dias Suspensão':    m.diasSuspensao ?? '',
     'ID Inspeção Click': m.numeroInspecao ?? '',
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   ws['!cols'] = [
-    { wch: 28 }, { wch: 28 }, { wch: 14 }, { wch: 20 }, { wch: 14 },
-    { wch: 16 }, { wch: 22 }, { wch: 12 }, { wch: 40 }, { wch: 50 },
-    { wch: 14 }, { wch: 20 },
+    { wch: 28 }, { wch: 28 }, { wch: 14 }, { wch: 14 }, { wch: 28 }, { wch: 14 },
+    { wch: 16 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 40 }, { wch: 50 }, { wch: 20 },
   ]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Medidas')
@@ -47,28 +55,18 @@ function exportToExcel(data: any[]) {
   XLSX.writeFile(wb, `medidas_${date}.xlsx`)
 }
 
-// ─── Componente isolado de menu — usa useRef para fechar ao clicar fora ──────
+// ─── Action Menu ─────────────────────────────────────────────────────────────
 function ActionMenu({
-  onVisualizar,
-  onEditar,
-  onExcluir,
-}: {
-  onVisualizar: () => void
-  onEditar: () => void
-  onExcluir: () => void
-}) {
+  onVisualizar, onEditar, onExcluir,
+}: { onVisualizar: () => void; onEditar: () => void; onExcluir: () => void }) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState({ top: 0, right: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
 
-  // Calcula posição fixed ao abrir
   function handleOpen() {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      setCoords({
-        top: r.bottom + 6,
-        right: window.innerWidth - r.right,
-      })
+      setCoords({ top: r.bottom + 6, right: window.innerWidth - r.right })
     }
     setOpen(v => !v)
   }
@@ -77,17 +75,14 @@ function ActionMenu({
     if (!open) return
     function handler(e: MouseEvent) {
       const target = e.target as Node
-      // Ignora cliques dentro do próprio botão ou do menu (portal)
       if (btnRef.current?.contains(target)) return
-      const menu = document.getElementById('action-menu-portal')
-      if (menu?.contains(target)) return
+      if (document.getElementById('action-menu-portal')?.contains(target)) return
       setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Fecha ao rolar a página
   useEffect(() => {
     if (!open) return
     const handler = () => setOpen(false)
@@ -103,30 +98,20 @@ function ActionMenu({
         onClick={handleOpen}
         className={cn(
           'p-2 rounded-xl transition-all',
-          open
-            ? 'bg-[#f0f4f9] text-[#094780]'
-            : 'text-[#b0bac8] hover:text-[#094780] hover:bg-[#f0f4f9]'
+          open ? 'bg-[#f0f4f9] text-[#094780]' : 'text-[#b0bac8] hover:text-[#094780] hover:bg-[#f0f4f9]'
         )}
       >
         <MoreVertical size={20} />
       </button>
 
       {open && (
-        // Portal via position:fixed — nunca é clipado por overflow de pai
         <div
           id="action-menu-portal"
           style={{
-            position: 'fixed',
-            top: coords.top,
-            right: coords.right,
-            background: '#fff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            boxShadow: '0 8px 30px rgba(0,0,0,.15)',
-            zIndex: 9999,
-            width: '155px',
-            overflow: 'hidden',
-            animation: 'menuIn .15s ease-out',
+            position: 'fixed', top: coords.top, right: coords.right,
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px',
+            boxShadow: '0 8px 30px rgba(0,0,0,.15)', zIndex: 9999,
+            width: '155px', overflow: 'hidden', animation: 'menuIn .15s ease-out',
           }}
         >
           <button type="button" className="action-item" onClick={() => { setOpen(false); onVisualizar() }}>
@@ -145,6 +130,47 @@ function ActionMenu({
   )
 }
 
+// ─── Badge helpers ────────────────────────────────────────────────────────────
+function CategoriaBadge({ tipo }: { tipo: string }) {
+  const isSeguranca = tipo === 'SEGURANÇA'
+  return (
+    <span
+      className="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase"
+      style={{
+        background: isSeguranca ? '#fef2f2' : '#eef2ff',
+        color: isSeguranca ? '#ef4444' : '#3d6cf0',
+      }}
+    >
+      {tipo}
+    </span>
+  )
+}
+
+function MedidaBadge({ medida }: { medida: string }) {
+  const cfg = MEDIDA_CONFIG[medida] ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
+  return (
+    <span
+      className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold border"
+      style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+    >
+      {medida}
+    </span>
+  )
+}
+
+function GravidadeBadge({ gravidade }: { gravidade: string }) {
+  const cfg = GRAVIDADE_CONFIG[gravidade] ?? GRAVIDADE_CONFIG['LEVE']
+  return (
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+      style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+    >
+      {gravidade}
+    </span>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ListagemMedidasPage() {
   const router = useRouter()
   const { data: session } = useSession()
@@ -182,9 +208,9 @@ export default function ListagemMedidasPage() {
     if (session) fetchMedidas()
   }, [session])
 
-  const listaClassificacoes = useMemo(() => {
-    return Array.from(new Set(medidas.map(m => m.classificacao).filter(Boolean))).sort() as string[]
-  }, [medidas])
+  const listaClassificacoes = useMemo(() =>
+    Array.from(new Set(medidas.map(m => m.classificacao).filter(Boolean))).sort() as string[]
+  , [medidas])
 
   const handleOpenDeleteModal = (id: string) => { setIdParaDeletar(id); setShowDeleteModal(true) }
 
@@ -209,11 +235,15 @@ export default function ListagemMedidasPage() {
           case 'colaborador':    return m.colaborador?.toLowerCase().includes(t)
           case 'matricula':      return m.matricula?.toLowerCase().includes(t)
           case 'supervisor':     return m.supervisor?.toLowerCase().includes(t)
+          case 'nomeSupervisor': return m.nomeSupervisor?.toLowerCase().includes(t)
           case 'numeroInspecao': return m.numeroInspecao?.toLowerCase().includes(t)
           case 'id':             return m.id?.toLowerCase().includes(t)
           default: return (
-            m.colaborador?.toLowerCase().includes(t) || m.matricula?.toLowerCase().includes(t) ||
-            m.supervisor?.toLowerCase().includes(t) || m.numeroInspecao?.toLowerCase().includes(t) ||
+            m.colaborador?.toLowerCase().includes(t) ||
+            m.matricula?.toLowerCase().includes(t) ||
+            m.supervisor?.toLowerCase().includes(t) ||
+            m.nomeSupervisor?.toLowerCase().includes(t) ||
+            m.numeroInspecao?.toLowerCase().includes(t) ||
             m.id?.toLowerCase().includes(t)
           )
         }
@@ -235,8 +265,10 @@ export default function ListagemMedidasPage() {
     setFiltroClassificacao('Todos'); setFiltroData('')
   }
 
-  const filtrosAtivos = [busca, filtroCategoria !== 'Todos', filtroMedida !== 'Todos',
-    filtroGravidade !== 'Todos', filtroClassificacao !== 'Todos', filtroData].filter(Boolean).length
+  const filtrosAtivos = [
+    busca, filtroCategoria !== 'Todos', filtroMedida !== 'Todos',
+    filtroGravidade !== 'Todos', filtroClassificacao !== 'Todos', filtroData,
+  ].filter(Boolean).length
 
   const handleExport = useCallback(() => {
     if (isExporting || filteredData.length === 0) return
@@ -283,15 +315,17 @@ export default function ListagemMedidasPage() {
         .ins-main-card .table-scroll { border-radius:18px; }
         .ins-main-card .ins-table thead tr:first-child th:first-child { border-top-left-radius:18px; }
         .ins-main-card .ins-table thead tr:first-child th:last-child { border-top-right-radius:18px; }
-        
-        
-        .ins-table { width:100%; border-collapse:collapse; min-width:600px; }
+
+        .ins-table { width:100%; border-collapse:collapse; min-width:900px; }
         .ins-table th { background:#f8fafc; padding:12px 14px; text-align:left; font-size:10px; font-weight:800; color:#8896ab; text-transform:uppercase; border-bottom:1px solid #e2e8f0; white-space:nowrap; }
-        @media(min-width:1024px){ .ins-table th { padding:16px 24px; } }
-        .ins-row td { padding:12px 14px; vertical-align:middle; border-bottom:1px solid #f1f5f9; transition:background .1s; }
-        @media(min-width:1024px){ .ins-row td { padding:16px 24px; } }
+        @media(min-width:1024px){ .ins-table th { padding:14px 20px; } }
+        .ins-row td { padding:12px 14px; vertical-align:top; border-bottom:1px solid #f1f5f9; transition:background .1s; }
+        @media(min-width:1024px){ .ins-row td { padding:14px 20px; } }
         .ins-row:last-child td { border-bottom:none; }
         .ins-row:hover td { background:#fafbfd; }
+
+        /* Divisor vertical entre colunas colaborador e supervisor */
+        .col-supervisor { border-left:1px solid #f1f5f9; }
 
         .btn-new { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; text-transform:uppercase; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .2s; white-space:nowrap; }
         .btn-new:hover { opacity:.9; }
@@ -311,9 +345,11 @@ export default function ListagemMedidasPage() {
       `}} />
 
       <div className="list-root">
+
+        {/* ── Header ── */}
         <div className="flex justify-between items-start mb-4 gap-3 flex-wrap">
           <div>
-            <h2 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'clamp(18px,4vw,26px)', color:'#0d1e33' }}>
+            <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: 'clamp(18px,4vw,26px)', color: '#0d1e33' }}>
               Medidas Administrativas
             </h2>
             <p className="text-[11px] text-[#8896ab] font-bold uppercase mt-1">
@@ -321,67 +357,79 @@ export default function ListagemMedidasPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button className="btn-export" onClick={handleExport}
-              disabled={isExporting || filteredData.length === 0 || loading}>
-              {isExporting ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+            <button
+              className="btn-export"
+              onClick={handleExport}
+              disabled={isExporting || filteredData.length === 0 || loading}
+            >
+              {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'Exportar Excel'}</span>
               {!isExporting && filteredData.length > 0 && (
-                <span style={{ background:'#f0fdf4', color:'#10b981', fontSize:'10px', fontWeight:800, padding:'1px 6px', borderRadius:'99px', border:'1px solid #bbf7d0' }}>
+                <span style={{ background: '#f0fdf4', color: '#10b981', fontSize: '10px', fontWeight: 800, padding: '1px 6px', borderRadius: '99px', border: '1px solid #bbf7d0' }}>
                   {filteredData.length}
                 </span>
               )}
             </button>
             <button className="btn-new" onClick={() => router.push('/medida-administrativa/nova')}>
-              <Plus size={15} strokeWidth={3}/>
+              <Plus size={15} strokeWidth={3} />
               <span className="hidden sm:inline">Nova Medida</span>
               <span className="sm:hidden">Nova</span>
             </button>
           </div>
         </div>
 
+        {/* ── Filtros ── */}
         <div className="filter-wrap">
           <div className="filter-header">
             <div className="filter-header-left">
-              <SlidersHorizontal size={14}/>
+              <SlidersHorizontal size={14} />
               Filtros
               {filtrosAtivos > 0 && <span className="filter-badge">{filtrosAtivos}</span>}
             </div>
             {filtrosAtivos > 0 && (
-              <button className="filter-clear" onClick={limparFiltros}><X size={12}/> Limpar</button>
+              <button className="filter-clear" onClick={limparFiltros}><X size={12} /> Limpar</button>
             )}
           </div>
 
           <div className="filter-body">
+            {/* Busca com campo selecionável */}
             <div className="filter-field">
               <span className="filter-label">Busca</span>
-              <div style={{ display:'flex', height:'36px', border:'1px solid #e3e8ef', borderRadius:'8px', overflow:'hidden', background:'#f8fafc', transition:'border-color .15s,box-shadow .15s' }}
-                onFocusCapture={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor='#3d6cf0'; el.style.boxShadow='0 0 0 3px rgba(61,108,240,.08)'; el.style.background='#fff' }}
-                onBlurCapture={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor='#e3e8ef'; el.style.boxShadow='none'; el.style.background='#f8fafc' }}
+              <div
+                style={{ display: 'flex', height: '36px', border: '1px solid #e3e8ef', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', transition: 'border-color .15s,box-shadow .15s' }}
+                onFocusCapture={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#3d6cf0'; el.style.boxShadow = '0 0 0 3px rgba(61,108,240,.08)'; el.style.background = '#fff' }}
+                onBlurCapture={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#e3e8ef'; el.style.boxShadow = 'none'; el.style.background = '#f8fafc' }}
               >
-                <div style={{ position:'relative', borderRight:'1px solid #e3e8ef', flexShrink:0 }}>
-                  <select value={campoBusca} onChange={e => { setCampoBusca(e.target.value); setBusca('') }}
-                    style={{ height:'100%', background:'transparent', border:'none', outline:'none', fontSize:'12px', fontWeight:700, color:'#3d6cf0', fontFamily:'inherit', paddingLeft:'10px', paddingRight:'22px', appearance:'none', cursor:'pointer' }}>
+                <div style={{ position: 'relative', borderRight: '1px solid #e3e8ef', flexShrink: 0 }}>
+                  <select
+                    value={campoBusca}
+                    onChange={e => { setCampoBusca(e.target.value); setBusca('') }}
+                    style={{ height: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '12px', fontWeight: 700, color: '#3d6cf0', fontFamily: 'inherit', paddingLeft: '10px', paddingRight: '22px', appearance: 'none', cursor: 'pointer' }}
+                  >
                     <option value="todos">Todos os campos</option>
-                    <option value="colaborador">Nome</option>
+                    <option value="colaborador">Colaborador</option>
                     <option value="matricula">Matrícula</option>
-                    <option value="supervisor">Supervisor</option>
+                    <option value="supervisor">Mat. Supervisor</option>
+                    <option value="nomeSupervisor">Nome Supervisor</option>
                     <option value="numeroInspecao">ID Click</option>
                     <option value="id">ID Sistema</option>
                   </select>
-                  <svg style={{ position:'absolute', right:'6px', top:'50%', transform:'translateY(-50%)', pointerEvents:'none', color:'#3d6cf0' }} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#3d6cf0' }} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
                 </div>
-                <div style={{ position:'relative', flex:1, display:'flex', alignItems:'center' }}>
-                  <Search style={{ position:'absolute', left:'9px', color:'#c4cbd6' }} size={13}/>
+                <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+                  <Search style={{ position: 'absolute', left: '9px', color: '#c4cbd6' }} size={13} />
                   <input
-                    style={{ width:'100%', height:'100%', background:'transparent', border:'none', outline:'none', paddingLeft:'28px', paddingRight:'8px', fontSize:'13px', fontFamily:'inherit', color:'#111827' }}
+                    style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none', paddingLeft: '28px', paddingRight: '8px', fontSize: '13px', fontFamily: 'inherit', color: '#111827' }}
                     placeholder={
                       campoBusca === 'colaborador' ? 'Nome do colaborador...' :
                       campoBusca === 'matricula' ? 'Ex: M1234...' :
                       campoBusca === 'supervisor' ? 'Matrícula do supervisor...' :
+                      campoBusca === 'nomeSupervisor' ? 'Nome do supervisor...' :
                       campoBusca === 'numeroInspecao' ? 'Ex: INSP-2026-001...' :
                       campoBusca === 'id' ? 'ID do sistema...' : 'Pesquisar...'
                     }
-                    value={busca} onChange={e => setBusca(e.target.value)}
+                    value={busca}
+                    onChange={e => setBusca(e.target.value)}
                   />
                 </div>
               </div>
@@ -434,29 +482,32 @@ export default function ListagemMedidasPage() {
 
             <div className="filter-field">
               <span className="filter-label">Data Ocorrência</span>
-              <input className="filter-input" type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)}/>
+              <input className="filter-input" type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
             </div>
           </div>
 
           {filtrosAtivos > 0 && (
             <div className="filter-chips">
-              {busca && <span className="filter-chip">"{busca}" <button onClick={() => setBusca('')}><X size={10}/></button></span>}
-              {filtroCategoria !== 'Todos' && <span className="filter-chip">{filtroCategoria} <button onClick={() => setFiltroCategoria('Todos')}><X size={10}/></button></span>}
-              {filtroMedida !== 'Todos' && <span className="filter-chip">{filtroMedida} <button onClick={() => setFiltroMedida('Todos')}><X size={10}/></button></span>}
-              {filtroGravidade !== 'Todos' && <span className="filter-chip">{filtroGravidade} <button onClick={() => setFiltroGravidade('Todos')}><X size={10}/></button></span>}
-              {filtroClassificacao !== 'Todos' && <span className="filter-chip">{filtroClassificacao} <button onClick={() => setFiltroClassificacao('Todos')}><X size={10}/></button></span>}
-              {filtroData && <span className="filter-chip">{new Date(filtroData + 'T00:00:00').toLocaleDateString('pt-BR')} <button onClick={() => setFiltroData('')}><X size={10}/></button></span>}
+              {busca && <span className="filter-chip">"{busca}" <button onClick={() => setBusca('')}><X size={10} /></button></span>}
+              {filtroCategoria !== 'Todos' && <span className="filter-chip">{filtroCategoria} <button onClick={() => setFiltroCategoria('Todos')}><X size={10} /></button></span>}
+              {filtroMedida !== 'Todos' && <span className="filter-chip">{filtroMedida} <button onClick={() => setFiltroMedida('Todos')}><X size={10} /></button></span>}
+              {filtroGravidade !== 'Todos' && <span className="filter-chip">{filtroGravidade} <button onClick={() => setFiltroGravidade('Todos')}><X size={10} /></button></span>}
+              {filtroClassificacao !== 'Todos' && <span className="filter-chip">{filtroClassificacao} <button onClick={() => setFiltroClassificacao('Todos')}><X size={10} /></button></span>}
+              {filtroData && <span className="filter-chip">{new Date(filtroData + 'T00:00:00').toLocaleDateString('pt-BR')} <button onClick={() => setFiltroData('')}><X size={10} /></button></span>}
             </div>
           )}
         </div>
 
+        {/* ── Tabela ── */}
         <div className="ins-main-card">
           {loading ? (
-            <div className="py-24 text-center"><Loader2 size={40} className="mx-auto mb-4 text-[#094780] animate-spin"/></div>
+            <div className="py-24 text-center">
+              <Loader2 size={40} className="mx-auto mb-4 text-[#094780] animate-spin" />
+            </div>
           ) : filteredData.length === 0 ? (
             <div className="py-20 text-center">
               <div className="w-14 h-14 rounded-full bg-[#f4f6f9] flex items-center justify-center mx-auto mb-3">
-                <Search size={22} className="text-[#c4cbd6]"/>
+                <Search size={22} className="text-[#c4cbd6]" />
               </div>
               <p className="text-[14px] font-semibold text-[#9ca3af]">Nenhum registro encontrado</p>
               <p className="text-[12px] text-[#c4cbd6] mt-1">Tente ajustar os filtros acima</p>
@@ -466,61 +517,94 @@ export default function ListagemMedidasPage() {
               <table className="ins-table">
                 <thead>
                   <tr>
-                    <th>ID / Click / Data</th>
-                    <th>Colaborador / Sup.</th>
-                    <th>Tipo / Medida</th>
-                    <th>Gravidade / Classif.</th>
-                    <th style={{ textAlign:'right' }}>Ações</th>
+                    <th>ID / Data</th>
+                    <th>Colaborador</th>
+                    <th className="col-supervisor">Supervisor</th>
+                    <th>Medida</th>
+                    <th>Gravidade</th>
+                    <th>Classificação</th>
+                    <th style={{ textAlign: 'right' }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.map(item => {
-                    const grav = GRAVIDADE_CONFIG[item.gravidade] ?? GRAVIDADE_CONFIG['LEVE']
-                    return (
-                      <tr key={item.id} className="ins-row">
-                        <td>
-                          <div className="font-bold text-[#094780] text-[13px] cursor-pointer hover:underline w-fit"
-                            onClick={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}>
-                            #{item.id.slice(-6).toUpperCase()}
+                  {filteredData.map(item => (
+                    <tr key={item.id} className="ins-row">
+
+                      {/* ── ID / Data / Click ── */}
+                      <td style={{ minWidth: '130px' }}>
+                        <div
+                          className="font-bold text-[#094780] text-[13px] cursor-pointer hover:underline w-fit"
+                          onClick={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
+                        >
+                          #{item.id.slice(-6).toUpperCase()}
+                        </div>
+                        <div className="text-[11px] text-[#8896ab] font-medium mt-0.5">
+                          {new Date(item.data).toLocaleDateString('pt-BR')}
+                        </div>
+                        {item.numeroInspecao && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <Link2 size={9} className="text-amber-500 flex-shrink-0" />
+                            <span className="text-[9px] text-amber-600 font-bold uppercase truncate max-w-[100px]" title={item.numeroInspecao}>
+                              {item.numeroInspecao}
+                            </span>
                           </div>
-                          {item.numeroInspecao && (
-                            <div className="text-[10px] text-amber-600 font-bold uppercase mt-0.5">Click: {item.numeroInspecao}</div>
-                          )}
-                          <div className="text-[10px] text-[#8896ab] mt-1 font-medium">{new Date(item.data).toLocaleDateString('pt-BR')}</div>
-                        </td>
-                        <td>
-                          <div className="font-bold text-[#1a2535] text-[14px]">{item.colaborador}</div>
-                          <div className="text-[10px] text-[#8896ab] font-bold">Mat: {item.matricula}</div>
-                          <div className="text-[9px] text-[#8896ab] font-medium italic mt-0.5">Supervisor: {item.supervisor || 'N/A'}</div>
-                        </td>
-                        <td>
-                          <div className={cn('inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase mb-1',
-                            item.tipo === 'SEGURANÇA' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600')}>
-                            {item.tipo}
+                        )}
+                      </td>
+
+                      {/* ── Colaborador ── */}
+                      <td style={{ minWidth: '170px' }}>
+                        <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">{item.colaborador}</div>
+                        <div className="text-[10px] text-[#8896ab] font-bold mt-0.5">Mat: {item.matricula}</div>
+                      </td>
+
+                      {/* ── Supervisor — coluna dedicada ── */}
+                      <td className="col-supervisor" style={{ minWidth: '170px' }}>
+                        <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">
+                          {item.nomeSupervisor || <span className="text-[#c4cbd6] font-normal italic text-[12px]">—</span>}
+                        </div>
+                        <div className="text-[10px] text-[#8896ab] font-bold mt-0.5">Mat: {item.supervisor || '—'}</div>
+                      </td>
+
+                      {/* ── Medida ── */}
+                      <td style={{ minWidth: '170px' }}>
+                        <div className="mb-1.5">
+                          <CategoriaBadge tipo={item.tipo} />
+                        </div>
+                        <MedidaBadge medida={item.medida} />
+                        {item.diasSuspensao && (
+                          <div className="text-[10px] text-purple-500 font-bold mt-1">
+                            {item.diasSuspensao} dia{item.diasSuspensao > 1 ? 's' : ''} suspensão
                           </div>
-                          <div className="text-[12px] font-bold text-[#4a5568]">{item.medida}</div>
-                        </td>
-                        <td>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border mb-1.5"
-                            style={{ background:grav.bg, color:grav.color, borderColor:grav.border }}>
-                            {item.gravidade}
-                          </span>
-                          <div className="text-[10px] font-bold text-slate-400 line-clamp-1 max-w-[180px]" title={item.classificacao}>
-                            {item.classificacao}
-                          </div>
-                        </td>
-                        <td style={{ textAlign:'right' }}>
-                          <div className="flex justify-end">
-                            <ActionMenu
-                              onVisualizar={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
-                              onEditar={() => router.push(`/medida-administrativa/editar/${item.id}`)}
-                              onExcluir={() => handleOpenDeleteModal(item.id)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                        )}
+                      </td>
+
+                      {/* ── Gravidade ── */}
+                      <td style={{ minWidth: '110px' }}>
+                        <GravidadeBadge gravidade={item.gravidade} />
+                      </td>
+
+                      {/* ── Classificação ── */}
+                      <td style={{ minWidth: '200px', maxWidth: '240px' }}>
+                        <div
+                          className="text-[11px] font-bold text-[#374151] leading-snug line-clamp-2"
+                          title={item.classificacao}
+                        >
+                          {item.classificacao || <span className="text-[#c4cbd6] font-normal italic">—</span>}
+                        </div>
+                      </td>
+
+                      {/* ── Ações ── */}
+                      <td style={{ textAlign: 'right', minWidth: '60px' }}>
+                        <div className="flex justify-end">
+                          <ActionMenu
+                            onVisualizar={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
+                            onEditar={() => router.push(`/medida-administrativa/editar/${item.id}`)}
+                            onExcluir={() => handleOpenDeleteModal(item.id)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -528,26 +612,41 @@ export default function ListagemMedidasPage() {
         </div>
       </div>
 
+      {/* ── Modal Excluir ── */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
-          style={{ animation:'fadeIn .2s ease' }}>
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
-            style={{ animation:'scaleIn .25s cubic-bezier(0.16,1,0.3,1)' }}>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+          style={{ animation: 'fadeIn .2s ease' }}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            style={{ animation: 'scaleIn .25s cubic-bezier(0.16,1,0.3,1)' }}
+          >
             <div className="p-8 text-center">
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
-                <AlertCircle size={32} className="text-red-500"/>
+                <AlertCircle size={32} className="text-red-500" />
               </div>
-              <h3 style={{ fontFamily:'Syne', fontWeight:800 }} className="text-xl text-[#0d1e33] mb-2">Excluir Medida?</h3>
-              <p className="text-sm text-[#8896ab] leading-relaxed">Esta ação é permanente e removerá todos os dados do sistema.</p>
+              <h3 style={{ fontFamily: 'Syne', fontWeight: 800 }} className="text-xl text-[#0d1e33] mb-2">
+                Excluir Medida?
+              </h3>
+              <p className="text-sm text-[#8896ab] leading-relaxed">
+                Esta ação é permanente e removerá todos os dados do sistema.
+              </p>
             </div>
             <div className="flex gap-3 p-6 bg-slate-50 border-t border-slate-100">
-              <button onClick={() => setShowDeleteModal(false)} disabled={isDeleting}
-                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-[#4a5568] bg-white border border-[#e2e8f0] hover:bg-slate-100 disabled:opacity-50">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-[#4a5568] bg-white border border-[#e2e8f0] hover:bg-slate-100 disabled:opacity-50"
+              >
                 Cancelar
               </button>
-              <button onClick={confirmDelete} disabled={isDeleting}
-                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-70">
-                {isDeleting ? <><Loader2 size={16} className="animate-spin"/>Excluindo...</> : 'Sim, excluir'}
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isDeleting ? <><Loader2 size={16} className="animate-spin" />Excluindo...</> : 'Sim, excluir'}
               </button>
             </div>
           </div>
