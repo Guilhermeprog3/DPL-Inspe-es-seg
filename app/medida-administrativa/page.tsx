@@ -3,8 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { MedidaLayout } from '@/components/layout/MedidasLayout'
 import {
-  PlusCircle, List, Clock,
-  FileWarning, Search, ArrowRight,
+  PlusCircle, List, Search, ArrowRight,
 } from 'lucide-react'
 
 const actions = [
@@ -24,23 +23,6 @@ const actions = [
     cta: 'Ver todas',
     href: '/medida-administrativa/lista',
   },
-  {
-    icon: Clock,
-    color: '#f59e0b',
-    title: 'Pendentes / Em Aberto',
-    description: 'Visualize medidas que ainda não foram concluídas ou aguardam providências.',
-    cta: 'Ver pendentes',
-    href: '/medida-administrativa/pendentes',
-    badge: '4 pendentes',
-  },
-  {
-    icon: FileWarning,
-    color: '#ef4444',
-    title: 'Por Colaborador',
-    description: 'Consulte o histórico individual de medidas por matrícula ou nome do colaborador.',
-    cta: 'Consultar',
-    href: '/medida-administrativa/colaborador',
-  },
 ]
 
 export default function MedidaDashboardPage() {
@@ -48,7 +30,6 @@ export default function MedidaDashboardPage() {
   const [search, setSearch] = useState('')
   const [mounted, setMounted] = useState(false)
 
-  // Evita o erro de hidratação garantindo que o componente montou no cliente
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -95,7 +76,7 @@ export default function MedidaDashboardPage() {
           box-shadow: 0 2px 16px rgba(9,71,128,0.05);
           transition: all 0.22s;
           width: 320px; 
-          min-height: 280px;
+          min-height: 260px;
           animation: mdFadeUp 0.4s ease forwards;
         }
 
@@ -125,6 +106,7 @@ export default function MedidaDashboardPage() {
           width: 100%; padding: 14px 20px 14px 48px;
           border: 1px solid rgba(9,71,128,0.1); border-radius: 14px;
           outline: none; transition: all 0.2s;
+          font-weight: 500;
         }
         .search-input:focus { border-color: #094780; box-shadow: 0 0 0 4px rgba(9,71,128,0.05); }
       `}} />
@@ -147,7 +129,7 @@ export default function MedidaDashboardPage() {
           <input 
             className="search-input" 
             type="text"
-            placeholder="O que deseja fazer hoje?"
+            placeholder="Pesquisar funcionalidade..."
             value={search} 
             onChange={e => setSearch(e.target.value)} 
           />
@@ -165,13 +147,6 @@ export default function MedidaDashboardPage() {
                 <a.icon size={22} color="#fff" strokeWidth={2} />
               </div>
               
-              {a.badge && (
-                <div className="mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f59e0b15] text-[#f59e0b] text-[10px] font-bold uppercase">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-                  {a.badge}
-                </div>
-              )}
-
               <p className="ac-title">{a.title}</p>
               <p className="ac-desc">{a.description}</p>
               

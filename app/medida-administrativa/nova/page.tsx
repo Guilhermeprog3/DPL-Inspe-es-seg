@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { MedidaLayout } from '@/components/layout/MedidasLayout'
 import {
-  ShieldAlert, User, Tag, AlertTriangle, FileText,
-  Paperclip, Link2, CheckCircle, Loader2, Zap, ArrowLeft,
-  CheckCircle2,
+  User, Tag, AlertTriangle, FileText,
+  Paperclip, Link2, CheckCircle, Loader2, Zap,
+  Search, X, ChevronDown, ArrowLeft
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,109 +19,97 @@ type TipoMedida =
 type Gravidade = 'LEVE' | 'MÉDIA' | 'GRAVE' | 'GRAVÍSSIMA' | ''
 
 const CLASSIFICACOES = [
-  'Uso inadequado de EPI', 'Falta de EPI', 'Comportamento de risco',
-  'Descumprimento de NR', 'Acidente de trabalho', 'Quase-acidente',
-  'Uso indevido de equipamento', 'Ausência injustificada', 'Atraso recorrente',
-  'Descumprimento de procedimento interno', 'Conduta inadequada com colegas',
-  'Dano ao patrimônio', 'Falta de comunicação de incidente',
-  'Violação de norma de segurança', 'Negligência em atividade crítica',
+  { group: "Segurança & EPI", items: ["Uso inadequado de EPI", "Falta de EPI", "NÃO UTILIZOU EPI ADEQUADO", "LUVA/MANGA ISOLANTE/PROTETOR FACIAL", "LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA", "LUVA CLASSE 0", "LENÇOL ISOLANTE", "VESTIMENTA RF", "CAPACETE", "PERNEIRAS", "ÓCULOS DE PROTEÇÃO", "CINTO PARAQUEDITAS", "MANTAS ISOLANTES", "TRAVA QUEDAS"] },
+  { group: "Trânsito & Condução", items: ["EXCESSO DE VELOCIDADE", "VELOCIDADE", "MANOBRA DE RÉ / MARCHA RÉ", "DIREÇÃO DISTRAÍDA", "DESCUPRIMENTO DAS LEIS DE TRÂNSITO", "TRANSITAR PELA CONTRA MÃO", "USO DO CELULAR DURANTE CONDUÇÃO", "SONOLÊNCIA", "COCHILANDO AO VOLANTE", "SEM O USO DO CINTO DE SEGURANÇA", "AVARIA VEICULAR"] },
+  { group: "Procedimentos (APR/NR)", items: ["NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS", "APR PREENCHIDA INCORRETAMENTE", "DESCUMPRIMENTO DE NR", "FALHA DE PROCEDIMENTO / ATO INSEGURO", "DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO", "EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO", "SEM GUARDIÃO DA VIDA", "NÃO COMUNICOU ACIDENTE DE TRABALHO"] },
+  { group: "Administrativo & Conduta", items: ["ADMNISTRATIVA", "AUSÊNCIA SEM JUSTIFICATIVA", "FOLHA DE PONTO", "DESVIO DE CONDUTA", "RECUSA EM CUMPRIR ORDENS", "INSUBORDINAÇÃO", "CIGARRO / FUMANDO", "Dano ao patrimônio", "Conduta inadequada com colegas"] },
+  { group: "Câmera & Monitoramento", items: ["OBSTRUÇÃO DE CÂMERA", "CÂMERA OBSTRUIDA", "POSSIVEL USO DO CELULAR"] }
 ]
 
 const GRAVIDADE_CFG: Record<string, { color: string }> = {
-  LEVE:       { color: '#10b981' },
-  MÉDIA:      { color: '#f59e0b' },
-  GRAVE:      { color: '#ef4444' },
+  LEVE: { color: '#10b981' },
+  MÉDIA: { color: '#f59e0b' },
+  GRAVE: { color: '#ef4444' },
   GRAVÍSSIMA: { color: '#a855f7' },
 }
 
 const TABS = [
-  { key: 'identificacao', label: 'Identificação',    icon: User },
-  { key: 'classificacao', label: 'Classificação',    icon: Tag },
-  { key: 'gravidade',     label: 'Gravidade',        icon: AlertTriangle },
-  { key: 'ocorrencia',    label: 'Ocorrência',       icon: FileText },
-  { key: 'anexos',        label: 'Anexos & Vínculo', icon: Paperclip },
+  { key: 'identificacao', label: 'Identificação', icon: User },
+  { key: 'classificacao', label: 'Classificação', icon: Tag },
+  { key: 'gravidade', label: 'Gravidade', icon: AlertTriangle },
+  { key: 'ocorrencia', label: 'Ocorrência', icon: FileText },
+  { key: 'anexos', label: 'Anexos & Vínculo', icon: Paperclip },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
 
 export default function NovaMedidaPage() {
+  const router = useRouter()
   const { data: session } = useSession()
   const [tab, setTab] = useState<TabKey>('identificacao')
   const [successModal, setSuccessModal] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
 
-  // Step 1 — Identificação
-  const [nomeColab, setNomeColab]           = useState('')
+  // Estados Form
+  const [nomeColab, setNomeColab] = useState('')
   const [matriculaColab, setMatriculaColab] = useState('')
-  const [statusColab, setStatusColab]       = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
-  const [matriculaSup, setMatriculaSup]     = useState('')
-  const [statusSup, setStatusSup]           = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
-  const [dataMedida, setDataMedida]         = useState('')
-
-  // Step 2 — Classificação
-  const [tipoCategoria, setTipoCategoria]   = useState<TipoCategoria>('')
-  const [tipoMedida, setTipoMedida]         = useState<TipoMedida>('')
-  const [diasSuspensao, setDiasSuspensao]   = useState('')
-
-  // Step 3 — Gravidade
-  const [gravidade, setGravidade]           = useState<Gravidade>('')
-
-  // Step 4 — Ocorrência
-  const [classificacao, setClassificacao]   = useState('')
-  const [ocorrencia, setOcorrencia]         = useState('')
-
-  // Step 5 — Anexos
+  const [statusColab, setStatusColab] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
+  const [matriculaSup, setMatriculaSup] = useState('')
+  const [statusSup, setStatusSup] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
+  const [dataMedida, setDataMedida] = useState('')
+  const [tipoCategoria, setTipoCategoria] = useState<TipoCategoria>('')
+  const [tipoMedida, setTipoMedida] = useState<TipoMedida>('')
+  const [diasSuspensao, setDiasSuspensao] = useState('')
+  const [gravidade, setGravidade] = useState<Gravidade>('')
+  const [classificacao, setClassificacao] = useState('')
+  const [ocorrencia, setOcorrencia] = useState('')
   const [relacionarClick, setRelacionarClick] = useState(false)
-  const [numeroInspecao, setNumeroInspecao]   = useState('')
+  const [numeroInspecao, setNumeroInspecao] = useState('')
 
-  // ─── INTEGRAÇÃO ───────────────────────────────────────────────────────────
+  // Estados Pesquisa
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  const allFlattenedClasses = useMemo(() => CLASSIFICACOES.flatMap(group => group.items), [])
+  const filteredClassificacoes = useMemo(() => {
+    if (!searchQuery) return allFlattenedClasses
+    return allFlattenedClasses.filter(item => item.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [searchQuery, allFlattenedClasses])
+
   async function handleRegister() {
-    if (isRegistering) return
+    if (isRegistering || !allValid) return
     const token = (session as any)?.access_token || (session as any)?.accessToken
-    if (!token) { alert('Erro: Token não encontrado. Faça login novamente.'); return }
+    if (!token) return
     setIsRegistering(true)
     const payload = {
-      colaborador: nomeColab,
-      matricula: matriculaColab,
-      supervisor: matriculaSup,
-      tipo: tipoCategoria,
-      medida: tipoMedida,
-      ocorrencia,
-      gravidade,
-      classificacao,
+      colaborador: nomeColab, matricula: matriculaColab, supervisor: matriculaSup,
+      tipo: tipoCategoria, medida: tipoMedida, ocorrencia, gravidade, classificacao,
+      data: new Date(dataMedida).toISOString(),
+      diasSuspensao: diasSuspensao ? Number(diasSuspensao) : null,
+      numeroInspecao: relacionarClick ? numeroInspecao : null
     }
     try {
-      const response = await fetch('http://localhost:3001/medidas', {
+      const res = await fetch('http://localhost:3001/medidas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload),
       })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Erro ao registrar medida.')
-      }
+      if (!res.ok) throw new Error('Erro ao registrar')
       setSuccessModal(true)
-    } catch (error: any) {
-      console.error('Erro no registro:', error)
-      alert(error.message)
-    } finally {
-      setIsRegistering(false)
-    }
+    } catch (error: any) { alert(error.message) } finally { setIsRegistering(false) }
   }
 
-  // ─── VALIDAÇÃO ────────────────────────────────────────────────────────────
-  const validar = (val: string, set: typeof setStatusColab) => {
+  const validar = (val: string, set: any) => {
     if (val.length < 4) { set('idle'); return }
-    set('loading')
-    setTimeout(() => set('valid'), 600)
+    set('loading'); setTimeout(() => set('valid'), 600)
   }
 
   const tabValid: Record<TabKey, boolean> = {
     identificacao: !!nomeColab && statusColab === 'valid' && statusSup === 'valid' && !!dataMedida,
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
-    gravidade:     !!gravidade,
-    ocorrencia:    !!classificacao && ocorrencia.trim().length >= 10,
-    anexos:        !relacionarClick || !!numeroInspecao.trim(),
+    gravidade: !!gravidade,
+    ocorrencia: !!classificacao && ocorrencia.trim().length >= 10,
+    anexos: !relacionarClick || !!numeroInspecao.trim(),
   }
 
   const tabOrder: TabKey[] = ['identificacao', 'classificacao', 'gravidade', 'ocorrencia', 'anexos']
@@ -128,357 +117,192 @@ export default function NovaMedidaPage() {
   const allValid = tabOrder.every(k => tabValid[k])
   const completedCount = tabOrder.filter(k => tabValid[k]).length
 
-  const reset = () => {
-    setTab('identificacao')
-    setNomeColab(''); setMatriculaColab(''); setStatusColab('idle')
-    setMatriculaSup(''); setStatusSup('idle'); setDataMedida('')
-    setTipoCategoria(''); setTipoMedida(''); setDiasSuspensao('')
-    setGravidade(''); setClassificacao(''); setOcorrencia('')
-    setRelacionarClick(false); setNumeroInspecao('')
-    setSuccessModal(false)
-  }
-
-  // ─── ESTILOS COMPARTILHADOS ───────────────────────────────────────────────
-  const inputCls = cn(
-    'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3',
-    'text-[13.5px] font-normal text-[#111827] outline-none',
-    'focus:border-[#3d6cf0] focus:ring-2 focus:ring-[#3d6cf0]/10',
-    'transition-all placeholder:text-[#9ca3af]'
-  )
-
-  const formRowCls = cn(
-    'grid gap-4 items-start sm:items-center px-4 sm:px-6 py-4',
-    'border-b border-[#e3e8ef] last:border-b-0',
-    'hover:bg-[#fafbfd] transition-colors'
-  )
-
+  const inputCls = cn('w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13.5px] outline-none focus:border-[#3d6cf0] transition-all')
+  const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
   const labelCls = 'text-[13.5px] font-medium text-[#111827]'
-  const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-4 sm:px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
 
   return (
     <MedidaLayout title="Nova Medida">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
         .fade-up { animation: fadeUp 0.2s ease forwards; }
-        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .modal-in { animation: zoomIn 0.25s cubic-bezier(.22,.68,0,1.2) forwards; }
-      `}</style>
+      `}} />
 
-      <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
-
-        {/* ── BREADCRUMB ── */}
-        <div className="bg-white border-b border-[#e3e8ef] px-7 py-3 flex items-center gap-2 text-[13px] text-[#9ca3af]">
-          <button onClick={() => window.history.back()} className="hover:text-[#3d6cf0] transition-colors">Início</button>
-          <span className="text-[11px]">›</span>
-          <span className="text-[#3d6cf0] font-semibold">Nova Medida</span>
+      <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]">
+        
+        {/* ── BREADCRUMB COM BOTÃO VOLTAR ── */}
+        <div className="bg-white border-b border-[#e3e8ef] px-7 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
+            <button onClick={() => router.push('/medida-administrativa/lista')} className="hover:text-[#3d6cf0] transition-colors flex items-center gap-1.5 font-medium">
+              <ArrowLeft size={14} /> Medidas
+            </button>
+            <span className="text-[11px]">›</span>
+            <span className="text-[#3d6cf0] font-semibold">Nova Medida</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Etapa {currentIdx + 1} de 5</span>
         </div>
 
-        {/* ── TABS BAR ── */}
+        {/* Tabs Bar */}
         <div className="bg-white border-b border-[#e3e8ef] px-7 flex overflow-x-auto">
-          {TABS.map((t) => {
-            const isActive = tab === t.key
-            const isComplete = tabValid[t.key]
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  'flex items-center gap-2 px-5 py-[14px] text-[13.5px] border-b-[2.5px] whitespace-nowrap transition-all -mb-px',
-                  isActive
-                    ? 'text-[#3d6cf0] border-[#3d6cf0] font-semibold'
-                    : 'text-[#9ca3af] border-transparent hover:text-[#4b5563]'
-                )}
-              >
-                {t.label}
-                {isComplete && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                )}
-              </button>
-            )
-          })}
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={cn('flex items-center gap-2 px-5 py-4 text-[13.5px] border-b-[2.5px] whitespace-nowrap transition-all -mb-px', 
+              tab === t.key ? 'text-[#3d6cf0] border-[#3d6cf0] font-semibold' : 'text-[#9ca3af] border-transparent')}>
+              {t.label}
+              {tabValid[t.key] && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+            </button>
+          ))}
         </div>
 
-        {/* ── CONTEÚDO ── */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 w-full">
-
-          {/* TAB: IDENTIFICAÇÃO */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pt-6 pb-28">
           {tab === 'identificacao' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Dados do colaborador</div>
-
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className={labelCls}>Nome do Colaborador <span className="text-[#3d6cf0]">*</span></span>
-                  <input
-                    type="text" value={nomeColab}
-                    onChange={e => setNomeColab(e.target.value)}
-                    placeholder="Nome completo do colaborador"
-                    className={inputCls}
-                  />
-                </div>
-
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
-                  <span className={cn(labelCls, 'flex flex-col')}>
-                    Matrícula <span className="text-[11px] font-normal text-[#9ca3af]">Colaborador e Supervisor</span>
-                    <span className="text-[#3d6cf0] text-base leading-none">*</span>
-                  </span>
-                  <input
-                    type="text" value={matriculaColab}
-                    onChange={e => { setMatriculaColab(e.target.value); validar(e.target.value, setStatusColab) }}
-                    placeholder="Colab. Ex: M1234"
-                    className={inputCls}
-                  />
-                  <input
-                    type="text" value={matriculaSup}
-                    onChange={e => { setMatriculaSup(e.target.value); validar(e.target.value, setStatusSup) }}
-                    placeholder="Sup. Ex: M5678"
-                    className={inputCls}
-                  />
-                </div>
-
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className={labelCls}>Data da Medida <span className="text-[#3d6cf0]">*</span></span>
-                  <input
-                    type="date" value={dataMedida}
-                    onChange={e => setDataMedida(e.target.value)}
-                    className={cn(inputCls, 'sm:max-w-[200px]')}
-                  />
-                </div>
+            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
+              <div className={sectionTitleCls}>Dados do Colaborador</div>
+              <div className="grid gap-4 items-center px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr]">
+                <span className={labelCls}>Nome Completo *</span>
+                <input type="text" value={nomeColab} onChange={e => setNomeColab(e.target.value)} className={inputCls} placeholder="Nome completo" />
+              </div>
+              <div className="grid gap-4 items-center px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
+                <span className={labelCls}>Matrículas *</span>
+                <input type="text" value={matriculaColab} onChange={e => { setMatriculaColab(e.target.value); validar(e.target.value, setStatusColab) }} className={inputCls} placeholder="Mat. Colaborador" />
+                <input type="text" value={matriculaSup} onChange={e => { setMatriculaSup(e.target.value); validar(e.target.value, setStatusSup) }} className={inputCls} placeholder="Mat. Supervisor" />
+              </div>
+              <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                <span className={labelCls}>Data da Medida *</span>
+                <input type="date" value={dataMedida} onChange={e => setDataMedida(e.target.value)} className={cn(inputCls, 'max-w-[200px]')} />
               </div>
             </div>
           )}
 
-          {/* TAB: CLASSIFICAÇÃO */}
           {tab === 'classificacao' && (
             <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Categoria</div>
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className={labelCls}>Categoria <span className="text-[#3d6cf0]">*</span></span>
-                  <div className="flex gap-2">
-                    {(['SEGURANÇA', 'ADMINISTRATIVA'] as TipoCategoria[]).map(opt => (
-                      <button
-                        key={opt}
-                        onClick={() => setTipoCategoria(opt)}
-                        className={cn(
-                          'px-4 py-2 rounded-lg text-[12.5px] font-semibold border-[1.5px] transition-all',
-                          tipoCategoria === opt
-                            ? 'bg-[#3d6cf0] text-white border-[#3d6cf0]'
-                            : 'bg-white text-[#4b5563] border-[#e3e8ef] hover:border-[#3d6cf0] hover:text-[#3d6cf0]'
-                        )}
-                      >{opt}</button>
-                    ))}
-                  </div>
+              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
+                <div className={sectionTitleCls}>Categoria e Tipo</div>
+                <div className="p-6 flex gap-3">
+                  {['SEGURANÇA', 'ADMINISTRATIVA'].map(cat => (
+                    <button key={cat} onClick={() => setTipoCategoria(cat as any)} 
+                      className={cn('flex-1 py-3 rounded-xl border-2 font-bold text-xs transition-all', 
+                      tipoCategoria === cat ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white' : 'bg-white border-slate-100 text-slate-400')}>
+                      {cat}
+                    </button>
+                  ))}
                 </div>
-              </div>
-
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Tipo de medida</div>
-                <div className="p-4 flex flex-col gap-2">
-                  {(['ADVERTÊNCIA VERBAL', 'ADVERTÊNCIA ESCRITA', 'SUSPENSÃO', 'CONVERSA PEDAGÓGICA', 'TREINAMENTO'] as TipoMedida[]).map(opt => (
-                    <div
-                      key={opt}
-                      onClick={() => setTipoMedida(opt)}
-                      className={cn(
-                        'flex items-center justify-between px-4 py-3 rounded-lg border-[1.5px] cursor-pointer transition-all',
-                        tipoMedida === opt
-                          ? 'border-[#3d6cf0] bg-[#eef2ff]'
-                          : 'border-[#e3e8ef] bg-white hover:border-[#3d6cf0] hover:bg-[#eef2ff]'
-                      )}
-                    >
-                      <span className="text-[13.5px] font-medium text-[#111827]">{opt}</span>
-                      <div className={cn(
-                        'w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all',
-                        tipoMedida === opt ? 'border-[#3d6cf0] bg-[#3d6cf0]' : 'border-[#e3e8ef] bg-white'
-                      )}>
-                        {tipoMedida === opt && <div className="w-[7px] h-[7px] rounded-full bg-white" />}
-                      </div>
+                <div className="p-6 pt-0 space-y-2">
+                  {['ADVERTÊNCIA VERBAL', 'ADVERTÊNCIA ESCRITA', 'SUSPENSÃO', 'CONVERSA PEDAGÓGICA', 'TREINAMENTO'].map(m => (
+                    <div key={m} onClick={() => setTipoMedida(m as any)} 
+                      className={cn('p-4 rounded-xl border cursor-pointer flex justify-between items-center transition-all', 
+                      tipoMedida === m ? 'border-[#3d6cf0] bg-blue-50/50' : 'border-slate-50 hover:border-slate-100')}>
+                      <span className="text-sm font-semibold text-slate-700">{m}</span>
+                      {tipoMedida === m && <CheckCircle size={18} className="text-[#3d6cf0]" />}
                     </div>
                   ))}
                 </div>
-
                 {tipoMedida === 'SUSPENSÃO' && (
-                  <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]', 'border-t border-[#e3e8ef]')}>
-                    <span className={labelCls}>Dias de Suspensão <span className="text-[#3d6cf0]">*</span></span>
-                    <input
-                      type="number" value={diasSuspensao}
-                      onChange={e => setDiasSuspensao(e.target.value)}
-                      placeholder="Quantidade de dias"
-                      className={cn(inputCls, 'sm:max-w-[160px]')}
-                    />
+                  <div className="p-6 border-t bg-slate-50/30 flex items-center gap-4">
+                    <span className="text-xs font-bold text-slate-500 uppercase">Dias de Suspensão *</span>
+                    <input type="number" value={diasSuspensao} onChange={e => setDiasSuspensao(e.target.value)} className={cn(inputCls, 'max-w-[120px]')} />
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* TAB: GRAVIDADE */}
           {tab === 'gravidade' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Nível de gravidade</div>
-                <div className="p-4 flex flex-col gap-2">
-                  {(Object.keys(GRAVIDADE_CFG) as Gravidade[]).map(key => (
-                    <div
-                      key={key}
-                      onClick={() => setGravidade(key)}
-                      className={cn(
-                        'flex items-center justify-between px-4 py-3 rounded-lg border-[1.5px] cursor-pointer transition-all',
-                        gravidade === key
-                          ? 'border-[#3d6cf0] bg-[#eef2ff]'
-                          : 'border-[#e3e8ef] bg-white hover:border-[#3d6cf0] hover:bg-[#eef2ff]'
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: GRAVIDADE_CFG[key!].color }} />
-                        <span className="text-[13.5px] font-medium text-[#111827]">{key}</span>
-                      </div>
-                      <div className={cn(
-                        'w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all',
-                        gravidade === key ? 'border-[#3d6cf0] bg-[#3d6cf0]' : 'border-[#e3e8ef] bg-white'
-                      )}>
-                        {gravidade === key && <div className="w-[7px] h-[7px] rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
+              <div className={sectionTitleCls}>Nível de Gravidade</div>
+              <div className="p-6 space-y-3">
+                {Object.keys(GRAVIDADE_CFG).map(g => (
+                  <div key={g} onClick={() => setGravidade(g as any)} 
+                    className={cn('p-5 rounded-2xl border-2 cursor-pointer flex items-center gap-4 transition-all', 
+                    gravidade === g ? 'border-[#3d6cf0] bg-blue-50/30' : 'border-slate-50 hover:border-slate-100')}>
+                    <div className="w-3 h-3 rounded-full" style={{ background: GRAVIDADE_CFG[g].color }} />
+                    <span className="text-sm font-bold text-slate-700">{g}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* TAB: OCORRÊNCIA */}
           {tab === 'ocorrencia' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Detalhes da ocorrência</div>
-
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className={labelCls}>Classificação <span className="text-[#3d6cf0]">*</span></span>
-                  <div className="relative">
-                    <select
-                      value={classificacao}
-                      onChange={e => setClassificacao(e.target.value)}
-                      className={cn(inputCls, 'pr-9 cursor-pointer appearance-none')}
-                    >
-                      <option value="">Selecione...</option>
-                      {CLASSIFICACOES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                    <svg className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
-                  </div>
+            <div className="fade-up bg-white p-8 rounded-3xl border border-[#eef1f6] shadow-sm space-y-6">
+              <div className="relative">
+                <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Pesquisar Classificação *</label>
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#3d6cf0]" size={18} />
+                  <input type="text" className={cn(inputCls, "pl-12 h-11")} placeholder="Busque por EPI, velocidade..." value={searchQuery} onFocus={() => setShowDropdown(true)}
+                    onChange={(e) => { const val = e.target.value; setSearchQuery(val); if (val === '') setClassificacao(''); setShowDropdown(true) }} />
+                  {searchQuery && (
+                    <button type="button" onClick={() => { setSearchQuery(''); setClassificacao(''); }} className="absolute right-10 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={14} /></button>
+                  )}
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                 </div>
-
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]', 'items-start pt-4')}>
-                  <span className={labelCls}>Descrição Detalhada <span className="text-[#3d6cf0]">*</span></span>
-                  <textarea
-                    value={ocorrencia}
-                    onChange={e => setOcorrencia(e.target.value)}
-                    rows={6}
-                    placeholder="Descreva o ocorrido com detalhes..."
-                    className={cn(inputCls, 'h-auto py-2.5 resize-y leading-relaxed')}
-                  />
-                </div>
+                {showDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowDropdown(false)} />
+                    <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-40 max-h-72 overflow-y-auto p-2">
+                      {filteredClassificacoes.length > 0 ? filteredClassificacoes.map((item, i) => (
+                        <button key={i} type="button" onClick={() => { setClassificacao(item); setSearchQuery(item); setShowDropdown(false) }} 
+                          className={cn("w-full text-left px-4 py-3 text-[13px] font-semibold rounded-xl transition-all mb-1 last:mb-0", 
+                          classificacao === item ? "bg-blue-50 text-[#3d6cf0]" : "text-slate-600 hover:bg-slate-50")}>{item}</button>
+                      )) : <div className="p-4 text-center text-slate-400 text-xs">Nenhum resultado para "{searchQuery}"</div>}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase">Descrição Detalhada *</label>
+                <textarea value={ocorrencia} onChange={e => setOcorrencia(e.target.value)} rows={6} className={cn(inputCls, 'h-auto py-3 leading-relaxed')} placeholder="Descreva detalhadamente o que aconteceu..." />
               </div>
             </div>
           )}
 
-          {/* TAB: ANEXOS */}
           {tab === 'anexos' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Vínculo com inspeção <span className="normal-case font-normal tracking-normal">(opcional)</span></div>
-
-                <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className={labelCls}>Relacionar com CLICK?</span>
-                  <button
-                    type="button"
-                    onClick={() => setRelacionarClick(!relacionarClick)}
-                    className={cn(
-                      'inline-flex items-center gap-2 px-4 py-2 rounded-lg border-[1.5px] text-[13px] font-semibold transition-all max-w-max',
-                      relacionarClick
-                        ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white'
-                        : 'bg-white border-[#e3e8ef] text-[#4b5563] hover:border-[#3d6cf0] hover:text-[#3d6cf0]'
-                    )}
-                  >
-                    <Link2 size={14} /> Vincular inspeção
-                  </button>
-                </div>
-
-                {relacionarClick && (
-                  <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]', 'fade-up')}>
-                    <span className={labelCls}>Número da Inspeção <span className="text-[#3d6cf0]">*</span></span>
-                    <input
-                      type="text" value={numeroInspecao}
-                      onChange={e => setNumeroInspecao(e.target.value)}
-                      placeholder="Ex: INSP-2026-001"
-                      className={cn(inputCls, 'sm:max-w-[260px]')}
-                    />
-                  </div>
-                )}
+            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
+              <div className={sectionTitleCls}>Vínculo Externo</div>
+              <div className="p-12 text-center space-y-4">
+                <button onClick={() => setRelacionarClick(!relacionarClick)} className={cn('px-8 py-3 rounded-xl border-2 font-bold transition-all', relacionarClick ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white shadow-lg shadow-blue-500/20' : 'bg-white border-slate-100 text-slate-400')}>
+                  <Link2 size={18} className="inline mr-2" /> {relacionarClick ? 'Inspeção Vinculada' : 'Vincular Inspeção CLICK'}
+                </button>
+                {relacionarClick && <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)} className={cn(inputCls, 'mt-4 max-w-[300px] mx-auto block text-center h-12')} placeholder="Número da Inspeção" />}
               </div>
             </div>
           )}
         </div>
 
-        {/* ── FOOTER FIXO ── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-[#e3e8ef] px-7 py-3.5 flex items-center justify-between">
-          <div className="text-[12px] text-[#9ca3af]">
-            Etapa <span className="font-semibold text-[#4b5563]">{currentIdx + 1}</span> de 5
-            &nbsp;·&nbsp;
-            <span className={cn('font-semibold', completedCount === 5 ? 'text-emerald-500' : 'text-[#4b5563]')}>
-              {completedCount === 5 ? '✓ Pronto para registrar' : `${completedCount} de 5 completas`}
+        {/* ── FOOTER COM PROGRESSO E BOTÕES ── */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t px-8 py-4 flex items-center justify-between z-50">
+          
+          {/* INDICADOR DE ETAPAS */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex gap-1.5">
+              {tabOrder.map((key, idx) => (
+                <div key={key} className={cn("h-1.5 w-6 rounded-full transition-all duration-300", idx <= currentIdx ? "bg-[#3d6cf0]" : "bg-slate-200")} />
+              ))}
+            </div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+              {completedCount} de 5 ETAPAS CONCLUÍDAS
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {currentIdx > 0 && (
-              <button
-                onClick={() => setTab(tabOrder[currentIdx - 1])}
-                className="px-4 py-2 rounded-lg border border-[#e3e8ef] text-[13px] font-medium text-[#4b5563] hover:border-[#9ca3af] hover:text-[#111827] transition-all"
-              >
-                ← Voltar
-              </button>
-            )}
-            <button
-              disabled={currentIdx < tabOrder.length - 1 ? false : (!allValid || isRegistering)}
-              onClick={() => {
-                if (currentIdx < tabOrder.length - 1) setTab(tabOrder[currentIdx + 1])
-                else handleRegister()
-              }}
-              className={cn(
-                'flex items-center gap-2 px-5 py-2 rounded-lg text-[13px] font-semibold transition-all',
-                currentIdx < tabOrder.length - 1
-                  ? 'bg-[#3d6cf0] text-white hover:bg-[#2d5ce0]'
-                  : allValid && !isRegistering
-                    ? 'bg-[#3d6cf0] text-white hover:bg-[#2d5ce0]'
-                    : 'bg-[#e3e8ef] text-[#9ca3af] cursor-not-allowed'
-              )}
-            >
-              {isRegistering
-                ? <Loader2 size={14} className="animate-spin" />
-                : currentIdx < tabOrder.length - 1
-                  ? null
-                  : <Zap size={14} />
-              }
-              {currentIdx < tabOrder.length - 1 ? 'Próximo →' : 'Salvar Medida'}
+          <div className="flex gap-3 w-full md:w-auto">
+            {currentIdx > 0 && <button onClick={() => setTab(tabOrder[currentIdx - 1])} className="flex-1 md:flex-none px-6 py-2 border-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50">VOLTAR</button>}
+            <button disabled={currentIdx === 4 ? (!allValid || isRegistering) : false} onClick={() => currentIdx < 4 ? setTab(tabOrder[currentIdx + 1]) : handleRegister()} 
+              className={cn('flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black tracking-widest text-white transition-all flex items-center justify-center gap-2', 
+              (currentIdx < 4 || allValid) ? 'bg-[#3d6cf0] hover:bg-[#2d5ce0] shadow-lg shadow-blue-500/20' : 'bg-slate-200 cursor-not-allowed')}>
+              {isRegistering ? <Loader2 className="animate-spin" size={16} /> : currentIdx < 4 ? 'PRÓXIMO' : 'SALVAR REGISTRO'}
             </button>
           </div>
         </div>
 
-        {/* ── MODAL SUCESSO ── */}
         {successModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
-            <div className="modal-in bg-white rounded-2xl w-full max-w-xs p-10 text-center shadow-2xl border border-[#e3e8ef]">
-              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
-                <CheckCircle size={32} className="text-emerald-500" />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+            <div className="bg-white p-10 rounded-3xl text-center shadow-2xl max-w-sm">
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle size={48} className="text-emerald-500" />
               </div>
-              <h3 className="text-[17px] font-bold text-[#111827] mb-2">Medida Registrada!</h3>
-              <p className="text-[13px] text-[#9ca3af] mb-6 leading-relaxed">A medida disciplinar foi salva com sucesso no sistema.</p>
-              <button
-                onClick={reset}
-                className="w-full py-2.5 bg-[#3d6cf0] text-white rounded-lg text-[13px] font-semibold hover:bg-[#2d5ce0] transition-all"
-              >
-                Novo Registro →
-              </button>
+              <h3 className="font-black text-xl text-slate-800 mb-2">Sucesso!</h3>
+              <p className="text-slate-500 text-sm mb-8 leading-relaxed">A medida administrativa foi processada e salva no sistema.</p>
+              <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs tracking-widest hover:bg-[#2d5ce0]">VER LISTAGEM</button>
             </div>
           </div>
         )}
