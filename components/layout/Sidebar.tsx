@@ -16,9 +16,6 @@ const navItems = [
   { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks }, // Novo item adicionado
   { label: 'Equipamentos',  href: '/equipamentos',   icon: Briefcase },
   { label: 'QR Codes',      href: '/qr-codes',       icon: QrCode },
-  { section: 'Gestão' },
-  { label: 'Relatórios',    href: '/relatorios',     icon: BarChart2 },
-  { label: 'Usuários',      href: '/usuarios',       icon: Users },
 ]
 
 interface SidebarProps {

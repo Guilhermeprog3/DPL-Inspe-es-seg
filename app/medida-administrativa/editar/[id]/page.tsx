@@ -63,9 +63,7 @@ export default function EditarMedidaPage() {
   // Form States
   const [nomeColab, setNomeColab] = useState('')
   const [matriculaColab, setMatriculaColab] = useState('')
-  const [statusColab, setStatusColab] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
   const [matriculaSup, setMatriculaSup] = useState('')
-  const [statusSup, setStatusSup] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
   const [nomeSupervisor, setNomeSupervisor] = useState('')
   const [dataMedida, setDataMedida] = useState('')
   const [tipoCategoria, setTipoCategoria] = useState<TipoCategoria>('')
@@ -77,13 +75,62 @@ export default function EditarMedidaPage() {
   const [relacionarClick, setRelacionarClick] = useState(false)
   const [numeroInspecao, setNumeroInspecao] = useState('')
 
-  // Estados Anexos (apenas visual, descartados após salvar — não são enviados ao backend)
+  // ── Estados Autocomplete (Taxa de Contato) ──
+  const [colaboradoresRepo, setColaboradoresRepo] = useState<any[]>([])
+  const [showColabDropdown, setShowColabDropdown] = useState(false)
+  const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
+
+  // Estados Anexos
   const [anexos, setAnexos] = useState<Anexo[]>([])
   const [isDragging, setIsDragging] = useState(false)
 
   // Pesquisa Classificação
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+
+  // ─── BUSCA COLABORADORES DO SUPABASE VIA BACKEND ────────────────────────
+  useEffect(() => {
+    const fetchColabs = async () => {
+      const token = (session as any)?.access_token || (session as any)?.accessToken
+      if (!token) return
+      try {
+        const res = await fetch('http://localhost:3001/taxa-contato/recentes', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setColaboradoresRepo(data)
+        }
+      } catch (e) { console.error("Erro fetch colabs", e) }
+    }
+    fetchColabs()
+  }, [session])
+
+  // ─── LÓGICA DE FILTRO AUTOCOMPLETE ──────────────────────────────────────
+  const colabsFiltrados = useMemo(() => {
+    const termoBusca = String(nomeColab || '').toLowerCase()
+    if (termoBusca.length < 2) return []
+    return colaboradoresRepo.filter(c =>
+      String(c.NOME || '').toLowerCase().includes(termoBusca)
+    ).slice(0, 8)
+  }, [nomeColab, colaboradoresRepo])
+
+  const chapasFiltradas = useMemo(() => {
+    const termoBusca = String(matriculaColab || '').toLowerCase()
+    if (termoBusca.length < 1) return []
+    return colaboradoresRepo.filter(c =>
+      String(c.CHAPA || '').toLowerCase().includes(termoBusca)
+    ).slice(0, 8)
+  }, [matriculaColab, colaboradoresRepo])
+
+  // Ao selecionar um colaborador do dropdown, preenche todos os campos relacionados
+  const selecionarColab = (item: any) => {
+    setNomeColab(String(item.NOME || ''))
+    setMatriculaColab(String(item.CHAPA || ''))
+    setNomeSupervisor(String(item.SUPERVISOR || ''))
+    setShowColabDropdown(false)
+    setShowMatriculaDropdown(false)
+  }
 
   // ─── FUNÇÕES ANEXOS ──────────────────────────────────────────────────────
   function handleFilesAdd(files: FileList | null) {
@@ -116,7 +163,6 @@ export default function EditarMedidaPage() {
     return <File size={20} className="text-slate-400" />
   }
 
-  // Limpa previews ao desmontar
   useEffect(() => {
     return () => anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
   }, [])
@@ -128,7 +174,7 @@ export default function EditarMedidaPage() {
     )
   }, [searchQuery])
 
-  // ─── CARREGAR DADOS ──────────────────────────────────────────────────────
+  // ─── CARREGAR DADOS DA MEDIDA ────────────────────────────────────────────
   useEffect(() => {
     if (!medidaId) return
     const token = (session as any)?.access_token || (session as any)?.accessToken
@@ -156,9 +202,6 @@ export default function EditarMedidaPage() {
         setOcorrencia(data.ocorrencia ?? '')
         setNumeroInspecao(data.numeroInspecao ?? '')
         setRelacionarClick(!!data.numeroInspecao)
-
-        setStatusColab('valid')
-        setStatusSup('valid')
 
         setOriginal({
           colaborador: data.colaborador ?? '',
@@ -238,7 +281,6 @@ export default function EditarMedidaPage() {
       })
       if (!res.ok) throw new Error('Erro ao salvar no servidor.')
 
-      // Limpa os object URLs antes de ir para sucesso
       anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
       setAnexos([])
 
@@ -277,14 +319,8 @@ export default function EditarMedidaPage() {
     }
   }
 
-  const validar = (val: string, set: any) => {
-    if (val.length < 4) { set('idle'); return }
-    set('loading')
-    setTimeout(() => set('valid'), 600)
-  }
-
   const tabValid: Record<TabKey, boolean> = {
-    identificacao: !!nomeColab && statusColab === 'valid' && statusSup === 'valid' && !!nomeSupervisor && !!dataMedida,
+    identificacao: !!nomeColab && !!matriculaColab && !!nomeSupervisor && !!dataMedida,
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade: !!gravidade,
     ocorrencia: !!classificacao && ocorrencia.trim().length >= 10,
@@ -296,8 +332,8 @@ export default function EditarMedidaPage() {
 
   // Styles
   const inputCls = cn('w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13.5px] outline-none focus:border-[#094780] transition-all')
-  const formRowCls = cn('grid gap-4 items-center px-6 py-4 border-b border-[#e3e8ef] last:border-b-0')
-  const labelCls = 'text-[13.5px] font-medium text-[#111827]'
+  const formRowCls = cn('grid gap-4 items-start px-6 py-4 border-b border-[#e3e8ef] last:border-b-0')
+  const labelCls = 'text-[13.5px] font-medium text-[#111827] mt-2'
   const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
 
   if (loadState === 'loading') return (
@@ -366,44 +402,93 @@ export default function EditarMedidaPage() {
 
           {/* ── IDENTIFICAÇÃO ── */}
           {tab === 'identificacao' && (
-            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-              <div className={sectionTitleCls}>Identificação</div>
+            // REMOVIDO overflow-hidden para o dropdown não ficar por baixo do card
+            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl shadow-sm">
+              <div className={sectionTitleCls + ' rounded-t-xl'}>Identificação</div>
 
-              {/* Nomes Colaborador e Supervisor */}
+              {/* Nomes: Colaborador (autocomplete por nome) + Supervisor */}
               <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
                 <span className={labelCls}>Nomes *</span>
-                <input
-                  type="text"
-                  value={nomeColab}
-                  onChange={e => setNomeColab(e.target.value)}
-                  className={inputCls}
-                  placeholder="Nome do colaborador"
-                />
+
+                {/* Input Nome com Autocomplete */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={nomeColab}
+                    onFocus={() => setShowColabDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowColabDropdown(false), 200)}
+                    onChange={e => {
+                      setNomeColab(e.target.value)
+                      setShowColabDropdown(true)
+                    }}
+                    className={inputCls}
+                    placeholder="Pesquisar nome..."
+                  />
+                  {showColabDropdown && colabsFiltrados.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto">
+                      {colabsFiltrados.map((c, i) => (
+                        <div
+                          key={i}
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                          onMouseDown={() => selecionarColab(c)}
+                        >
+                          <p className="font-bold text-slate-700">{c.NOME}</p>
+                          <p className="text-slate-400">Chapa: {c.CHAPA} | Supervisor: {c.SUPERVISOR}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <input
                   type="text"
                   value={nomeSupervisor}
                   onChange={e => setNomeSupervisor(e.target.value)}
-                  className={inputCls}
+                  className={cn(inputCls, 'bg-slate-50/50')}
                   placeholder="Nome do supervisor"
                 />
               </div>
 
-              {/* Matrículas */}
+              {/* Matrículas: Colaborador (autocomplete por chapa) + Supervisor */}
               <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
-                <span className={labelCls}>Matrículas (Colab/Sup) *</span>
-                <input
-                  type="text"
-                  value={matriculaColab}
-                  onChange={e => { setMatriculaColab(e.target.value); validar(e.target.value, setStatusColab) }}
-                  className={inputCls}
-                  placeholder="M001"
-                />
+                <span className={labelCls}>Matrículas *</span>
+
+                {/* Input Chapa com Autocomplete */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={matriculaColab}
+                    onFocus={() => setShowMatriculaDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowMatriculaDropdown(false), 200)}
+                    onChange={e => {
+                      setMatriculaColab(e.target.value)
+                      setShowMatriculaDropdown(true)
+                    }}
+                    className={inputCls}
+                    placeholder="Mat. Colaborador (Chapa)"
+                  />
+                  {showMatriculaDropdown && chapasFiltradas.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto">
+                      {chapasFiltradas.map((c, i) => (
+                        <div
+                          key={i}
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                          onMouseDown={() => selecionarColab(c)}
+                        >
+                          <p className="font-bold text-slate-700">{c.CHAPA}</p>
+                          <p className="text-slate-400">{c.NOME}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <input
                   type="text"
                   value={matriculaSup}
-                  onChange={e => { setMatriculaSup(e.target.value); validar(e.target.value, setStatusSup) }}
+                  onChange={e => setMatriculaSup(e.target.value)}
                   className={inputCls}
-                  placeholder="M002"
+                  placeholder="Mat. Supervisor"
                 />
               </div>
 
@@ -578,7 +663,6 @@ export default function EditarMedidaPage() {
           {tab === 'anexos' && (
             <div className="fade-up space-y-4">
 
-              {/* SEÇÃO ANEXOS */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={sectionTitleCls}>
                   Anexos
@@ -587,7 +671,6 @@ export default function EditarMedidaPage() {
                   </span>
                 </div>
 
-                {/* Drop Zone */}
                 <div className="p-6">
                   <div
                     className={cn(
@@ -627,7 +710,6 @@ export default function EditarMedidaPage() {
                   />
                 </div>
 
-                {/* Lista de arquivos anexados */}
                 {anexos.length > 0 && (
                   <div className="px-6 pb-6 space-y-2">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">
@@ -665,7 +747,6 @@ export default function EditarMedidaPage() {
                 )}
               </div>
 
-              {/* SEÇÃO VÍNCULO */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={sectionTitleCls}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">

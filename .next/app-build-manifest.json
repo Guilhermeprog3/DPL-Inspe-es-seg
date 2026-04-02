@@ -1,10 +1,9 @@
 {
   "pages": {
-    "/modulos/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/modulos/page.css",
-      "static/chunks/app/modulos/page.js"
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -18,40 +17,66 @@
       "static/css/app/login/page.css",
       "static/chunks/app/login/page.js"
     ],
-    "/cadastro/page": [
+    "/modulos/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/cadastro/page.js"
+      "static/css/app/modulos/page.css",
+      "static/chunks/app/modulos/page.js"
     ],
     "/medida-administrativa/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/medida-administrativa/page.js"
     ],
-    "/medida-administrativa/nova/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/medida-administrativa/nova/page.js"
-    ],
     "/medida-administrativa/lista/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/medida-administrativa/lista/page.js"
     ],
+    "/medida-administrativa/nova/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/medida-administrativa/nova/page.js"
+    ],
+    "/cadastro/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/cadastro/page.js"
+    ],
+    "/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/page.js"
+    ],
+    "/inspecao/nova/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/inspecao/nova/page.js"
+    ],
+    "/inspecao/lista/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/inspecao/lista/page.js"
+    ],
+    "/equipamentos/lista/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/equipamentos/lista/page.js"
+    ],
+    "/equipamentos/novo/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/equipamentos/novo/page.js"
+    ],
+    "/qr-codes/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/qr-codes/page.js"
+    ],
     "/recuperar-senha/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/recuperar-senha/page.js"
-    ],
-    "/medida-administrativa/detalhes/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/medida-administrativa/detalhes/[id]/page.js"
-    ],
-    "/medida-administrativa/editar/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/medida-administrativa/editar/[id]/page.js"
     ]
   }
 }

@@ -39,7 +39,6 @@ const TABS = [
 ] as const
 
 type TabKey = typeof TABS[number]['key']
-
 type Anexo = { id: string; file: File; preview?: string }
 
 export default function NovaMedidaPage() {
@@ -50,7 +49,7 @@ export default function NovaMedidaPage() {
   const [isRegistering, setIsRegistering] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Estados Form
+  // ── Estados Form ──
   const [nomeColab, setNomeColab] = useState('')
   const [matriculaColab, setMatriculaColab] = useState('')
   const [statusColab, setStatusColab] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle')
@@ -67,10 +66,68 @@ export default function NovaMedidaPage() {
   const [relacionarClick, setRelacionarClick] = useState(false)
   const [numeroInspecao, setNumeroInspecao] = useState('')
 
-  // Estados Anexos (apenas visual, descartados após salvar — não são enviados ao backend)
+  // ── Estados Autocomplete (Taxa de Contato) ──
+  const [colaboradoresRepo, setColaboradoresRepo] = useState<any[]>([])
+  const [showColabDropdown, setShowColabDropdown] = useState(false)
+  const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
+
+  // ── Estados Anexos ──
   const [anexos, setAnexos] = useState<Anexo[]>([])
   const [isDragging, setIsDragging] = useState(false)
 
+  // ── Busca Colaboradores do Supabase via Backend ──
+  useEffect(() => {
+    const fetchColabs = async () => {
+      const token = (session as any)?.access_token || (session as any)?.accessToken
+      if (!token) return
+      try {
+        const res = await fetch('http://localhost:3001/taxa-contato/recentes', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setColaboradoresRepo(data)
+        }
+      } catch (e) { console.error("Erro fetch colabs", e) }
+    }
+    fetchColabs()
+  }, [session])
+
+  // ── Lógica de Filtro e Seleção ──
+  // ── Lógica de Filtro e Seleção CORRIGIDA ──
+const colabsFiltrados = useMemo(() => {
+  // Garantimos que nomeColab seja tratado como string
+  const termoBusca = String(nomeColab || '').toLowerCase();
+  if (termoBusca.length < 2) return [];
+
+  return colaboradoresRepo.filter(c => 
+    String(c.NOME || '').toLowerCase().includes(termoBusca)
+  ).slice(0, 8);
+}, [nomeColab, colaboradoresRepo]);
+
+const chapasFiltradas = useMemo(() => {
+  // Garantimos que matriculaColab seja tratado como string
+  const termoBusca = String(matriculaColab || '').toLowerCase();
+  if (termoBusca.length < 1) return [];
+
+  return colaboradoresRepo.filter(c => {
+    const chapaStr = String(c.CHAPA || '').toLowerCase(); 
+    return chapaStr.includes(termoBusca);
+  }).slice(0, 8);
+}, [matriculaColab, colaboradoresRepo]);
+
+const selecionarColab = (item: any) => {
+  // O SEGREDO ESTÁ AQUI: Forçar a conversão para String ao selecionar
+  setNomeColab(String(item.NOME || ''));
+  setMatriculaColab(String(item.CHAPA || ''));
+  setNomeSupervisor(String(item.SUPERVISOR || ''));
+  
+  setStatusColab('valid');
+  setShowColabDropdown(false);
+  setShowMatriculaDropdown(false);
+};
+
+  // ── Handlers de Anexos ──
   function handleFilesAdd(files: FileList | null) {
     if (!files) return
     const novos = Array.from(files).map(file => {
@@ -101,12 +158,11 @@ export default function NovaMedidaPage() {
     return <File size={20} className="text-slate-400" />
   }
 
-  // Limpa previews ao desmontar
   useEffect(() => {
     return () => anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
   }, [])
 
-  // Estados Pesquisa
+  // ── Estados Pesquisa Classificação ──
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -115,12 +171,12 @@ export default function NovaMedidaPage() {
     return CLASSIFICACOES.filter(item => item.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [searchQuery])
 
+  // ── Registro Final ──
   async function handleRegister() {
     if (isRegistering || !allValid) return
     const token = (session as any)?.access_token || (session as any)?.accessToken
     if (!token) return
     setIsRegistering(true)
-    // Nota: anexos são descartados aqui intencionalmente — apenas visuais
     const payload = {
       colaborador: nomeColab,
       matricula: matriculaColab,
@@ -142,7 +198,6 @@ export default function NovaMedidaPage() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Erro ao registrar')
-      // Limpa os object URLs antes de ir para sucesso
       anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
       setAnexos([])
       setSuccessModal(true)
@@ -153,14 +208,8 @@ export default function NovaMedidaPage() {
     }
   }
 
-  const validar = (val: string, set: any) => {
-    if (val.length < 4) { set('idle'); return }
-    set('loading')
-    setTimeout(() => set('valid'), 600)
-  }
-
   const tabValid: Record<TabKey, boolean> = {
-    identificacao: !!nomeColab && statusColab === 'valid' && statusSup === 'valid' && !!nomeSupervisor && !!dataMedida,
+    identificacao: !!nomeColab && !!matriculaColab && !!nomeSupervisor && !!dataMedida,
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade: !!gravidade,
     ocorrencia: !!classificacao && ocorrencia.trim().length >= 10,
@@ -189,7 +238,6 @@ export default function NovaMedidaPage() {
 
       <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]">
 
-        {/* ── BREADCRUMB COM BOTÃO VOLTAR ── */}
         <div className="bg-white border-b border-[#e3e8ef] px-7 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
             <button
@@ -206,7 +254,6 @@ export default function NovaMedidaPage() {
           </span>
         </div>
 
-        {/* ── TABS ── */}
         <div className="bg-white border-b border-[#e3e8ef] px-7 flex overflow-x-auto">
           {TABS.map((t) => (
             <button
@@ -227,50 +274,89 @@ export default function NovaMedidaPage() {
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-8 pt-6 pb-28">
 
-          {/* ── IDENTIFICAÇÃO ── */}
+          {/* ── IDENTIFICAÇÃO (CORRIGIDA) ── */}
           {tab === 'identificacao' && (
-            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-              <div className={sectionTitleCls}>Dados do Colaborador</div>
+           <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl shadow-sm">
+              <div className={sectionTitleCls}>Dados do Colaborador (Taxa de Contato)</div>
 
-              {/* Nomes Colaborador e Supervisor */}
-              <div className="grid gap-4 items-center px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
-                <span className={labelCls}>Nomes *</span>
-                <input
-                  type="text"
-                  value={nomeColab}
-                  onChange={e => setNomeColab(e.target.value)}
-                  className={inputCls}
-                  placeholder="Nome completo do colaborador"
-                />
+              <div className="grid gap-4 items-start px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
+                <span className={labelCls + " mt-2"}>Nomes *</span>
+                
+                {/* Nome Colaborador com Autocomplete */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={nomeColab}
+                    onFocus={() => setShowColabDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowColabDropdown(false), 200)}
+                    onChange={e => setNomeColab(e.target.value)}
+                    className={inputCls}
+                    placeholder="Pesquisar nome..."
+                  />
+                  {showColabDropdown && colabsFiltrados.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-60 overflow-auto">
+                      {colabsFiltrados.map((c, i) => (
+                        <div 
+                          key={i} 
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                          onMouseDown={() => selecionarColab(c)}
+                        >
+                          <p className="font-bold text-slate-700">{c.NOME}</p>
+                          <p className="text-slate-400">Chapa: {c.CHAPA} | Supervisor: {c.SUPERVISOR}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <input
                   type="text"
                   value={nomeSupervisor}
                   onChange={e => setNomeSupervisor(e.target.value)}
-                  className={inputCls}
-                  placeholder="Nome completo do supervisor"
+                  className={cn(inputCls, "bg-slate-50/50")}
+                  placeholder="Nome do supervisor"
                 />
               </div>
 
-              {/* Matrículas */}
-              <div className="grid gap-4 items-center px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
-                <span className={labelCls}>Matrículas *</span>
-                <input
-                  type="text"
-                  value={matriculaColab}
-                  onChange={e => { setMatriculaColab(e.target.value); validar(e.target.value, setStatusColab) }}
-                  className={inputCls}
-                  placeholder="Mat. Colaborador"
-                />
+              <div className="grid gap-4 items-start px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
+                <span className={labelCls + " mt-2"}>Matrículas *</span>
+                
+                {/* Chapa/Matrícula com Autocomplete */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={matriculaColab}
+                    onFocus={() => setShowMatriculaDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowMatriculaDropdown(false), 200)}
+                    onChange={e => setMatriculaColab(e.target.value)}
+                    className={inputCls}
+                    placeholder="Mat. Colaborador (Chapa)"
+                  />
+                  {showMatriculaDropdown && chapasFiltradas.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-60 overflow-auto">
+                      {chapasFiltradas.map((c, i) => (
+                        <div 
+                          key={i} 
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                          onMouseDown={() => selecionarColab(c)}
+                        >
+                          <p className="font-bold text-slate-700">{c.CHAPA}</p>
+                          <p className="text-slate-400">{c.NOME}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <input
                   type="text"
                   value={matriculaSup}
-                  onChange={e => { setMatriculaSup(e.target.value); validar(e.target.value, setStatusSup) }}
+                  onChange={e => setMatriculaSup(e.target.value)}
                   className={inputCls}
                   placeholder="Mat. Supervisor"
                 />
               </div>
 
-              {/* Data */}
               <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
                 <span className={labelCls}>Data da Medida *</span>
                 <input
@@ -435,24 +521,13 @@ export default function NovaMedidaPage() {
           {/* ── ANEXOS & VÍNCULO ── */}
           {tab === 'anexos' && (
             <div className="fade-up space-y-4">
-
-              {/* SEÇÃO ANEXOS */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={sectionTitleCls}>
-                  Anexos
-                  <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-slate-400">
-                    (imagens e documentos — apenas visualização, não enviados ao sistema)
-                  </span>
-                </div>
-
-                {/* Drop Zone */}
+                <div className={sectionTitleCls}>Anexos</div>
                 <div className="p-6">
                   <div
                     className={cn(
                       'border-2 border-dashed rounded-2xl transition-all cursor-pointer',
-                      isDragging
-                        ? 'border-[#3d6cf0] bg-[#eff4ff]'
-                        : 'border-slate-200 bg-slate-50/50 hover:border-[#3d6cf0] hover:bg-[#eff4ff]/30'
+                      isDragging ? 'border-[#3d6cf0] bg-[#eff4ff]' : 'border-slate-200 bg-slate-50/50 hover:border-[#3d6cf0]'
                     )}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
@@ -460,199 +535,79 @@ export default function NovaMedidaPage() {
                     onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}
                   >
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
-                      <div className={cn(
-                        'w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all',
-                        isDragging ? 'bg-[#3d6cf0] text-white' : 'bg-white border border-slate-200 text-slate-400'
-                      )}>
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-white border border-slate-200 text-slate-400">
                         <Upload size={24} />
                       </div>
-                      <p className="text-sm font-semibold text-slate-600 mb-1">
-                        Arraste arquivos aqui ou{' '}
-                        <span className="text-[#3d6cf0]">clique para selecionar</span>
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        Imagens (JPG, PNG, WEBP) · Documentos (PDF) · Máx. 10 MB por arquivo
-                      </p>
+                      <p className="text-sm font-semibold text-slate-600 mb-1">Arraste arquivos aqui ou <span className="text-[#3d6cf0]">clique</span></p>
                     </div>
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={e => handleFilesAdd(e.target.files)}
-                  />
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e => handleFilesAdd(e.target.files)} />
                 </div>
-
-                {/* Lista de arquivos */}
                 {anexos.length > 0 && (
                   <div className="px-6 pb-6 space-y-2">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">
-                      {anexos.length} arquivo{anexos.length > 1 ? 's' : ''} selecionado{anexos.length > 1 ? 's' : ''}
-                    </p>
-                    <div className="space-y-2">
-                      {anexos.map(anexo => (
-                        <div
-                          key={anexo.id}
-                          className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group"
-                        >
-                          {anexo.preview ? (
-                            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200">
-                              <img src={anexo.preview} alt={anexo.file.name} className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                              {getFileIcon(anexo.file)}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-slate-700 truncate">{anexo.file.name}</p>
-                            <p className="text-[11px] text-slate-400">{formatBytes(anexo.file.size)}</p>
-                          </div>
-                          <button
-                            onClick={() => removerAnexo(anexo.id)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                    {anexos.map(anexo => (
+                      <div key={anexo.id} className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group">
+                        {anexo.preview ? <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200"><img src={anexo.preview} className="w-full h-full object-cover" /></div> : <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center">{getFileIcon(anexo.file)}</div>}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-700 truncate">{anexo.file.name}</p>
+                          <p className="text-[11px] text-slate-400">{formatBytes(anexo.file.size)}</p>
                         </div>
-                      ))}
-                    </div>
+                        <button onClick={() => removerAnexo(anexo.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 group-hover:opacity-100 opacity-0 transition-all"><Trash2 size={15} /></button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              {/* SEÇÃO VÍNCULO */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={sectionTitleCls}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={labelCls}>Inspeção CLICK</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {relacionarClick ? 'Campo ativo — informe o número' : 'Nenhuma inspeção vinculada'}
-                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{relacionarClick ? 'Campo ativo' : 'Sem vínculo'}</p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setRelacionarClick(v => !v)
-                        if (relacionarClick) setNumeroInspecao('')
-                      }}
-                      className={cn(
-                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200',
-                        relacionarClick ? 'bg-[#3d6cf0]' : 'bg-slate-200'
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200',
-                          relacionarClick ? 'translate-x-6' : 'translate-x-1'
-                        )}
-                      />
-                    </button>
+                    <button onClick={() => { setRelacionarClick(v => !v); if (relacionarClick) setNumeroInspecao('') }} className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', relacionarClick ? 'bg-[#3d6cf0]' : 'bg-slate-200')}><span className={cn('inline-block h-4 w-4 rounded-full bg-white shadow transition-transform', relacionarClick ? 'translate-x-6' : 'translate-x-1')} /></button>
                   </div>
-
-                  {relacionarClick && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={numeroInspecao}
-                        onChange={e => setNumeroInspecao(e.target.value)}
-                        className={inputCls}
-                        placeholder="Número da inspeção"
-                        autoFocus
-                      />
-                      {numeroInspecao && (
-                        <button
-                          onClick={() => setNumeroInspecao('')}
-                          className="text-slate-300 hover:text-slate-500 transition-colors flex-shrink-0"
-                        >
-                          <X size={15} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {relacionarClick && numeroInspecao && (
-                    <p className="text-[11px] text-[#3d6cf0] flex items-center gap-1">
-                      <Link2 size={11} /> Inspeção vinculada
-                    </p>
-                  )}
+                  {relacionarClick && <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)} className={inputCls} placeholder="Número da inspeção" />}
                 </div>
               </div>
-
             </div>
           )}
         </div>
 
-        {/* ── FOOTER COM PROGRESSO E BOTÕES ── */}
         <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t px-8 py-4 flex items-center justify-between z-50">
           <div className="hidden md:flex items-center gap-4">
             <div className="flex gap-1.5">
               {tabOrder.map((key, idx) => (
-                <div
-                  key={key}
-                  className={cn(
-                    'h-1.5 w-6 rounded-full transition-all duration-300',
-                    idx <= currentIdx ? 'bg-[#3d6cf0]' : 'bg-slate-200'
-                  )}
-                />
+                <div key={key} className={cn('h-1.5 w-6 rounded-full transition-all', idx <= currentIdx ? 'bg-[#3d6cf0]' : 'bg-slate-200')} />
               ))}
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-              {completedCount} de 5 ETAPAS CONCLUÍDAS
-            </span>
+            <span className="text-[10px] font-black text-slate-400 uppercase">Etapas: {completedCount}/5</span>
           </div>
 
           <div className="flex gap-3 w-full md:w-auto">
-            {currentIdx > 0 && (
-              <button
-                onClick={() => setTab(tabOrder[currentIdx - 1])}
-                className="flex-1 md:flex-none px-6 py-2 border-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50"
-              >
-                VOLTAR
-              </button>
-            )}
+            {currentIdx > 0 && <button onClick={() => setTab(tabOrder[currentIdx - 1])} className="flex-1 md:flex-none px-6 py-2 border-2 rounded-xl text-xs font-bold text-slate-500">VOLTAR</button>}
             <button
               disabled={currentIdx === 4 ? (!allValid || isRegistering) : false}
               onClick={() => currentIdx < 4 ? setTab(tabOrder[currentIdx + 1]) : handleRegister()}
-              className={cn(
-                'flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black tracking-widest text-white transition-all flex items-center justify-center gap-2',
-                (currentIdx < 4 || allValid)
-                  ? 'bg-[#3d6cf0] hover:bg-[#2d5ce0] shadow-lg shadow-blue-500/20'
-                  : 'bg-slate-200 cursor-not-allowed'
-              )}
+              className={cn('flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white transition-all', (currentIdx < 4 || allValid) ? 'bg-[#3d6cf0]' : 'bg-slate-200 cursor-not-allowed')}
             >
-              {isRegistering
-                ? <Loader2 className="animate-spin" size={16} />
-                : currentIdx < 4 ? 'PRÓXIMO' : 'SALVAR REGISTRO'
-              }
+              {isRegistering ? <Loader2 className="animate-spin" size={16} /> : currentIdx < 4 ? 'PRÓXIMO' : 'SALVAR REGISTRO'}
             </button>
           </div>
         </div>
 
-        {/* ── MODAL SUCESSO ── */}
         {successModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
             <div className="bg-white p-10 rounded-3xl text-center shadow-2xl max-w-sm">
-              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle size={48} className="text-emerald-500" />
-              </div>
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={48} className="text-emerald-500" /></div>
               <h3 className="font-black text-xl text-slate-800 mb-2">Sucesso!</h3>
-              <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                A medida administrativa foi processada e salva no sistema.
-              </p>
-              <button
-                onClick={() => router.push('/medida-administrativa/lista')}
-                className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs tracking-widest hover:bg-[#2d5ce0]"
-              >
-                VER LISTAGEM
-              </button>
+              <p className="text-slate-500 text-sm mb-8 leading-relaxed">A medida administrativa foi processada e salva.</p>
+              <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs tracking-widest">VER LISTAGEM</button>
             </div>
           </div>
         )}
-
       </div>
     </MedidaLayout>
   )

@@ -10,9 +10,9 @@ import { gerarCodigoInspecao, cn } from '@/lib/utils'
 import { Html5Qrcode } from 'html5-qrcode'
 
 import {
-  CheckCircle, Zap, Search, AlertCircle, ShieldCheck,
+  CheckCircle, Search, AlertCircle, ShieldCheck,
   Wrench, Image as ImageIcon, ArrowLeft, CheckCircle2,
-  XCircle, MinusCircle,
+  XCircle, MinusCircle, Loader2, QrCode, X, Keyboard,
 } from 'lucide-react'
 import type { Equipamento, RespostaChecklist } from '@/types'
 
@@ -35,20 +35,25 @@ type AcaoCorretiva = {
 }
 
 const STATUS_OPTIONS: { value: AcaoCorretiva['status']; label: string; color: string }[] = [
-  { value: 'a_atribuir',   label: 'A Atribuir',    color: '#6b7a90' },
-  { value: 'a_iniciar',    label: 'A Iniciar',      color: '#3b82f6' },
-  { value: 'em_andamento', label: 'Em Andamento',   color: '#f59e0b' },
-  { value: 'cancelado',    label: 'Cancelado',      color: '#ef4444' },
-  { value: 'concluido',    label: 'Concluído',      color: '#10b981' },
+  { value: 'a_atribuir',   label: 'A Atribuir',   color: '#6b7a90' },
+  { value: 'a_iniciar',    label: 'A Iniciar',     color: '#3b82f6' },
+  { value: 'em_andamento', label: 'Em Andamento',  color: '#f59e0b' },
+  { value: 'cancelado',    label: 'Cancelado',     color: '#ef4444' },
+  { value: 'concluido',    label: 'Concluído',     color: '#10b981' },
 ]
 
+// Todas as tabs sempre visíveis — QR Code é a primeira etapa
 const TABS = [
+  { key: 'qrcode',    label: 'QR Code',        icon: QrCode      },
   { key: 'checklist', label: 'Inspeção',        icon: ShieldCheck },
-  { key: 'acao',      label: 'Ação Corretiva',  icon: Wrench },
+  { key: 'acao',      label: 'Ação Corretiva',  icon: Wrench      },
 ] as const
+
+type TabKey = typeof TABS[number]['key']
 
 export default function InspecaoPage() {
   const [mounted, setMounted]                   = useState(false)
+  const [tab, setTab]                           = useState<TabKey>('qrcode')
   const [equipamentoPonto, setEquipamentoPonto] = useState<Equipamento | null>(null)
   const [serieBusca, setSerieBusca]             = useState('')
   const [showSuggestions, setShowSuggestions]   = useState(false)
@@ -56,7 +61,9 @@ export default function InspecaoPage() {
   const [successModal, setSuccessModal]         = useState(false)
   const [codigoGerado, setCodigoGerado]         = useState('')
   const [scanKey, setScanKey]                   = useState(0)
-  const [tab, setTab]                           = useState<'checklist' | 'acao'>('checklist')
+  const [isSaving, setIsSaving]                 = useState(false)
+  const [idManual, setIdManual]                 = useState('')
+  const [idManualError, setIdManualError]       = useState('')
 
   const [acao, setAcao] = useState<AcaoCorretiva>({
     status: '', dataVencimento: '', titulo: '', descricao: '',
@@ -69,11 +76,12 @@ export default function InspecaoPage() {
 
   useEffect(() => { setMounted(true) }, [])
 
+  // ── Leitura do QR Code ──
   const handleScan = useCallback((val: string) => {
     if (scanFinishedRef.current) return
     const found = mockEquipamentos.find(e =>
       e.uuid === val || e.codigo.toLowerCase() === val.toLowerCase()
-    ) as Equipamento
+    ) as Equipamento | undefined
     if (found) {
       scanFinishedRef.current = true
       setEquipamentoPonto(found)
@@ -106,27 +114,58 @@ export default function InspecaoPage() {
     } catch {
       alert('QR Code não detectado na imagem. Tente uma foto mais nítida.')
     }
+    e.target.value = ''
   }
 
-  const handleToggleResposta = (idItem: string, valor: OpcaoResposta | string) => {
-    setRespostas(prev => {
-      const idx = prev.findIndex(r => r.idItem === idItem)
-      const nova: RespostaChecklist = {
-        idItem,
-        resposta: valor as any,
-        valor: (valor === 'ok' ? 'OK' : valor === 'na' ? 'N/A' : valor === 'nao_conforme' ? 'NC' : valor) as any,
-      }
-      if (idx > -1) { const arr = [...prev]; arr[idx] = nova; return arr }
-      return [...prev, nova]
+  // Limpa apenas o QR sem resetar o formulário
+  const handleClearQr = () => {
+    scanFinishedRef.current = false
+    setEquipamentoPonto(null)
+    setSerieBusca('')
+    setIdManual('')
+    setIdManualError('')
+    setScanKey(k => k + 1)
+  }
+
+  // Reset completo para nova inspeção
+  const handleReset = () => {
+    handleClearQr()
+    setRespostas([])
+    setShowSuggestions(false)
+    setSuccessModal(false)
+    setTab('qrcode')
+    setAcao({
+      status: '', dataVencimento: '', titulo: '', descricao: '',
+      numNaoConformidade: '', empresaResponsavel: '', nomeResponsavel: '', emailsCopia: '',
     })
   }
 
-  const handleReset = () => {
-    scanFinishedRef.current = false
-    setEquipamentoPonto(null); setSerieBusca(''); setRespostas([])
-    setShowSuggestions(false); setScanKey(k => k + 1)
-    setSuccessModal(false); setTab('checklist')
-    setAcao({ status: '', dataVencimento: '', titulo: '', descricao: '', numNaoConformidade: '', empresaResponsavel: '', nomeResponsavel: '', emailsCopia: '' })
+  const handleIdManualSubmit = () => {
+    const val = idManual.trim()
+    if (!val) return
+    const found = mockEquipamentos.find(e =>
+      e.uuid === val || e.codigo.toLowerCase() === val.toLowerCase()
+    ) as Equipamento | undefined
+    if (found) {
+      scanFinishedRef.current = true
+      setEquipamentoPonto(found)
+      setIdManualError('')
+      if (found.tipo.toLowerCase().includes('extintor'))
+        setSerieBusca(found.numeroSerieCilindro || found.codigoGalao || '')
+      captureGeo()
+    } else {
+      setIdManualError('Equipamento não encontrado. Verifique o ID informado.')
+    }
+  }
+
+  const handleToggleResposta = (idItem: string, valor: string) => {
+    setRespostas(prev => {
+      const idx = prev.findIndex(r => r.idItem === idItem)
+      const valorDisplay = valor === 'ok' ? 'OK' : valor === 'na' ? 'N/A' : valor === 'nao_conforme' ? 'NC' : valor
+      const nova = { idItem, resposta: valor as any, valor: valorDisplay as any } as RespostaChecklist
+      if (idx > -1) { const arr = [...prev]; arr[idx] = nova; return arr }
+      return [...prev, nova]
+    })
   }
 
   const template = useMemo(() => {
@@ -135,9 +174,9 @@ export default function InspecaoPage() {
   }, [equipamentoPonto])
 
   const itensChecklist    = useMemo(() => template?.itens.filter(i => i.pergunta !== 'Teste Hidrostático') || [], [template])
-  const itensNaoConformes = useMemo(() => respostas.filter(r => r.resposta === 'nao_conforme'), [respostas])
+  const itensNaoConformes  = useMemo(() => respostas.filter(r => (r.resposta as string) === 'nao_conforme'), [respostas])
   const temNaoConformidade = itensNaoConformes.length > 0
-  const isExtintor = useMemo(() => equipamentoPonto?.tipo.toLowerCase().includes('extintor'), [equipamentoPonto])
+  const isExtintor        = useMemo(() => equipamentoPonto?.tipo.toLowerCase().includes('extintor'), [equipamentoPonto])
 
   const dadosCilindro = useMemo(() => {
     if (!serieBusca) return null
@@ -156,466 +195,674 @@ export default function InspecaoPage() {
     ).slice(0, 5)
   }, [serieBusca])
 
-  const canFinishChecklist = respostas.length >= (template?.itens.length || 0) && (!isExtintor || !!dadosCilindro)
-  const canSaveAcao = acao.status !== '' && !!acao.dataVencimento && !!acao.titulo && !!acao.descricao && !!acao.empresaResponsavel && !!acao.nomeResponsavel
+  const checklistOk = respostas.length >= (itensChecklist.length || 0) && (!isExtintor || !!dadosCilindro)
+  const acaoOk      = acao.status !== '' && !!acao.dataVencimento && !!acao.titulo && !!acao.descricao && !!acao.empresaResponsavel && !!acao.nomeResponsavel
 
-  // Progresso do checklist
   const progressoPct = itensChecklist.length > 0
     ? Math.round((respostas.length / itensChecklist.length) * 100)
     : 0
 
-  const inputCls = 'w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl py-3.5 px-4 text-sm font-semibold text-[#1a2535] outline-none focus:border-[#094780]/40 focus:ring-2 focus:ring-[#094780]/08 transition-all placeholder:font-normal placeholder:text-[#b0bac8]'
-  const labelCls = 'text-[10px] font-black text-[#8896ab] uppercase tracking-[0.25em] mb-2 block'
+  // Progresso das etapas (acao só entra se houver não conformidade)
+  const tabOrder: TabKey[] = temNaoConformidade ? ['qrcode', 'checklist', 'acao'] : ['qrcode', 'checklist']
+  const currentIdx = tabOrder.indexOf(tab) === -1 ? 0 : tabOrder.indexOf(tab)
+
+  const tabValid: Record<TabKey, boolean> = {
+    qrcode:    !!equipamentoPonto,
+    checklist: checklistOk,
+    acao:      acaoOk,
+  }
+  const completedCount = tabOrder.filter(k => tabValid[k]).length
+
+  // ── Estilos compartilhados (idênticos à tela de medidas) ──
+  const inputCls        = cn('w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13.5px] outline-none focus:border-[#3d6cf0] transition-all')
+  const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
+  const labelCls        = 'text-[13.5px] font-medium text-[#111827]'
 
   if (!mounted) return null
 
   return (
     <DashboardLayout title="Executar Inspeção">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+          .fade-up { animation: fadeUp 0.2s ease forwards; }
+          @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+          .scale-in { animation: scaleIn 0.15s ease forwards; }
+          @keyframes scanLine { 0% { top: 0; } 100% { top: 100%; } }
+          .scan-line { animation: scanLine 1.8s ease-in-out infinite alternate; }
+          .prog-bar { transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+        `
+      }} />
 
-        .insp-root { font-family: 'DM Sans', sans-serif; }
+      <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]">
 
-        @keyframes scanLine {
-          0%   { top: 0; }
-          100% { top: 100%; }
-        }
-        .scan-line { animation: scanLine 1.8s ease-in-out infinite alternate; }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up { animation: fadeUp 0.35s ease forwards; }
-
-        @keyframes zoomIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        .modal-in { animation: zoomIn 0.28s cubic-bezier(.22,.68,0,1.2) forwards; }
-
-        /* Scrollbar */
-        .light-scroll::-webkit-scrollbar { width: 3px; }
-        .light-scroll::-webkit-scrollbar-track { background: transparent; }
-        .light-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
-
-        /* Radio */
-        .status-opt { transition: background 0.15s, border-color 0.15s; }
-        .status-opt:hover { background: #f8fafc; }
-
-        /* Progress bar */
-        .prog-bar { transition: width 0.5s cubic-bezier(.4,0,.2,1); }
-      `}</style>
-
-      <div className="insp-root w-full flex flex-col bg-white min-h-[calc(100vh-60px)]">
-
-        {/* ══ ESTADO 1 — AGUARDANDO QR CODE ══════════════════════════════════ */}
-        {!equipamentoPonto ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 bg-white">
-
-            {/* Eyebrow */}
-            <div className="flex items-center gap-3 mb-3">
-              <span className="w-8 h-px bg-[#094780]/20" />
-              <span className="text-[9px] font-black uppercase tracking-[0.4em] text-[#8896ab]">Leitura de Campo</span>
-              <span className="w-8 h-px bg-[#094780]/20" />
-            </div>
-
-            <h2 className="text-[#0d1e33] font-black text-3xl uppercase italic tracking-tighter mb-10 text-center leading-tight"
-              style={{ fontFamily: "'Syne', sans-serif" }}>
-              Aguardando<br />QR Code
-            </h2>
-
-            {/* Scanner card */}
-            <div className="w-full max-w-[320px] fade-up">
-              {/* Status pill */}
-              <div className="flex justify-center mb-4">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#e8edf3] shadow-sm">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="text-[9px] font-black text-[#6b7a90] uppercase tracking-[0.3em]">Pronto para leitura</span>
-                </div>
-              </div>
-
-              {/* Scanner box */}
-              <div className="relative rounded-[28px] overflow-hidden bg-[#07111f] shadow-2xl"
-                style={{ boxShadow: '0 24px 64px rgba(9,71,128,0.18)' }}>
-                <div className="aspect-square relative">
-                  <div className="absolute inset-0 z-0">
-                    <QrScanner key={scanKey} onScan={handleScan} />
-                  </div>
-
-                  {/* Overlay corners */}
-                  <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                    <div className="w-44 h-44 relative">
-                      <div className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-[#094780] rounded-tl-lg" />
-                      <div className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-[#094780] rounded-tr-lg" />
-                      <div className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-[#094780] rounded-bl-lg" />
-                      <div className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-[#094780] rounded-br-lg" />
-                      {/* Scan line */}
-                      <div className="scan-line absolute left-0 right-0 h-[2px] rounded-full"
-                        style={{ background: 'rgba(9,71,128,0.7)', boxShadow: '0 0 12px rgba(9,71,128,0.8)' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Upload */}
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-              <button onClick={() => fileInputRef.current?.click()}
-                className="w-full mt-3 p-4 bg-white border border-[#e8edf3] rounded-[22px] flex items-center gap-4 hover:bg-[#f8fafc] hover:border-[#094780]/20 transition-all shadow-sm group">
-                <div className="w-11 h-11 bg-[#f0f4f9] text-[#094780] rounded-xl flex items-center justify-center group-hover:bg-[#094780]/10 group-hover:scale-105 transition-all">
-                  <ImageIcon size={20} />
-                </div>
-                <div className="text-left">
-                  <p className="text-[12px] font-black text-[#1a2535] uppercase tracking-wide">Upload de Imagem</p>
-                  <p className="text-[10px] text-[#8896ab] font-medium mt-0.5">Selecionar foto com QR Code</p>
-                </div>
-              </button>
-            </div>
+        {/* ── Breadcrumb ── */}
+        <div className="bg-white border-b border-[#e3e8ef] px-7 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
+            <button
+              onClick={() => window.history.back()}
+              className="hover:text-[#3d6cf0] transition-colors flex items-center gap-1.5 font-medium"
+            >
+              <ArrowLeft size={14} /> Inspeções
+            </button>
+            <span className="text-[11px]">›</span>
+            <span className="text-[#3d6cf0] font-semibold">Nova Inspeção</span>
           </div>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Etapa {currentIdx + 1} de {tabOrder.length}
+          </span>
+        </div>
 
-        ) : (
-          /* ══ ESTADO 2 — CHECKLIST + AÇÃO CORRETIVA ══════════════════════ */
-          <div className="flex flex-col min-h-[calc(100vh-60px)] bg-white">
+        {/* ── Tab bar — todas sempre clicáveis ── */}
+        <div className="bg-white border-b border-[#e3e8ef] px-7 flex overflow-x-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                'flex items-center gap-2 px-5 py-4 text-[13.5px] border-b-[2.5px] whitespace-nowrap transition-all -mb-px',
+                tab === t.key
+                  ? 'text-[#3d6cf0] border-[#3d6cf0] font-semibold'
+                  : 'text-[#9ca3af] border-transparent hover:text-[#374151]'
+              )}
+            >
+              {t.label}
+              {tabValid[t.key] && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              )}
+            </button>
+          ))}
+        </div>
 
-            {/* ── Cabeçalho branco com info do equipamento ────────────────── */}
-            <div className="bg-white border-b border-[#e8edf3] px-6 pt-6 pb-0">
-              <button onClick={handleReset}
-                className="flex items-center gap-2 text-[#8896ab] hover:text-[#094780] mb-5 group transition-colors">
-                <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Voltar para leitura</span>
-              </button>
+        {/* ── Conteúdo rolável ── */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pt-6 pb-28">
 
-              {/* Equipamento info */}
-              <div className="flex items-start justify-between mb-5">
-                <div>
-                  <span className="text-[9px] font-black text-[#094780] uppercase tracking-[0.35em]">
-                    {tab === 'checklist' ? 'Ponto de Instalação' : 'Ação Corretiva'}
-                  </span>
-                  <h1 className="text-[28px] font-black tracking-tighter text-[#0d1e33] uppercase leading-none mt-0.5"
-                    style={{ fontFamily: "'Syne', sans-serif" }}>
-                    {equipamentoPonto.codigo}
-                  </h1>
-                  <p className="text-[11px] text-[#8896ab] font-medium mt-1">{equipamentoPonto.tipo}</p>
-                </div>
-                <div className="bg-[#f0f4f9] p-2.5 rounded-xl border border-[#e2e8f0]">
-                  {tab === 'checklist'
-                    ? <ShieldCheck size={20} className="text-[#094780]" />
-                    : <Wrench size={20} className="text-[#094780]" />}
+          {/* ══ TAB QR CODE ══ */}
+          {tab === 'qrcode' && (
+            <div className="fade-up max-w-sm mx-auto space-y-4">
+
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Leitura de Campo</div>
+                <div className="p-6 space-y-4">
+
+                  {/* Badge: equipamento lido */}
+                  {equipamentoPonto ? (
+                    <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
+                        <div>
+                          <p className="text-[13px] font-black text-emerald-800 uppercase">{equipamentoPonto.codigo}</p>
+                          <p className="text-[11px] text-emerald-600">{equipamentoPonto.tipo}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleClearQr}
+                        title="Remover e reler"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-400 hover:text-red-400 hover:bg-red-50 transition-all"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center">
+                      <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f8fafc] border border-[#e3e8ef]">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">
+                          Aguardando leitura
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Câmera — só quando não leu ainda */}
+                  {!equipamentoPonto && (
+                    <div className="relative rounded-xl overflow-hidden bg-[#07111f] shadow-lg">
+                      <div className="aspect-square relative">
+                        <div className="absolute inset-0 z-0">
+                          <QrScanner key={scanKey} onScan={handleScan} />
+                        </div>
+                        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                          <div className="w-44 h-44 relative">
+                            <div className="absolute top-0 left-0 w-7 h-7 border-t-[3px] border-l-[3px] border-[#3d6cf0] rounded-tl-lg" />
+                            <div className="absolute top-0 right-0 w-7 h-7 border-t-[3px] border-r-[3px] border-[#3d6cf0] rounded-tr-lg" />
+                            <div className="absolute bottom-0 left-0 w-7 h-7 border-b-[3px] border-l-[3px] border-[#3d6cf0] rounded-bl-lg" />
+                            <div className="absolute bottom-0 right-0 w-7 h-7 border-b-[3px] border-r-[3px] border-[#3d6cf0] rounded-br-lg" />
+                            <div
+                              className="scan-line absolute left-0 right-0 h-[2px] rounded-full"
+                              style={{ background: 'rgba(61,108,240,0.7)', boxShadow: '0 0 12px rgba(61,108,240,0.8)' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload de imagem */}
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-10 bg-[#f8fafc] border border-[#e3e8ef] rounded-lg flex items-center gap-3 px-3 hover:border-[#3d6cf0] transition-all group"
+                  >
+                    <ImageIcon size={15} className="text-[#9ca3af] group-hover:text-[#3d6cf0] transition-colors flex-shrink-0" />
+                    <span className="text-[13px] font-medium text-[#9ca3af] group-hover:text-[#3d6cf0] transition-colors">
+                      Upload de imagem com QR Code
+                    </span>
+                  </button>
+
+                  {/* Divisor */}
+                  {!equipamentoPonto && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-[#e3e8ef]" />
+                      <span className="text-[10px] font-bold text-[#c3cad4] uppercase tracking-widest">ou</span>
+                      <div className="flex-1 h-px bg-[#e3e8ef]" />
+                    </div>
+                  )}
+
+                  {/* Input manual de ID */}
+                  {!equipamentoPonto && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Keyboard size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+                          <input
+                            type="text"
+                            value={idManual}
+                            onChange={e => { setIdManual(e.target.value); setIdManualError('') }}
+                            onKeyDown={e => e.key === 'Enter' && handleIdManualSubmit()}
+                            className={cn(
+                              inputCls,
+                              'pl-9',
+                              idManualError ? 'border-red-300 focus:border-red-400' : ''
+                            )}
+                            placeholder="Digitar ID do equipamento..."
+                          />
+                        </div>
+                        <button
+                          onClick={handleIdManualSubmit}
+                          disabled={!idManual.trim()}
+                          className={cn(
+                            'h-10 px-4 rounded-lg text-xs font-black text-white transition-all flex-shrink-0',
+                            idManual.trim() ? 'bg-[#3d6cf0] hover:bg-[#3460d8]' : 'bg-slate-200 cursor-not-allowed'
+                          )}
+                        >
+                          OK
+                        </button>
+                      </div>
+                      {idManualError && (
+                        <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-100 rounded-lg">
+                          <AlertCircle size={13} className="text-red-400 flex-shrink-0" />
+                          <p className="text-[11px] text-red-600 font-medium">{idManualError}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Reler outro QR (quando já leu) */}
+                  {equipamentoPonto && (
+                    <button
+                      onClick={handleClearQr}
+                      className="w-full h-10 bg-[#f8fafc] border border-[#e3e8ef] rounded-lg flex items-center gap-3 px-3 hover:border-[#3d6cf0] transition-all group"
+                    >
+                      <QrCode size={15} className="text-[#9ca3af] group-hover:text-[#3d6cf0] transition-colors flex-shrink-0" />
+                      <span className="text-[13px] font-medium text-[#9ca3af] group-hover:text-[#3d6cf0] transition-colors">
+                        Ler outro QR Code
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Barra de progresso do checklist */}
-              {tab === 'checklist' && (
-                <div className="mb-5">
-                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-[#8896ab] mb-1.5">
-                    <span>Progresso</span>
-                    <span>{respostas.length}/{itensChecklist.length} itens · {progressoPct}%</span>
-                  </div>
-                  <div className="h-1.5 bg-[#f0f4f9] rounded-full overflow-hidden">
-                    <div className="prog-bar h-full rounded-full"
-                      style={{
-                        width: `${progressoPct}%`,
-                        background: progressoPct === 100 ? '#10b981' : 'linear-gradient(90deg,#094780,#3b82f6)',
-                      }} />
-                  </div>
+              {/* Aviso de avanço sem QR */}
+              {!equipamentoPonto && (
+                <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-amber-700 font-medium leading-relaxed">
+                    Você pode avançar sem ler o QR Code, mas o equipamento não será vinculado automaticamente à inspeção.
+                  </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ══ TAB CHECKLIST ══ */}
+          {tab === 'checklist' && (
+            <div className="fade-up space-y-4">
+
+              {/* Info do equipamento */}
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Ponto de Instalação</div>
+                <div className="px-6 py-4 flex items-center justify-between">
+                  {equipamentoPonto ? (
+                    <>
+                      <div>
+                        <p className="text-[18px] font-black text-[#111827] uppercase tracking-tight">
+                          {equipamentoPonto.codigo}
+                        </p>
+                        <p className="text-[12px] text-[#9ca3af] mt-0.5">{equipamentoPonto.tipo}</p>
+                      </div>
+                      <button
+                        onClick={() => setTab('qrcode')}
+                        className="flex items-center gap-1.5 text-[11px] font-bold text-[#3d6cf0] hover:underline"
+                      >
+                        <QrCode size={13} /> Trocar
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center flex-shrink-0">
+                        <AlertCircle size={16} className="text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#374151]">Sem equipamento vinculado</p>
+                        <button
+                          onClick={() => setTab('qrcode')}
+                          className="text-[11px] font-bold text-[#3d6cf0] hover:underline"
+                        >
+                          Ler QR Code →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Barra de progresso */}
+                {itensChecklist.length > 0 && (
+                  <div className="px-6 pb-4 border-t border-[#e3e8ef] pt-4">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-[#9ca3af] mb-1.5">
+                      <span>Progresso</span>
+                      <span>{respostas.length}/{itensChecklist.length} itens · {progressoPct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#f0f4f9] rounded-full overflow-hidden">
+                      <div
+                        className="prog-bar h-full rounded-full"
+                        style={{
+                          width: `${progressoPct}%`,
+                          background: progressoPct === 100 ? '#10b981' : 'linear-gradient(90deg,#3d6cf0,#60a5fa)',
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Busca cilindro extintor */}
-              {tab === 'checklist' && isExtintor && (
-                <div className="border-t border-[#e8edf3] pt-5 mb-0">
-                  <label className={labelCls}>Número de Série do Cilindro</label>
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8896ab]" size={15} />
-                    <input type="text" value={serieBusca}
-                      onChange={e => { setSerieBusca(e.target.value); setShowSuggestions(true) }}
-                      onFocus={() => setShowSuggestions(true)}
-                      className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl py-3.5 pl-11 pr-4 text-sm font-semibold text-[#1a2535] focus:border-[#094780]/40 focus:ring-2 focus:ring-[#094780]/06 transition-all outline-none uppercase placeholder:font-normal placeholder:text-[#b0bac8] placeholder:normal-case"
-                      placeholder="Pesquisar cilindro..." />
-                    {showSuggestions && sugestoes.length > 0 && (
-                      <div className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#e8edf3] overflow-hidden">
-                        {sugestoes.map(s => (
-                          <div key={s.id}
-                            className="p-4 border-b border-[#f0f2f5] last:border-0 cursor-pointer hover:bg-[#f8fafc] transition-colors"
-                            onClick={() => { setSerieBusca(s.numeroSerieCilindro || s.codigoGalao || ''); setShowSuggestions(false) }}>
-                            <p className="text-sm font-bold text-[#1a2535]">{s.numeroSerieCilindro || s.codigoGalao}</p>
-                            <p className="text-[10px] text-[#094780] font-bold uppercase mt-0.5">{s.agente} · {s.carga}</p>
+              {isExtintor && (
+                <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                  <div className={sectionTitleCls}>Número de Série do Cilindro</div>
+                  <div className="px-6 py-4 space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" size={15} />
+                      <input
+                        type="text"
+                        value={serieBusca}
+                        onChange={e => { setSerieBusca(e.target.value); setShowSuggestions(true) }}
+                        onFocus={() => setShowSuggestions(true)}
+                        className={cn(inputCls, 'pl-9 uppercase')}
+                        placeholder="Pesquisar cilindro..."
+                      />
+                      {showSuggestions && sugestoes.length > 0 && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setShowSuggestions(false)} />
+                          <div className="absolute z-40 w-full mt-1 bg-white border border-[#e3e8ef] rounded-lg shadow-xl max-h-60 overflow-auto">
+                            {sugestoes.map(s => (
+                              <div
+                                key={s.id}
+                                className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                                onMouseDown={() => { setSerieBusca(s.numeroSerieCilindro || s.codigoGalao || ''); setShowSuggestions(false) }}
+                              >
+                                <p className="font-bold text-slate-700">{s.numeroSerieCilindro || s.codigoGalao}</p>
+                                <p className="text-slate-400">{s.agente} · {s.carga}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {serieBusca && (
-                    <div className="mt-3 mb-1">
-                      {dadosCilindro ? (
+                        </>
+                      )}
+                    </div>
+                    {serieBusca && (
+                      dadosCilindro ? (
                         <div className="grid grid-cols-3 gap-2">
                           {[
                             { label: 'Carga',    value: dadosCilindro.carga,   ok: true },
                             { label: 'Agente',   value: dadosCilindro.agente,  ok: true },
                             { label: 'Validade', value: dadosCilindro.validadeRecarga || dadosCilindro.proximaInspecao, ok: dadosCilindro.status !== 'vencido' },
                           ].map(info => (
-                            <div key={info.label} className="bg-[#f8fafc] border border-[#e8edf3] rounded-xl p-3 text-center">
-                              <p className="text-[8px] text-[#8896ab] uppercase font-black tracking-wider mb-1">{info.label}</p>
-                              <p className={cn('text-[11px] font-black truncate', info.ok ? 'text-[#1a2535]' : 'text-red-500')}>
+                            <div key={info.label} className="bg-[#f8fafc] border border-[#e3e8ef] rounded-lg p-3 text-center">
+                              <p className="text-[9px] text-[#9ca3af] uppercase font-bold tracking-wider mb-1">{info.label}</p>
+                              <p className={cn('text-[11px] font-black truncate', info.ok ? 'text-[#111827]' : 'text-red-500')}>
                                 {info.value}
                               </p>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2.5 p-3.5 bg-red-50 border border-red-100 rounded-2xl">
-                          <AlertCircle size={15} className="text-red-500 flex-shrink-0" />
-                          <p className="text-[11px] text-red-600 font-bold">Cilindro não localizado no sistema</p>
+                        <div className="flex items-center gap-2.5 p-3 bg-red-50 border border-red-100 rounded-lg">
+                          <AlertCircle size={14} className="text-red-500 flex-shrink-0" />
+                          <p className="text-[12px] text-red-600 font-semibold">Cilindro não localizado no sistema</p>
                         </div>
-                      )}
-                    </div>
-                  )}
+                      )
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* Tab bar */}
-              <div className="flex gap-0 -mb-px mt-2">
-                {TABS.map(t => {
-                  const Icon = t.icon
-                  const isActive = tab === t.key
-                  const isLocked = t.key === 'acao' && !canFinishChecklist
-                  return (
-                    <button key={t.key}
-                      onClick={() => !isLocked && setTab(t.key)}
-                      className={cn(
-                        'flex items-center gap-2 px-5 py-3.5 text-[12px] font-bold border-b-2 transition-all relative',
-                        isActive
-                          ? 'text-[#094780] border-[#094780]'
-                          : isLocked
-                            ? 'text-[#c8d0dc] border-transparent cursor-not-allowed'
-                            : 'text-[#8896ab] border-transparent hover:text-[#1a2535] hover:border-[#e2e8f0]',
-                      )}>
-                      <Icon size={14} />
-                      {t.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+              {/* Itens do checklist */}
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Itens de Verificação</div>
 
-            {/* ── Conteúdo scrollável ──────────────────────────────────────── */}
-            <div className="flex-1 overflow-y-auto light-scroll bg-[#f8fafc] px-6 pt-6 pb-32">
-
-              {/* TAB — CHECKLIST */}
-              {tab === 'checklist' && (
-                <div className="space-y-2.5 max-w-2xl mx-auto fade-up">
-                  {itensChecklist.map((item, idx) => {
-                    const r = respostas.find(res => res.idItem === item.id)
-                    return (
-                      <div key={item.id}
-                        className="bg-white rounded-[20px] border border-[#e8edf3] px-5 py-4 flex items-center justify-between gap-4 shadow-sm hover:border-[#094780]/15 transition-all"
-                        style={{ animationDelay: `${idx * 0.03}s` }}>
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <span className="text-[10px] font-black text-[#b0bac8] w-5 flex-shrink-0">{String(idx + 1).padStart(2, '0')}</span>
-                          <p className="text-[13px] font-semibold text-[#1a2535] leading-snug">{item.pergunta}</p>
+                {itensChecklist.length === 0 ? (
+                  <div className="px-6 py-10 text-center space-y-2">
+                    <p className="text-[13px] text-[#9ca3af]">
+                      {equipamentoPonto
+                        ? 'Nenhum item de verificação para este equipamento.'
+                        : 'Leia o QR Code para carregar os itens de verificação.'}
+                    </p>
+                    {!equipamentoPonto && (
+                      <button
+                        onClick={() => setTab('qrcode')}
+                        className="text-[12px] font-bold text-[#3d6cf0] hover:underline"
+                      >
+                        Ir para leitura QR →
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[#f1f5f9]">
+                    {itensChecklist.map((item, idx) => {
+                      const r = respostas.find(res => res.idItem === item.id)
+                      return (
+                        <div
+                          key={item.id}
+                          className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-[#fafbff] transition-colors"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span className="text-[10px] font-black text-[#d1d5db] w-5 flex-shrink-0 tabular-nums">
+                              {String(idx + 1).padStart(2, '0')}
+                            </span>
+                            <p className="text-[13.5px] font-medium text-[#111827] leading-snug">{item.pergunta}</p>
+                          </div>
+                          <div className="flex gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => handleToggleResposta(item.id, 'ok')}
+                              className={cn(
+                                'w-9 h-9 rounded-lg border-2 flex items-center justify-center transition-all',
+                                (r?.resposta as string) === 'ok'
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
+                                  : 'bg-white border-[#e3e8ef] text-[#d1d5db] hover:border-emerald-300 hover:text-emerald-500',
+                              )}
+                            >
+                              <CheckCircle2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleToggleResposta(item.id, 'nao_conforme')}
+                              className={cn(
+                                'w-9 h-9 rounded-lg border-2 flex items-center justify-center transition-all',
+                                (r?.resposta as string) === 'nao_conforme'
+                                  ? 'bg-red-500 border-red-500 text-white shadow-sm'
+                                  : 'bg-white border-[#e3e8ef] text-[#d1d5db] hover:border-red-300 hover:text-red-500',
+                              )}
+                            >
+                              <XCircle size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleToggleResposta(item.id, 'na')}
+                              className={cn(
+                                'w-9 h-9 rounded-lg border-2 flex items-center justify-center transition-all',
+                                (r?.resposta as string) === 'na'
+                                  ? 'bg-slate-500 border-slate-500 text-white shadow-sm'
+                                  : 'bg-white border-[#e3e8ef] text-[#d1d5db] hover:border-slate-300 hover:text-slate-500',
+                              )}
+                            >
+                              <MinusCircle size={14} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          {/* OK */}
-                          <button onClick={() => handleToggleResposta(item.id, 'ok')}
-                            className={cn(
-                              'w-10 h-10 rounded-xl font-black text-[10px] border-2 flex items-center justify-center transition-all',
-                              r?.resposta === 'ok'
-                                ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/25'
-                                : 'bg-white border-[#e2e8f0] text-[#b0bac8] hover:border-emerald-300 hover:text-emerald-500',
-                            )}>
-                            <CheckCircle2 size={15} />
-                          </button>
-                          {/* NC */}
-                          <button onClick={() => handleToggleResposta(item.id, 'nao_conforme')}
-                            className={cn(
-                              'w-10 h-10 rounded-xl font-black text-[10px] border-2 flex items-center justify-center transition-all',
-                              r?.resposta === 'nao_conforme'
-                                ? 'bg-red-500 border-red-500 text-white shadow-md shadow-red-500/25'
-                                : 'bg-white border-[#e2e8f0] text-[#b0bac8] hover:border-red-300 hover:text-red-500',
-                            )}>
-                            <XCircle size={15} />
-                          </button>
-                          {/* N/A */}
-                          <button onClick={() => handleToggleResposta(item.id, 'na')}
-                            className={cn(
-                              'w-10 h-10 rounded-xl font-black text-[10px] border-2 flex items-center justify-center transition-all',
-                              r?.resposta === 'na'
-                                ? 'bg-slate-500 border-slate-500 text-white shadow-md shadow-slate-500/20'
-                                : 'bg-white border-[#e2e8f0] text-[#b0bac8] hover:border-slate-300 hover:text-slate-500',
-                            )}>
-                            <MinusCircle size={15} />
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
+                )}
 
-                  {/* Legenda */}
-                  <div className="flex items-center gap-4 pt-2 px-1">
+                {itensChecklist.length > 0 && (
+                  <div className="px-6 py-3 bg-[#f8fafc] border-t border-[#e3e8ef] flex items-center gap-5">
                     {[
-                      { icon: CheckCircle2, label: 'Conforme',       color: '#10b981' },
-                      { icon: XCircle,      label: 'Não Conforme',   color: '#ef4444' },
-                      { icon: MinusCircle,  label: 'Não Aplicável',  color: '#64748b' },
+                      { icon: CheckCircle2, label: 'Conforme',      color: '#10b981' },
+                      { icon: XCircle,      label: 'Não Conforme',  color: '#ef4444' },
+                      { icon: MinusCircle,  label: 'Não Aplicável', color: '#64748b' },
                     ].map(({ icon: Icon, label, color }) => (
                       <div key={label} className="flex items-center gap-1.5">
-                        <Icon size={12} style={{ color }} />
-                        <span className="text-[10px] text-[#8896ab] font-medium">{label}</span>
+                        <Icon size={11} style={{ color }} />
+                        <span className="text-[10px] text-[#9ca3af] font-medium">{label}</span>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* TAB — AÇÃO CORRETIVA */}
-              {tab === 'acao' && (
-                <div className="max-w-2xl mx-auto fade-up space-y-5">
-                  
-                  {/* Status */}
-                  <div className="bg-white rounded-[20px] border border-[#e8edf3] p-5 shadow-sm">
-                    <label className={labelCls}>Status da Ação *</label>
-                    <div className="space-y-2">
-                      {STATUS_OPTIONS.map(opt => (
-                        <div key={opt.value}
-                          onClick={() => setAcao(a => ({ ...a, status: opt.value }))}
-                          className={cn(
-                            'status-opt flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all',
-                            acao.status === opt.value
-                              ? 'border-[#094780]/20 bg-[#094780]/4'
-                              : 'border-transparent hover:bg-[#f8fafc]',
-                          )}>
-                          <div className={cn('w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
-                            acao.status === opt.value ? 'border-[#094780]' : 'border-[#d1d9e6]')}>
-                            {acao.status === opt.value && (
-                              <div className="w-2.5 h-2.5 rounded-full bg-[#094780]" />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: opt.color }} />
-                            <span className={cn('text-sm font-semibold',
-                              acao.status === opt.value ? 'text-[#094780]' : 'text-[#4a5568]')}>
-                              {opt.label}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Campos principais */}
-                  <div className="bg-white rounded-[20px] border border-[#e8edf3] p-5 shadow-sm space-y-4">
-                    <div>
-                      <label className={labelCls}>Data Limite *</label>
-                      <input type="date" value={acao.dataVencimento}
-                        onChange={e => setAcao(a => ({ ...a, dataVencimento: e.target.value }))}
-                        className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Título da Ação *</label>
-                      <input type="text" value={acao.titulo}
-                        onChange={e => setAcao(a => ({ ...a, titulo: e.target.value }))}
-                        placeholder="Ex: Troca de mangueira"
-                        className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Descrição Detalhada *</label>
-                      <textarea value={acao.descricao}
-                        onChange={e => setAcao(a => ({ ...a, descricao: e.target.value }))}
-                        placeholder="Descreva o que deve ser feito..."
-                        rows={3} className={cn(inputCls, 'resize-none')} />
-                    </div>
-                  </div>
-
-                  {/* Responsável */}
-                  <div className="bg-white rounded-[20px] border border-[#e8edf3] p-5 shadow-sm space-y-4">
-                    <div className="flex items-center gap-3 pb-1">
-                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#8896ab]">Responsável</span>
-                      <div className="flex-1 h-px bg-[#e8edf3]" />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Relacionar com Não Conformidade</label>
-                      <select value={acao.numNaoConformidade}
-                        onChange={e => setAcao(a => ({ ...a, numNaoConformidade: e.target.value }))}
-                        className={inputCls}>
-                        <option value="">-</option>
-                        {itensNaoConformes.map((nc, i) => (
-                          <option key={nc.idItem} value={nc.idItem}>{i + 1} — {nc.idItem}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelCls}>Empresa Responsável *</label>
-                      <input type="text" value={acao.empresaResponsavel}
-                        onChange={e => setAcao(a => ({ ...a, empresaResponsavel: e.target.value }))}
-                        placeholder="Empresa responsável"
-                        className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Nome do Responsável *</label>
-                      <input type="text" value={acao.nomeResponsavel}
-                        onChange={e => setAcao(a => ({ ...a, nomeResponsavel: e.target.value }))}
-                        placeholder="Nome do técnico/encarregado"
-                        className={inputCls} />
-                    </div>
-                    <div>
-                      <label className={labelCls}>Copiar E-mail(s)</label>
-                      <input type="text" value={acao.emailsCopia}
-                        onChange={e => setAcao(a => ({ ...a, emailsCopia: e.target.value }))}
-                        placeholder="e-mails separados por vírgula"
-                        className={inputCls} />
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+          )}
 
-            {/* ── Barra inferior fixa ──────────────────────────────────────── */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-[#e8edf3] px-6 py-4">
+          {/* ══ TAB AÇÃO CORRETIVA ══ */}
+          {tab === 'acao' && (
+            <div className="fade-up space-y-4">
+
+              {/* Status */}
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Status da Ação *</div>
+                <div className="p-4 space-y-1.5">
+                  {STATUS_OPTIONS.map(opt => (
+                    <div
+                      key={opt.value}
+                      onClick={() => setAcao(a => ({ ...a, status: opt.value }))}
+                      className={cn(
+                        'p-4 rounded-xl border cursor-pointer flex items-center justify-between transition-all',
+                        acao.status === opt.value
+                          ? 'border-[#3d6cf0] bg-blue-50/50'
+                          : 'border-slate-50 hover:border-slate-100'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: opt.color }} />
+                        <span className="text-sm font-semibold text-slate-700">{opt.label}</span>
+                      </div>
+                      {acao.status === opt.value && <CheckCircle size={16} className="text-[#3d6cf0]" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Detalhes */}
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Detalhes da Ação</div>
+                <div className="divide-y divide-[#f1f5f9]">
+                  <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={labelCls}>Data Limite *</span>
+                    <input
+                      type="date"
+                      value={acao.dataVencimento}
+                      onChange={e => setAcao(a => ({ ...a, dataVencimento: e.target.value }))}
+                      className={cn(inputCls, 'max-w-[200px]')}
+                    />
+                  </div>
+                  <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={labelCls}>Título da Ação *</span>
+                    <input
+                      type="text"
+                      value={acao.titulo}
+                      onChange={e => setAcao(a => ({ ...a, titulo: e.target.value }))}
+                      className={inputCls}
+                      placeholder="Ex: Troca de mangueira"
+                    />
+                  </div>
+                  <div className="grid gap-4 items-start px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={cn(labelCls, 'mt-2')}>Descrição Detalhada *</span>
+                    <textarea
+                      value={acao.descricao}
+                      onChange={e => setAcao(a => ({ ...a, descricao: e.target.value }))}
+                      placeholder="Descreva o que deve ser feito..."
+                      rows={4}
+                      className={cn(inputCls, 'h-auto py-2.5 resize-none leading-relaxed')}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Responsável */}
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Responsável</div>
+                <div className="divide-y divide-[#f1f5f9]">
+                  <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={labelCls}>Não Conformidade</span>
+                    <select
+                      value={acao.numNaoConformidade}
+                      onChange={e => setAcao(a => ({ ...a, numNaoConformidade: e.target.value }))}
+                      className={inputCls}
+                    >
+                      <option value="">— Selecionar —</option>
+                      {itensNaoConformes.map((nc, i) => (
+                        <option key={nc.idItem} value={nc.idItem}>{i + 1} — {nc.idItem}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={labelCls}>Empresa Responsável *</span>
+                    <input
+                      type="text"
+                      value={acao.empresaResponsavel}
+                      onChange={e => setAcao(a => ({ ...a, empresaResponsavel: e.target.value }))}
+                      className={inputCls}
+                      placeholder="Nome da empresa"
+                    />
+                  </div>
+                  <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={labelCls}>Nome do Responsável *</span>
+                    <input
+                      type="text"
+                      value={acao.nomeResponsavel}
+                      onChange={e => setAcao(a => ({ ...a, nomeResponsavel: e.target.value }))}
+                      className={inputCls}
+                      placeholder="Nome do técnico/encarregado"
+                    />
+                  </div>
+                  <div className="grid gap-4 items-center px-6 py-4 grid-cols-1 sm:grid-cols-[200px_1fr]">
+                    <span className={labelCls}>Copiar E-mail(s)</span>
+                    <input
+                      type="text"
+                      value={acao.emailsCopia}
+                      onChange={e => setAcao(a => ({ ...a, emailsCopia: e.target.value }))}
+                      className={inputCls}
+                      placeholder="e-mails separados por vírgula"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Barra inferior fixa ── */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t px-8 py-4 flex items-center justify-between z-50">
+
+          {/* Indicador de progresso */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex gap-1.5">
+              {tabOrder.map((key) => (
+                <div
+                  key={key}
+                  className={cn(
+                    'h-1.5 w-6 rounded-full transition-all',
+                    tabValid[key] ? 'bg-[#3d6cf0]' : 'bg-slate-200'
+                  )}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] font-black text-slate-400 uppercase">
+              Etapas: {completedCount}/{tabOrder.length}
+            </span>
+          </div>
+
+          <div className="flex gap-3 w-full md:w-auto">
+
+            {/* Botão VOLTAR — não aparece na primeira tab */}
+            {currentIdx > 0 && (
               <button
-                disabled={(tab === 'checklist' ? !canFinishChecklist : !canSaveAcao) || geoLoading}
+                onClick={() => setTab(tabOrder[currentIdx - 1])}
+                className="flex-1 md:flex-none px-6 py-2 border-2 rounded-xl text-xs font-bold text-slate-500"
+              >
+                VOLTAR
+              </button>
+            )}
+
+            {/* QR Code → sempre pode avançar */}
+            {tab === 'qrcode' && (
+              <button
+                onClick={() => setTab('checklist')}
+                className="flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white bg-[#3d6cf0] transition-all"
+              >
+                {equipamentoPonto ? 'PRÓXIMO' : 'AVANÇAR SEM QR CODE'}
+              </button>
+            )}
+
+            {/* Checklist → precisa completar todos os itens */}
+            {tab === 'checklist' && (
+              <button
+                disabled={!checklistOk}
                 onClick={() => {
-                  if (tab === 'checklist') {
-                    if (temNaoConformidade) setTab('acao')
-                    else { setCodigoGerado(gerarCodigoInspecao()); setSuccessModal(true) }
-                  } else {
-                    setCodigoGerado(gerarCodigoInspecao()); setSuccessModal(true)
-                  }
+                  if (temNaoConformidade) setTab('acao')
+                  else { setCodigoGerado(gerarCodigoInspecao()); setSuccessModal(true) }
                 }}
                 className={cn(
-                  'w-full py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2.5 transition-all text-[12px] uppercase tracking-wide',
-                  (tab === 'checklist' ? canFinishChecklist : canSaveAcao) && !geoLoading
-                    ? 'bg-[#094780] shadow-lg shadow-[#094780]/20 hover:bg-[#0a5494]'
-                    : 'bg-[#d1d9e6] text-[#8896ab] cursor-not-allowed',
-                )}>
-                <Zap size={16} fill="currentColor" />
-                {tab === 'checklist'
-                  ? (temNaoConformidade ? 'Próximo — Ação Corretiva' : 'Concluir Inspeção')
-                  : 'Salvar e Concluir Inspeção'}
+                  'flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white transition-all flex items-center justify-center',
+                  checklistOk ? 'bg-[#3d6cf0]' : 'bg-slate-200 cursor-not-allowed'
+                )}
+              >
+                {isSaving
+                  ? <Loader2 className="animate-spin" size={16} />
+                  : temNaoConformidade ? 'PRÓXIMO' : 'CONCLUIR INSPEÇÃO'
+                }
+              </button>
+            )}
+
+            {/* Ação Corretiva → precisa preencher todos os campos */}
+            {tab === 'acao' && (
+              <button
+                disabled={!acaoOk || isSaving || geoLoading}
+                onClick={() => { setCodigoGerado(gerarCodigoInspecao()); setSuccessModal(true) }}
+                className={cn(
+                  'flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white transition-all flex items-center justify-center gap-2',
+                  acaoOk && !geoLoading ? 'bg-[#3d6cf0]' : 'bg-slate-200 cursor-not-allowed'
+                )}
+              >
+                {isSaving || geoLoading
+                  ? <Loader2 className="animate-spin" size={16} />
+                  : 'SALVAR INSPEÇÃO'
+                }
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ══ MODAL SUCESSO ══ */}
+        {successModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+            <div className="bg-white p-10 rounded-3xl text-center shadow-2xl max-w-sm scale-in">
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle size={48} className="text-emerald-500" />
+              </div>
+              <h3 className="font-black text-xl text-slate-800 mb-2">Sucesso!</h3>
+              <p className="text-slate-500 text-sm mb-2 leading-relaxed">
+                Inspeção registrada com sucesso.
+              </p>
+              <p className="text-[#3d6cf0] font-black text-xs mb-8 uppercase tracking-widest">
+                #{codigoGerado}
+              </p>
+              <button
+                onClick={handleReset}
+                className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs tracking-widest"
+              >
+                PRÓXIMA INSPEÇÃO →
               </button>
             </div>
           </div>
         )}
 
-        {/* ══ MODAL SUCESSO ════════════════════════════════════════════════ */}
-        {successModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[#0d1e33]/80 backdrop-blur-md">
-            <div className="modal-in bg-white rounded-[36px] w-full max-w-xs p-10 text-center shadow-2xl">
-              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-lg">
-                <CheckCircle size={40} className="text-emerald-500" />
-              </div>
-              <h3 className="text-2xl font-black text-[#0d1e33] mb-1 uppercase italic"
-                style={{ fontFamily: "'Syne', sans-serif" }}>Sucesso!</h3>
-              <p className="text-[10px] text-[#8896ab] font-bold mb-8 uppercase tracking-[0.25em]">
-                Inspeção #{codigoGerado} salva.
-              </p>
-              <button
-                className="w-full py-4 bg-[#094780] text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-[#0a5494] transition-all"
-                onClick={handleReset}>
-                Próximo Equipamento →
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   )

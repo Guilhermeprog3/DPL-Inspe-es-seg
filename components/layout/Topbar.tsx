@@ -1,6 +1,6 @@
 'use client'
 import { useSession } from 'next-auth/react'
-import { Bell, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 
 interface TopbarProps {
   title: string
@@ -46,13 +46,6 @@ export function Topbar({ title, breadcrumb, sidebarExpanded, onToggleSidebar }: 
         <span className="text-xs text-[#6b7a90]">
           {user?.uf ?? 'PI'} · {user?.regional ?? 'Metropolitana'}
         </span>
-
-        <div className="relative">
-          <Bell size={18} className="text-[#6b7a90]" />
-          <span className="absolute -top-1 -right-1 bg-[#E67A0E] text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-            3
-          </span>
-        </div>
 
         <div className="w-8 h-8 rounded-full bg-[#E67A0E] flex items-center justify-center text-[12px] font-bold text-white">
           {user?.name?.charAt(0) ?? 'U'}

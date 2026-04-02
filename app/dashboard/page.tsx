@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, ListChecks, PackageSearch, ArrowRight, Boxes, Flame, Search } from 'lucide-react'
+import { ClipboardList, ListChecks, Boxes, ArrowRight, Search, QrCode } from 'lucide-react'
 
 const actions = [
   {
@@ -24,14 +24,13 @@ const actions = [
     href: '/inspecao/lista',
   },
   {
-    icon: Flame,
-    color: '#ef4444',
-    colorLight: 'rgba(239,68,68,0.08)',
-    title: 'Equipamentos Pendentes',
-    description: 'Visualize equipamentos que ainda não foram inspecionados ou com prazo vencido.',
-    cta: 'Ver pendentes',
-    href: '/equipamentos/pendentes',
-    badge: '7 pendentes',
+    icon: QrCode,
+    color: '#E67A0E',
+    colorLight: 'rgba(230,122,14,0.08)',
+    title: 'Gerar QR Code',
+    description: 'Gere e imprima QR Codes para equipamentos cadastrados e fixe nos pontos de inspeção.',
+    cta: 'Gerar QR Code',
+    href: '/equipamentos/qrcode',
   },
   {
     icon: Boxes,
@@ -137,7 +136,6 @@ export default function DashboardPage() {
           text-align: center;
         }
 
-        /* SEARCH */
         .search-container {
           width: 100%;
           max-width: 500px;
@@ -176,7 +174,6 @@ export default function DashboardPage() {
           align-items: center;
         }
 
-        /* GRID — 4 colunas */
         .db-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -185,7 +182,6 @@ export default function DashboardPage() {
           max-width: 1100px;
         }
 
-        /* CARD */
         .db-card {
           background: #fff;
           border-radius: 18px;
@@ -242,24 +238,6 @@ export default function DashboardPage() {
           box-shadow: 0 4px 14px rgba(0,0,0,0.12);
         }
 
-        .db-card-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 10px;
-          font-weight: 700;
-          padding: 3px 9px;
-          border-radius: 100px;
-          margin-bottom: 10px;
-          align-self: flex-start;
-        }
-        .db-card-badge-dot {
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          animation: dbPulse 1.8s infinite;
-        }
-
         .db-card-title {
           font-family: 'Syne', sans-serif;
           font-size: 15px;
@@ -297,7 +275,6 @@ export default function DashboardPage() {
         }
         .db-card:hover .db-card-cta-line { width: 28px; }
 
-        /* EMPTY STATE */
         .no-results {
           grid-column: 1 / -1;
           text-align: center;
@@ -314,17 +291,11 @@ export default function DashboardPage() {
           margin-bottom: 6px;
         }
 
-        /* ANIMATIONS */
         @keyframes dbFadeUp {
           from { opacity: 0; transform: translateY(20px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes dbPulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.7); }
-        }
 
-        /* RESPONSIVE */
         @media (max-width: 960px) {
           .db-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -350,7 +321,6 @@ export default function DashboardPage() {
           <p className="db-subline">PI · Regional Metropolitana</p>
         </div>
 
-        {/* BARRA DE PESQUISA */}
         <div className="search-container">
           <span className="search-icon">
             <Search size={16} />
@@ -365,7 +335,6 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* GRID */}
         <div className="db-grid">
           {filteredActions.length > 0 ? (
             filteredActions.map((a, index) => {
@@ -394,16 +363,6 @@ export default function DashboardPage() {
                   >
                     <Icon size={22} color="#fff" strokeWidth={1.8} />
                   </div>
-
-                  {a.badge && (
-                    <div
-                      className="db-card-badge"
-                      style={{ background: a.colorLight, color: a.color }}
-                    >
-                      <span className="db-card-badge-dot" style={{ background: a.color }} />
-                      {a.badge}
-                    </div>
-                  )}
 
                   <p className="db-card-title">{a.title}</p>
                   <p className="db-card-desc">{a.description}</p>

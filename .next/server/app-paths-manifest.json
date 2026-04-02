@@ -1,8 +1,10 @@
 {
-  "/medida-administrativa/detalhes/[id]/page": "app/medida-administrativa/detalhes/[id]/page.js",
-  "/cadastro/page": "app/cadastro/page.js",
-  "/medida-administrativa/lista/page": "app/medida-administrativa/lista/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/medida-administrativa/nova/page": "app/medida-administrativa/nova/page.js",
-  "/medida-administrativa/editar/[id]/page": "app/medida-administrativa/editar/[id]/page.js"
+  "/equipamentos/novo/page": "app/equipamentos/novo/page.js",
+  "/modulos/page": "app/modulos/page.js",
+  "/login/page": "app/login/page.js",
+  "/qr-codes/page": "app/qr-codes/page.js",
+  "/medida-administrativa/page": "app/medida-administrativa/page.js",
+  "/inspecao/nova/page": "app/inspecao/nova/page.js"
 }

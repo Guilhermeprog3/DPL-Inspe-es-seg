@@ -1,295 +1,646 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { useRouter } from 'next/navigation'
-import {
-  Search, CheckCircle2, AlertTriangle, XCircle,
-  Clock, Eye, User, Calendar, Hash, FilterX, SlidersHorizontal, ChevronDown, Boxes, Plus
-} from 'lucide-react'
 
-/* ─── Mock data ─── */
-const INSPECOES = [
-  { id: 'INS-0041', equipId: 'EQ-9921', equipamento: 'Extintor CO₂ – Bloco A', tipo: 'Extintor', inspetor: 'Carlos Mendes', regional: 'Metropolitana', data: '2026-03-19T10:32:00', status: 'aprovado' },
-  { id: 'INS-0040', equipId: 'EQ-4412', equipamento: 'Mangueira HID-12 – Pav 3', tipo: 'Hidrante', inspetor: 'Ana Souza', regional: 'Metropolitana', data: '2026-03-19T08:15:00', status: 'atencao' },
-  { id: 'INS-0039', equipId: 'EQ-1022', equipamento: 'Extintor Pó – Oficina', tipo: 'Extintor', inspetor: 'João Lima', regional: 'Norte', data: '2026-03-18T16:44:00', status: 'reprovado' },
-  { id: 'INS-0038', equipId: 'EQ-8855', equipamento: 'Sprinkler – Almoxarifado', tipo: 'Sprinkler', inspetor: 'Carlos Mendes', regional: 'Metropolitana', data: '2026-03-18T14:10:00', status: 'aprovado' },
-  { id: 'INS-0037', equipId: 'EQ-3310', equipamento: 'Extintor ABC – Recepção', tipo: 'Extintor', inspetor: 'Mariana Farias', regional: 'Sul', data: '2026-03-17T11:05:00', status: 'aprovado' },
-  { id: 'INS-0036', equipId: 'EQ-5561', equipamento: 'Detector de Fumaça – TI', tipo: 'Detector', inspetor: 'Ana Souza', regional: 'Metropolitana', data: '2026-03-17T09:22:00', status: 'pendente' },
-  { id: 'INS-0035', equipId: 'EQ-7701', equipamento: 'Mangueira HID-07 – Pav 1', tipo: 'Hidrante', inspetor: 'João Lima', regional: 'Norte', data: '2026-03-16T15:00:00', status: 'atencao' },
-  { id: 'INS-0034', equipId: 'EQ-2230', equipamento: 'Extintor CO₂ – Datacenter', tipo: 'Extintor', inspetor: 'Pedro Alves', regional: 'Metropolitana', data: '2026-03-15T13:30:00', status: 'aprovado' },
+import * as XLSX from 'xlsx'
+
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import {
+  Search, Plus, MoreVertical, Eye,
+  Loader2, Trash2, Edit2, AlertCircle, X, SlidersHorizontal,
+  Download, CheckCircle2, AlertTriangle, XCircle, Clock,
+  ShieldCheck,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+type StatusKey = 'aprovado' | 'atencao' | 'reprovado' | 'pendente'
+
+const STATUS_CONFIG: Record<StatusKey, {
+  label: string; icon: React.ElementType
+  color: string; bg: string; border: string
+}> = {
+  aprovado:  { label: 'Aprovado',  icon: CheckCircle2,   color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+  atencao:   { label: 'Atenção',   icon: AlertTriangle,  color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  reprovado: { label: 'Reprovado', icon: XCircle,        color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  pendente:  { label: 'Pendente',  icon: Clock,          color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+}
+
+const TIPO_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
+  'Extintor':  { color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+  'Hidrante':  { color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+  'Sprinkler': { color: '#7e22ce', bg: '#faf5ff', border: '#e9d5ff' },
+  'Detector':  { color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+}
+
+// ─── Mock data — substituir pela chamada real à API ───────────────────────────
+const MOCK: any[] = [
+  { id: 'INS-0041', equipId: 'EQ-9921', equipamento: 'Extintor CO₂ – Bloco A',       tipo: 'Extintor',  inspetor: 'Carlos Mendes',  regional: 'Metropolitana', data: '2026-03-19T10:32:00', status: 'aprovado'  },
+  { id: 'INS-0040', equipId: 'EQ-4412', equipamento: 'Mangueira HID-12 – Pav 3',     tipo: 'Hidrante',  inspetor: 'Ana Souza',       regional: 'Metropolitana', data: '2026-03-19T08:15:00', status: 'atencao'   },
+  { id: 'INS-0039', equipId: 'EQ-1022', equipamento: 'Extintor Pó – Oficina',         tipo: 'Extintor',  inspetor: 'João Lima',       regional: 'Norte',         data: '2026-03-18T16:44:00', status: 'reprovado' },
+  { id: 'INS-0038', equipId: 'EQ-8855', equipamento: 'Sprinkler – Almoxarifado',      tipo: 'Sprinkler', inspetor: 'Carlos Mendes',   regional: 'Metropolitana', data: '2026-03-18T14:10:00', status: 'aprovado'  },
+  { id: 'INS-0037', equipId: 'EQ-3310', equipamento: 'Extintor ABC – Recepção',       tipo: 'Extintor',  inspetor: 'Mariana Farias',  regional: 'Sul',           data: '2026-03-17T11:05:00', status: 'aprovado'  },
+  { id: 'INS-0036', equipId: 'EQ-5561', equipamento: 'Detector de Fumaça – TI',       tipo: 'Detector',  inspetor: 'Ana Souza',       regional: 'Metropolitana', data: '2026-03-17T09:22:00', status: 'pendente'  },
+  { id: 'INS-0035', equipId: 'EQ-7701', equipamento: 'Mangueira HID-07 – Pav 1',     tipo: 'Hidrante',  inspetor: 'João Lima',       regional: 'Norte',         data: '2026-03-16T15:00:00', status: 'atencao'   },
+  { id: 'INS-0034', equipId: 'EQ-2230', equipamento: 'Extintor CO₂ – Datacenter',     tipo: 'Extintor',  inspetor: 'Pedro Alves',     regional: 'Metropolitana', data: '2026-03-15T13:30:00', status: 'aprovado'  },
 ]
 
-const STATUS_CONFIG = {
-  aprovado: { label: 'Aprovado', icon: CheckCircle2, color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
-  atencao: { label: 'Atenção', icon: AlertTriangle, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
-  reprovado: { label: 'Reprovado', icon: XCircle, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-  pendente: { label: 'Pendente', icon: Clock, color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
-} as const
-
-const TIPO_COLORS: Record<string, { bg: string; color: string }> = {
-  Extintor: { bg: '#eff6ff', color: '#1d4ed8' },
-  Hidrante: { bg: '#f0fdf4', color: '#15803d' },
-  Sprinkler: { bg: '#faf5ff', color: '#7e22ce' },
-  Detector: { bg: '#fff7ed', color: '#c2410c' },
+// ─── Export Excel ─────────────────────────────────────────────────────────────
+function exportToExcel(data: any[]) {
+  const rows = data.map(i => ({
+    'ID':          i.id ?? '',
+    'Equipamento': i.equipamento ?? '',
+    'ID Equip.':   i.equipId ?? '',
+    'Tipo':        i.tipo ?? '',
+    'Inspetor':    i.inspetor ?? '',
+    'Regional':    i.regional ?? '',
+    'Data':        i.data ? new Date(i.data).toLocaleDateString('pt-BR') : '',
+    'Hora':        i.data ? new Date(i.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+    'Status':      STATUS_CONFIG[i.status as StatusKey]?.label ?? i.status ?? '',
+  }))
+  const ws = XLSX.utils.json_to_sheet(rows)
+  ws['!cols'] = [
+    { wch: 12 }, { wch: 36 }, { wch: 12 }, { wch: 12 },
+    { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 12 },
+  ]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Inspeções')
+  const date = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')
+  XLSX.writeFile(wb, `inspecoes_${date}.xlsx`)
 }
 
-const fmt = (iso: string) => {
-  const d = new Date(iso)
-  return {
-    date: d.toLocaleDateString('pt-BR'),
-    time: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-  }
-}
-
-const INSPETORES = [...new Set(INSPECOES.map((i) => i.inspetor))]
-
-function InspetorCombobox({ value, onApply }: { value: string, onApply: (v: string) => void }) {
-  const [inputValue, setInputValue] = useState(value === 'Todos' ? '' : value)
+// ─── Action Menu ──────────────────────────────────────────────────────────────
+function ActionMenu({
+  onVisualizar, onEditar, onExcluir,
+}: { onVisualizar: () => void; onEditar: () => void; onExcluir: () => void }) {
   const [open, setOpen] = useState(false)
-  const [highlighted, setHighlighted] = useState(-1)
-  const wrapRef = useRef<HTMLDivElement>(null)
+  const [coords, setCoords] = useState({ top: 0, right: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => { if (value === 'Todos') setInputValue('') }, [value])
-
-  const suggestions = inputValue.trim()
-    ? INSPETORES.filter((n) => n.toLowerCase().includes(inputValue.toLowerCase()))
-    : INSPETORES
-
-  const select = (name: string) => {
-    setInputValue(name)
-    onApply(name)
-    setOpen(false)
+  function handleOpen() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setCoords({ top: r.bottom + 6, right: window.innerWidth - r.right })
+    }
+    setOpen(v => !v)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      setOpen(true)
-      setHighlighted((h) => Math.min(h + 1, suggestions.length - 1))
-      return
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      const target = e.target as Node
+      if (btnRef.current?.contains(target)) return
+      if (document.getElementById('action-menu-portal')?.contains(target)) return
+      setOpen(false)
     }
-    if (e.key === 'ArrowUp') setHighlighted((h) => Math.max(h - 1, 0))
-    if (e.key === 'Enter') {
-      if (highlighted >= 0) {
-        select(suggestions[highlighted])
-      } else {
-        onApply(inputValue.trim() === '' ? 'Todos' : inputValue)
-        setOpen(false)
-      }
-    }
-    if (e.key === 'Escape') setOpen(false)
-  }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handler = () => setOpen(false)
+    window.addEventListener('scroll', handler, true)
+    return () => window.removeEventListener('scroll', handler, true)
+  }, [open])
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
-      <div className="ins-field">
-        <span className="ins-field-icon"><User size={13} /></span>
-        <input
-          className="ins-input"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onFocus={() => setOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder="Enter p/ filtrar..."
-        />
-        <span className="ins-field-icon" style={{ right: 11, left: 'auto' }}><ChevronDown size={13} /></span>
-      </div>
-      {open && suggestions.length > 0 && (
-        <ul className="ins-combobox-list">
-          {suggestions.map((name, idx) => (
-            <li key={name} className={`ins-combobox-item ${highlighted === idx ? 'highlighted' : ''}`} onMouseDown={() => select(name)}>
-              {name}
-            </li>
-          ))}
-        </ul>
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={handleOpen}
+        className={cn(
+          'p-2 rounded-xl transition-all',
+          open ? 'bg-[#f0f4f9] text-[#3d6cf0]' : 'text-[#b0bac8] hover:text-[#3d6cf0] hover:bg-[#f0f4f9]'
+        )}
+      >
+        <MoreVertical size={20} />
+      </button>
+
+      {open && (
+        <div
+          id="action-menu-portal"
+          style={{
+            position: 'fixed', top: coords.top, right: coords.right,
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px',
+            boxShadow: '0 8px 30px rgba(0,0,0,.15)', zIndex: 9999,
+            width: '155px', overflow: 'hidden', animation: 'menuIn .15s ease-out',
+          }}
+        >
+          <button type="button" className="action-item" onClick={() => { setOpen(false); onVisualizar() }}>
+            <Eye size={14} /> Visualizar
+          </button>
+          <button type="button" className="action-item" onClick={() => { setOpen(false); onEditar() }}>
+            <Edit2 size={14} /> Editar
+          </button>
+          <div className="action-sep" />
+          <button type="button" className="action-item delete" onClick={() => { setOpen(false); onExcluir() }}>
+            <Trash2 size={14} /> Excluir
+          </button>
+        </div>
       )}
-    </div>
+    </>
   )
 }
 
-export default function InspecoesPage() {
+// ─── Badges ───────────────────────────────────────────────────────────────────
+function TipoBadge({ tipo }: { tipo: string }) {
+  const cfg = TIPO_CONFIG[tipo] ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
+  return (
+    <span
+      className="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase"
+      style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+    >
+      {tipo}
+    </span>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cfg = STATUS_CONFIG[status as StatusKey] ?? STATUS_CONFIG.pendente
+  const Icon = cfg.icon
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+      style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+    >
+      <Icon size={10} strokeWidth={2.5} />
+      {cfg.label}
+    </span>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function ListaInspecoesPage() {
   const router = useRouter()
+  const { data: session } = useSession()
 
-  const [filterId, setFilterId] = useState('')
-  const [filterEquip, setFilterEquip] = useState('')
-  const [filterInspetor, setFilterInspetor] = useState('Todos')
-  const [filterStatus, setFilterStatus] = useState('Todos')
-  const [filterData, setFilterData] = useState('')
+  const [inspecoes, setInspecoes]     = useState<any[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [isDeleting, setIsDeleting]   = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
-  const [draftId, setDraftId] = useState('')
-  const [draftEquip, setDraftEquip] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [idParaDeletar, setIdParaDeletar]     = useState<string | null>(null)
 
-  const handleKeyDownId = (e: React.KeyboardEvent) => { if (e.key === 'Enter') setFilterId(draftId) }
-  const handleKeyDownEquip = (e: React.KeyboardEvent) => { if (e.key === 'Enter') setFilterEquip(draftEquip) }
+  const [busca, setBusca]                   = useState('')
+  const [campoBusca, setCampoBusca]         = useState('todos')
+  const [filtroTipo, setFiltroTipo]         = useState('Todos')
+  const [filtroStatus, setFiltroStatus]     = useState('Todos')
+  const [filtroRegional, setFiltroRegional] = useState('Todos')
+  const [filtroInspetor, setFiltroInspetor] = useState('Todos')
+  const [filtroData, setFiltroData]         = useState('')
 
-  const filtered = INSPECOES.filter((i) => {
-    const matchId = i.id.toLowerCase().includes(filterId.toLowerCase())
-    const matchEquip = 
-        i.equipamento.toLowerCase().includes(filterEquip.toLowerCase()) || 
-        i.equipId.toLowerCase().includes(filterEquip.toLowerCase())
-    const matchInspetor = filterInspetor === 'Todos' || i.inspetor.toLowerCase().includes(filterInspetor.toLowerCase())
-    const matchStatus = filterStatus === 'Todos' || STATUS_CONFIG[i.status as keyof typeof STATUS_CONFIG].label === filterStatus
-    const matchData = !filterData || i.data.startsWith(filterData)
-    return matchId && matchEquip && matchInspetor && matchStatus && matchData
-  })
+  // ── Fetch (troque MOCK por chamada real) ──
+  useEffect(() => {
+    const fetchInspecoes = async () => {
+      setLoading(true)
+      try {
+        // const token = (session as any)?.access_token || (session as any)?.accessToken
+        // const res = await fetch('http://localhost:3001/inspecoes', { headers: { Authorization: `Bearer ${token}` } })
+        // setInspecoes(await res.json())
+        await new Promise(r => setTimeout(r, 600)) // simula latência
+        setInspecoes(MOCK)
+      } catch { console.error('Falha ao carregar') }
+      finally { setLoading(false) }
+    }
+    fetchInspecoes()
+  }, [session])
 
-  const resetFilters = () => {
-    setFilterId(''); setFilterEquip(''); setFilterInspetor('Todos')
-    setFilterStatus('Todos'); setFilterData(''); setDraftId(''); setDraftEquip('')
+  // ── Listas de opções dinâmicas ──
+  const listaRegionais = useMemo(() =>
+    Array.from(new Set(inspecoes.map(i => i.regional).filter(Boolean))).sort() as string[]
+  , [inspecoes])
+
+  const listaInspetores = useMemo(() =>
+    Array.from(new Set(inspecoes.map(i => i.inspetor).filter(Boolean))).sort() as string[]
+  , [inspecoes])
+
+  const handleOpenDeleteModal = (id: string) => { setIdParaDeletar(id); setShowDeleteModal(true) }
+
+  const confirmDelete = async () => {
+    if (!idParaDeletar) return
+    setIsDeleting(true)
+    try {
+      // await fetch(`http://localhost:3001/inspecoes/${idParaDeletar}`, { method: 'DELETE', ... })
+      setInspecoes(p => p.filter(i => i.id !== idParaDeletar))
+      setShowDeleteModal(false)
+    } catch { alert('Não foi possível excluir.') }
+    finally { setIsDeleting(false); setIdParaDeletar(null) }
   }
 
-  const hasFilters = filterId || filterEquip || filterInspetor !== 'Todos' || filterStatus !== 'Todos' || filterData
+  // ── Filtro ──
+  const filteredData = useMemo(() => {
+    return inspecoes.filter(i => {
+      const t = busca.toLowerCase()
+      const matchBusca = !busca || (() => {
+        switch (campoBusca) {
+          case 'id':          return i.id?.toLowerCase().includes(t)
+          case 'equipamento': return i.equipamento?.toLowerCase().includes(t) || i.equipId?.toLowerCase().includes(t)
+          case 'inspetor':    return i.inspetor?.toLowerCase().includes(t)
+          case 'equipId':     return i.equipId?.toLowerCase().includes(t)
+          default: return (
+            i.id?.toLowerCase().includes(t) ||
+            i.equipamento?.toLowerCase().includes(t) ||
+            i.equipId?.toLowerCase().includes(t) ||
+            i.inspetor?.toLowerCase().includes(t) ||
+            i.regional?.toLowerCase().includes(t)
+          )
+        }
+      })()
+      return (
+        matchBusca &&
+        (filtroTipo === 'Todos' || i.tipo === filtroTipo) &&
+        (filtroStatus === 'Todos' || i.status === filtroStatus) &&
+        (filtroRegional === 'Todos' || i.regional === filtroRegional) &&
+        (filtroInspetor === 'Todos' || i.inspetor === filtroInspetor) &&
+        (!filtroData || i.data?.startsWith(filtroData))
+      )
+    })
+  }, [inspecoes, busca, campoBusca, filtroTipo, filtroStatus, filtroRegional, filtroInspetor, filtroData])
+
+  const limparFiltros = () => {
+    setBusca(''); setCampoBusca('todos'); setFiltroTipo('Todos')
+    setFiltroStatus('Todos'); setFiltroRegional('Todos')
+    setFiltroInspetor('Todos'); setFiltroData('')
+  }
+
+  const filtrosAtivos = [
+    busca,
+    filtroTipo !== 'Todos',
+    filtroStatus !== 'Todos',
+    filtroRegional !== 'Todos',
+    filtroInspetor !== 'Todos',
+    filtroData,
+  ].filter(Boolean).length
+
+  const handleExport = useCallback(() => {
+    if (isExporting || filteredData.length === 0) return
+    setIsExporting(true)
+    try { exportToExcel(filteredData) }
+    catch (e) { console.error(e); alert('Erro ao exportar.') }
+    finally { setIsExporting(false) }
+  }, [filteredData, isExporting])
 
   return (
-    <DashboardLayout title="Lista de Inspeções" breadcrumb="SIGS / Dashboard / Inspeções">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Fraunces:wght@600&display=swap');
-        .ins-root { font-family: 'Instrument Sans', sans-serif; padding: 8px 0 48px; --blue: #094780; --blue-faint: #f0f6ff; --orange: #E67A0E; }
-        .ins-filter-wrap { background: #fff; border: 1px solid #e9eef4; border-radius: 16px; padding: 20px 24px; margin-bottom: 24px; }
-        .ins-filter-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        .ins-btn-primary { display: flex; align-items: center; gap: 8px; background: var(--orange); color: #fff; padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 13px; transition: opacity .2s; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(230, 122, 14, 0.2); }
-        .ins-btn-primary:hover { opacity: 0.9; }
-        .ins-filter-grid { display: grid; grid-template-columns: 1fr 1.8fr 1.4fr 1fr 1fr; gap: 12px; align-items: end; }
-        .ins-field-wrap { display: flex; flex-direction: column; gap: 5px; }
-        .ins-field-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .4px; }
-        .ins-field { position: relative; display: flex; align-items: center; }
-        .ins-field-icon { position: absolute; left: 11px; color: #94a3b8; pointer-events: none; display: flex; align-items: center; }
-        .ins-input { width: 100%; height: 40px; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 12px 0 36px; font-size: 13px; color: #1e293b; outline: none; background: #f8fafc; transition: all .18s; }
-        .ins-input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(9,71,128,.08); }
-        .ins-combobox-list { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 50; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 8px 24px rgba(9,71,128,.10); list-style: none; margin: 0; padding: 6px; max-height: 200px; overflow-y: auto; }
-        .ins-combobox-item { padding: 8px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
-        .ins-combobox-item.highlighted, .ins-combobox-item:hover { background: var(--blue-faint); color: var(--blue); }
-        .ins-card { background: #fff; border: 1px solid #e9eef4; border-radius: 18px; overflow: hidden; }
-        .ins-card-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; border-bottom: 1px solid #f1f5f9; }
-        .ins-table { width: 100%; border-collapse: collapse; }
-        .ins-table th { padding: 12px 20px; text-align: left; font-size: 10.5px; font-weight: 700; color: #94a3b8; background: #f8fafc; border-bottom: 1px solid #f1f5f9; text-transform: uppercase; }
-        .ins-row td { padding: 15px 20px; border-bottom: 1px solid #f8fafc; font-size: 13.5px; color: #334155; }
-        .ins-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid; }
-        .ins-btn-detail { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 9px; border: 1.5px solid #e2e8f0; font-size: 12px; font-weight: 600; cursor: pointer; transition: .15s; }
-        .ins-btn-detail:hover { background: var(--blue); color: #fff; }
-        .ins-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--blue-faint); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--blue); font-weight: 700; }
-        .ins-equip-id { font-size: 10px; color: #94a3b8; font-family: monospace; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
-      `}</style>
+    <DashboardLayout title="Lista de Inspeções" breadcrumb="SIGS / Inspeções / Listagem">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .list-root { font-family:'DM Sans',sans-serif; padding:16px; background:#f8fafc; min-height:calc(100vh - 60px); }
+        @media(min-width:640px){ .list-root { padding:20px 24px 60px; } }
+        @media(min-width:1024px){ .list-root { padding:24px 32px 60px; } }
 
-      <div className="ins-root">
-        <div className="ins-filter-wrap">
-          <div className="ins-filter-header">
-            <span className="ins-field-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-              <SlidersHorizontal size={14} /> Painel de Filtros
-            </span>
-            <button className="ins-btn-primary" onClick={() => router.push('/inspecao/nova')}>
-              <Plus size={16} /> Nova Inspeção
+        .filter-wrap { background:#fff; border:1px solid #e3e8ef; border-radius:14px; margin-bottom:16px; overflow:hidden; }
+        .filter-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #f1f5f9; }
+        @media(min-width:640px){ .filter-header { padding:14px 20px; } }
+        .filter-header-left { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:.06em; }
+        .filter-badge { background:#3d6cf0; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; line-height:1.6; }
+        .filter-clear { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; color:#9ca3af; background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px; transition:all .15s; }
+        .filter-clear:hover { color:#ef4444; background:#fef2f2; }
+        .filter-body { padding:12px 14px; display:grid; grid-template-columns:1fr; gap:10px; }
+        @media(min-width:640px){ .filter-body { padding:14px 20px; grid-template-columns:repeat(2,1fr); } }
+        @media(min-width:1024px){ .filter-body { grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr; } }
+        .filter-field { display:flex; flex-direction:column; gap:5px; }
+        .filter-label { font-size:10.5px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.07em; }
+        .filter-input { height:36px; background:#f8fafc; border:1px solid #e3e8ef; border-radius:8px; padding:0 10px; font-size:13px; font-family:inherit; color:#111827; outline:none; width:100%; transition:border-color .15s,box-shadow .15s; appearance:none; }
+        .filter-input:focus { border-color:#3d6cf0; background:#fff; box-shadow:0 0 0 3px rgba(61,108,240,.08); }
+        .filter-input::placeholder { color:#c4cbd6; }
+        select.filter-input { cursor:pointer; padding-right:28px; }
+        .filter-select-wrap { position:relative; }
+        .filter-select-wrap::after { content:''; position:absolute; right:10px; top:50%; transform:translateY(-50%); width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid #c4cbd6; pointer-events:none; }
+        .filter-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 12px; }
+        @media(min-width:640px){ .filter-chips { padding:0 20px 14px; } }
+        .filter-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; background:#eef2ff; border:1px solid #c7d5fb; border-radius:99px; font-size:11.5px; font-weight:600; color:#3d6cf0; }
+        .filter-chip button { background:none; border:none; cursor:pointer; color:#3d6cf0; display:flex; align-items:center; padding:0; opacity:.6; }
+        .filter-chip button:hover { opacity:1; }
+
+        .table-scroll { overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; }
+        .ins-main-card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:visible; }
+        .ins-main-card .table-scroll { border-radius:18px; }
+        .ins-main-card .ins-table thead tr:first-child th:first-child { border-top-left-radius:18px; }
+        .ins-main-card .ins-table thead tr:first-child th:last-child { border-top-right-radius:18px; }
+
+        .ins-table { width:100%; border-collapse:collapse; min-width:860px; }
+        .ins-table th { background:#f8fafc; padding:12px 14px; text-align:left; font-size:10px; font-weight:800; color:#8896ab; text-transform:uppercase; border-bottom:1px solid #e2e8f0; white-space:nowrap; }
+        @media(min-width:1024px){ .ins-table th { padding:14px 20px; } }
+        .ins-row td { padding:12px 14px; vertical-align:top; border-bottom:1px solid #f1f5f9; transition:background .1s; }
+        @media(min-width:1024px){ .ins-row td { padding:14px 20px; } }
+        .ins-row:last-child td { border-bottom:none; }
+        .ins-row:hover td { background:#fafbfd; }
+
+        .col-sep { border-left:1px solid #f1f5f9; }
+
+        .btn-new { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; text-transform:uppercase; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .2s; white-space:nowrap; }
+        .btn-new:hover { opacity:.9; }
+        .btn-export { background:#fff; color:#374151; padding:8px 12px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .2s; white-space:nowrap; }
+        .btn-export:hover:not(:disabled) { border-color:#10b981; color:#10b981; background:#f0fdf4; }
+        .btn-export:disabled { opacity:.5; cursor:not-allowed; }
+
+        .ins-avatar { width:26px; height:26px; border-radius:50%; background:#eef2ff; display:flex; align-items:center; justify-content:center; font-size:10px; color:#3d6cf0; font-weight:800; flex-shrink:0; }
+
+        @keyframes menuIn { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:translateY(0);} }
+        .action-item { width:100%; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; color:#4a5568; transition:all .15s; border:none; background:none; cursor:pointer; text-align:left; }
+        .action-item:hover { background:#f8fafc; color:#3d6cf0; }
+        .action-item.delete { color:#ef4444; }
+        .action-item.delete:hover { background:#fef2f2; }
+        .action-sep { height:1px; background:#f1f5f9; margin:2px 0; }
+
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        @keyframes scaleIn { from{opacity:0;transform:scale(.95);} to{opacity:1;transform:scale(1);} }
+      `}} />
+
+      <div className="list-root">
+
+        {/* ── Header ── */}
+        <div className="flex justify-between items-start mb-4 gap-3 flex-wrap">
+          <div>
+            <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, fontSize: 'clamp(18px,4vw,26px)', color: '#0d1e33' }}>
+              Inspeções de Segurança
+            </h2>
+            <p className="text-[11px] text-[#8896ab] font-bold uppercase mt-1">
+              {loading ? 'Sincronizando...' : `${filteredData.length} registros encontrados`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              className="btn-export"
+              onClick={handleExport}
+              disabled={isExporting || filteredData.length === 0 || loading}
+            >
+              {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'Exportar Excel'}</span>
+              {!isExporting && filteredData.length > 0 && (
+                <span style={{ background: '#f0fdf4', color: '#10b981', fontSize: '10px', fontWeight: 800, padding: '1px 6px', borderRadius: '99px', border: '1px solid #bbf7d0' }}>
+                  {filteredData.length}
+                </span>
+              )}
+            </button>
+            <button className="btn-new" onClick={() => router.push('/inspecao/nova')}>
+              <Plus size={15} strokeWidth={3} />
+              <span className="hidden sm:inline">Nova Inspeção</span>
+              <span className="sm:hidden">Nova</span>
             </button>
           </div>
+        </div>
 
-          <div className="ins-filter-grid">
-            <div className="ins-field-wrap">
-              <label className="ins-field-label">ID Inspeção</label>
-              <div className="ins-field">
-                <span className="ins-field-icon"><Hash size={13} /></span>
-                <input className="ins-input" value={draftId} onChange={(e) => setDraftId(e.target.value)} onKeyDown={handleKeyDownId} placeholder="ID + Enter" />
+        {/* ── Filtros ── */}
+        <div className="filter-wrap">
+          <div className="filter-header">
+            <div className="filter-header-left">
+              <SlidersHorizontal size={14} />
+              Filtros
+              {filtrosAtivos > 0 && <span className="filter-badge">{filtrosAtivos}</span>}
+            </div>
+            {filtrosAtivos > 0 && (
+              <button className="filter-clear" onClick={limparFiltros}><X size={12} /> Limpar</button>
+            )}
+          </div>
+
+          <div className="filter-body">
+            {/* Busca com campo selecionável */}
+            <div className="filter-field">
+              <span className="filter-label">Busca</span>
+              <div
+                style={{ display: 'flex', height: '36px', border: '1px solid #e3e8ef', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', transition: 'border-color .15s,box-shadow .15s' }}
+                onFocusCapture={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#3d6cf0'; el.style.boxShadow = '0 0 0 3px rgba(61,108,240,.08)'; el.style.background = '#fff' }}
+                onBlurCapture={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#e3e8ef'; el.style.boxShadow = 'none'; el.style.background = '#f8fafc' }}
+              >
+                <div style={{ position: 'relative', borderRight: '1px solid #e3e8ef', flexShrink: 0 }}>
+                  <select
+                    value={campoBusca}
+                    onChange={e => { setCampoBusca(e.target.value); setBusca('') }}
+                    style={{ height: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '12px', fontWeight: 700, color: '#3d6cf0', fontFamily: 'inherit', paddingLeft: '10px', paddingRight: '22px', appearance: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="todos">Todos os campos</option>
+                    <option value="id">ID Inspeção</option>
+                    <option value="equipamento">Equipamento</option>
+                    <option value="equipId">ID Equip.</option>
+                    <option value="inspetor">Inspetor</option>
+                  </select>
+                  <svg style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#3d6cf0' }} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
+                </div>
+                <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+                  <Search style={{ position: 'absolute', left: '9px', color: '#c4cbd6' }} size={13} />
+                  <input
+                    style={{ width: '100%', height: '100%', background: 'transparent', border: 'none', outline: 'none', paddingLeft: '28px', paddingRight: '8px', fontSize: '13px', fontFamily: 'inherit', color: '#111827' }}
+                    placeholder={
+                      campoBusca === 'id' ? 'Ex: INS-0041...' :
+                      campoBusca === 'equipamento' ? 'Nome do equipamento...' :
+                      campoBusca === 'equipId' ? 'Ex: EQ-9921...' :
+                      campoBusca === 'inspetor' ? 'Nome do inspetor...' :
+                      'Pesquisar...'
+                    }
+                    value={busca}
+                    onChange={e => setBusca(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="ins-field-wrap">
-              <label className="ins-field-label">Equipamento / ID</label>
-              <div className="ins-field">
-                <span className="ins-field-icon"><Boxes size={13} /></span>
-                <input className="ins-input" value={draftEquip} onChange={(e) => setDraftEquip(e.target.value)} onKeyDown={handleKeyDownEquip} placeholder="Nome ou ID + Enter" />
-              </div>
-            </div>
-
-            <div className="ins-field-wrap">
-              <label className="ins-field-label">Inspetor</label>
-              <InspetorCombobox value={filterInspetor} onApply={setFilterInspetor} />
-            </div>
-
-            <div className="ins-field-wrap">
-              <label className="ins-field-label">Data</label>
-              <div className="ins-field">
-                <span className="ins-field-icon"><Calendar size={13} /></span>
-                <input className="ins-input" type="date" value={filterData} onChange={(e) => setFilterData(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="ins-field-wrap">
-              <label className="ins-field-label">Status</label>
-              <div className="ins-field">
-                <span className="ins-field-icon"><CheckCircle2 size={13} /></span>
-                <select className="ins-input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                  <option value="Todos">Todos os status</option>
-                  {Object.values(STATUS_CONFIG).map((s) => <option key={s.label} value={s.label}>{s.label}</option>)}
+            <div className="filter-field">
+              <span className="filter-label">Tipo de Equip.</span>
+              <div className="filter-select-wrap">
+                <select className="filter-input" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
+                  <option value="Todos">Todos</option>
+                  {Object.keys(TIPO_CONFIG).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
             </div>
+
+            <div className="filter-field">
+              <span className="filter-label">Status</span>
+              <div className="filter-select-wrap">
+                <select className="filter-input" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+                  <option value="Todos">Todos</option>
+                  {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="filter-field">
+              <span className="filter-label">Inspetor</span>
+              <div className="filter-select-wrap">
+                <select className="filter-input" value={filtroInspetor} onChange={e => setFiltroInspetor(e.target.value)}>
+                  <option value="Todos">Todos</option>
+                  {listaInspetores.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="filter-field">
+              <span className="filter-label">Regional</span>
+              <div className="filter-select-wrap">
+                <select className="filter-input" value={filtroRegional} onChange={e => setFiltroRegional(e.target.value)}>
+                  <option value="Todos">Todas</option>
+                  {listaRegionais.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="filter-field">
+              <span className="filter-label">Data</span>
+              <input className="filter-input" type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
+            </div>
           </div>
 
-          {hasFilters && (
-            <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="ins-btn-reset active" style={{ width: 'auto', padding: '0 18px' }} onClick={resetFilters}>
-                <FilterX size={13} /> Limpar filtros
-              </button>
+          {/* Chips de filtros ativos */}
+          {filtrosAtivos > 0 && (
+            <div className="filter-chips">
+              {busca && <span className="filter-chip">"{busca}" <button onClick={() => setBusca('')}><X size={10} /></button></span>}
+              {filtroTipo !== 'Todos' && <span className="filter-chip">{filtroTipo} <button onClick={() => setFiltroTipo('Todos')}><X size={10} /></button></span>}
+              {filtroStatus !== 'Todos' && <span className="filter-chip">{STATUS_CONFIG[filtroStatus as StatusKey]?.label ?? filtroStatus} <button onClick={() => setFiltroStatus('Todos')}><X size={10} /></button></span>}
+              {filtroInspetor !== 'Todos' && <span className="filter-chip">{filtroInspetor} <button onClick={() => setFiltroInspetor('Todos')}><X size={10} /></button></span>}
+              {filtroRegional !== 'Todos' && <span className="filter-chip">{filtroRegional} <button onClick={() => setFiltroRegional('Todos')}><X size={10} /></button></span>}
+              {filtroData && <span className="filter-chip">{new Date(filtroData + 'T00:00:00').toLocaleDateString('pt-BR')} <button onClick={() => setFiltroData('')}><X size={10} /></button></span>}
             </div>
           )}
         </div>
 
-        <div className="ins-card">
-          <div className="ins-card-header">
-            <span style={{ fontWeight: 600, fontSize: 16 }}>Registros</span>
-            <span className="ins-badge-count">{filtered.length} encontrados</span>
-          </div>
-
-          <table className="ins-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Equipamento</th>
-                <th>Inspetor</th>
-                <th>Data</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((ins) => {
-                const s = STATUS_CONFIG[ins.status as keyof typeof STATUS_CONFIG]
-                const dt = fmt(ins.data)
-                return (
-                  <tr className="ins-row" key={ins.id}>
-                    <td><span style={{ fontWeight: 700, color: '#094780' }}>{ins.id}</span></td>
-                    <td>
-                      <div className="ins-equip-name">{ins.equipamento}</div>
-                      <div className="ins-equip-sub">
-                        <span className="ins-equip-id">{ins.equipId}</span>
-                        <span className="ins-regional" style={{fontSize: '11px', color: '#94a3b8'}}>{ins.regional}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="ins-inspetor">
-                        <div className="ins-avatar">{ins.inspetor.charAt(0)}</div>
-                        <span>{ins.inspetor}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{dt.date}</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{dt.time}</div>
-                    </td>
-                    <td>
-                      <span className="ins-status-pill" style={{ background: s.bg, color: s.color, borderColor: s.border }}>
-                        <s.icon size={11} strokeWidth={2.5} /> {s.label}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="ins-btn-detail" onClick={() => router.push(`/inspecao/${ins.id}`)}>
-                        <Eye size={12} /> Detalhes
-                      </button>
-                    </td>
+        {/* ── Tabela ── */}
+        <div className="ins-main-card">
+          {loading ? (
+            <div className="py-24 text-center">
+              <Loader2 size={40} className="mx-auto mb-4 text-[#3d6cf0] animate-spin" />
+            </div>
+          ) : filteredData.length === 0 ? (
+            <div className="py-20 text-center">
+              <div className="w-14 h-14 rounded-full bg-[#f4f6f9] flex items-center justify-center mx-auto mb-3">
+                <Search size={22} className="text-[#c4cbd6]" />
+              </div>
+              <p className="text-[14px] font-semibold text-[#9ca3af]">Nenhum registro encontrado</p>
+              <p className="text-[12px] text-[#c4cbd6] mt-1">Tente ajustar os filtros acima</p>
+            </div>
+          ) : (
+            <div className="table-scroll">
+              <table className="ins-table">
+                <thead>
+                  <tr>
+                    <th>ID / Data</th>
+                    <th>Equipamento</th>
+                    <th className="col-sep">Inspetor</th>
+                    <th>Tipo</th>
+                    <th>Regional</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Ações</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {filteredData.map(item => {
+                    const dt = new Date(item.data)
+                    return (
+                      <tr key={item.id} className="ins-row">
+
+                        {/* ── ID / Data ── */}
+                        <td style={{ minWidth: '120px' }}>
+                          <div
+                            className="font-bold text-[#3d6cf0] text-[13px] cursor-pointer hover:underline w-fit"
+                            onClick={() => router.push(`/inspecao/${item.id}`)}
+                          >
+                            {item.id}
+                          </div>
+                          <div className="text-[11px] text-[#8896ab] font-medium mt-0.5">
+                            {dt.toLocaleDateString('pt-BR')}
+                          </div>
+                          <div className="text-[10px] text-[#c4cbd6] font-medium">
+                            {dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </td>
+
+                        {/* ── Equipamento ── */}
+                        <td style={{ minWidth: '200px' }}>
+                          <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">{item.equipamento}</div>
+                          <div className="text-[10px] text-[#8896ab] font-bold mt-0.5 font-mono bg-[#f1f5f9] inline-block px-1.5 py-0.5 rounded">{item.equipId}</div>
+                        </td>
+
+                        {/* ── Inspetor ── */}
+                        <td className="col-sep" style={{ minWidth: '160px' }}>
+                          <div className="flex items-center gap-2">
+                            <div className="ins-avatar">{item.inspetor.charAt(0)}</div>
+                            <span className="font-semibold text-[13px] text-[#1a2535]">{item.inspetor}</span>
+                          </div>
+                        </td>
+
+                        {/* ── Tipo ── */}
+                        <td style={{ minWidth: '100px' }}>
+                          <TipoBadge tipo={item.tipo} />
+                        </td>
+
+                        {/* ── Regional ── */}
+                        <td style={{ minWidth: '130px' }}>
+                          <div className="flex items-center gap-1.5">
+                            <ShieldCheck size={12} className="text-[#c4cbd6] flex-shrink-0" />
+                            <span className="text-[12px] font-semibold text-[#374151]">{item.regional}</span>
+                          </div>
+                        </td>
+
+                        {/* ── Status ── */}
+                        <td style={{ minWidth: '110px' }}>
+                          <StatusBadge status={item.status} />
+                        </td>
+
+                        {/* ── Ações ── */}
+                        <td style={{ textAlign: 'right', minWidth: '60px' }}>
+                          <div className="flex justify-end">
+                            <ActionMenu
+                              onVisualizar={() => router.push(`/inspecao/${item.id}`)}
+                              onEditar={() => router.push(`/inspecao/editar/${item.id}`)}
+                              onExcluir={() => handleOpenDeleteModal(item.id)}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* ── Modal Excluir ── */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+          style={{ animation: 'fadeIn .2s ease' }}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            style={{ animation: 'scaleIn .25s cubic-bezier(0.16,1,0.3,1)' }}
+          >
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
+                <AlertCircle size={32} className="text-red-500" />
+              </div>
+              <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800 }} className="text-xl text-[#0d1e33] mb-2">
+                Excluir Inspeção?
+              </h3>
+              <p className="text-sm text-[#8896ab] leading-relaxed">
+                Esta ação é permanente e removerá todos os dados do sistema.
+              </p>
+            </div>
+            <div className="flex gap-3 p-6 bg-slate-50 border-t border-slate-100">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-[#4a5568] bg-white border border-[#e2e8f0] hover:bg-slate-100 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {isDeleting ? <><Loader2 size={16} className="animate-spin" />Excluindo...</> : 'Sim, excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   )
 }
