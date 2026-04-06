@@ -28,35 +28,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/medida-administrativa/page.js"
     ],
-    "/medida-administrativa/lista/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/medida-administrativa/lista/page.js"
-    ],
-    "/medida-administrativa/nova/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/medida-administrativa/nova/page.js"
-    ],
-    "/cadastro/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/cadastro/page.js"
-    ],
     "/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
-    ],
-    "/inspecao/nova/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/inspecao/nova/page.js"
-    ],
-    "/inspecao/lista/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/inspecao/lista/page.js"
     ],
     "/equipamentos/lista/page": [
       "static/chunks/webpack.js",
@@ -68,15 +43,45 @@
       "static/chunks/main-app.js",
       "static/chunks/app/equipamentos/novo/page.js"
     ],
+    "/locais/lista/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/locais/lista/page.js"
+    ],
+    "/inspecao/lista/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/inspecao/lista/page.js"
+    ],
     "/qr-codes/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/qr-codes/page.js"
     ],
-    "/recuperar-senha/page": [
+    "/locais/novo/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/recuperar-senha/page.js"
+      "static/chunks/app/locais/novo/page.js"
+    ],
+    "/inspecao/nova/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/inspecao/nova/page.js"
+    ],
+    "/equipamentos/editar/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/equipamentos/editar/[id]/page.js"
+    ],
+    "/equipamentos/detalhes/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/equipamentos/detalhes/[id]/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }
