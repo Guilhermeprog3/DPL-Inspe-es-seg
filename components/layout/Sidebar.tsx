@@ -5,17 +5,21 @@ import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, ClipboardList, Briefcase,
-  QrCode, BarChart2, Users, LogOut, Grid2x2, ListChecks // Importado ListChecks
+  QrCode, LogOut, Grid2x2, ListChecks, MapPin, ShieldAlert,
 } from 'lucide-react'
 
 const navItems = [
   { section: 'Principal' },
-  { label: 'Dashboard',     href: '/dashboard',     icon: LayoutDashboard },
+  { label: 'Dashboard',         href: '/dashboard',                  icon: LayoutDashboard },
   { section: 'Inspeção' },
-  { label: 'Nova Inspeção', href: '/inspecao/nova',    icon: ClipboardList }, // Rota corrigida
-  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks }, // Novo item adicionado
-  { label: 'Equipamentos',  href: '/equipamentos',   icon: Briefcase },
-  { label: 'QR Codes',      href: '/qr-codes',       icon: QrCode },
+  { label: 'Nova Inspeção',      href: '/inspecao/nova',              icon: ClipboardList   },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista',             icon: ListChecks      },
+  { section: 'Cadastros' },
+  { label: 'Equipamentos',       href: '/equipamentos/lista',         icon: Briefcase       },
+  { label: 'Locais',             href: '/locais/lista',               icon: MapPin          },
+  { label: 'QR Codes',           href: '/locais/qr-codes',                   icon: QrCode          },
+  { section: 'Administrativo' },
+  { label: 'Medidas',            href: '/medida-administrativa/lista', icon: ShieldAlert     },
 ]
 
 interface SidebarProps {
@@ -27,6 +31,14 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const user = session?.user as any
+
+  // Verifica se a rota atual está "dentro" do href do item
+  // Ex: /equipamentos/lista, /equipamentos/novo, /equipamentos/detalhes/123
+  // todos marcam o item "Equipamentos" como ativo
+  const isActive = (href: string) => {
+    if (href === '/dashboard') return pathname === href
+    return pathname.startsWith(href.replace('/lista', ''))
+  }
 
   return (
     <>
@@ -69,7 +81,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
             }
 
             const Icon = item.icon!
-            const active = pathname === item.href
+            const active = isActive(item.href!)
 
             return (
               <Link
