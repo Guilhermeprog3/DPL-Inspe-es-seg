@@ -1,14 +1,1 @@
-{
-  "app\\inspecao\\nova\\page.tsx -> @/components/inspecao/QrScanner": {
-    "id": "app\\inspecao\\nova\\page.tsx -> @/components/inspecao/QrScanner",
-    "files": [
-      "static/chunks/_app-pages-browser_components_inspecao_QrScanner_tsx.js"
-    ]
-  },
-  "app\\inspecao\\nova\\page.tsx -> jsqr": {
-    "id": "app\\inspecao\\nova\\page.tsx -> jsqr",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_jsqr_dist_jsQR_js.js"
-    ]
-  }
-}
+{}

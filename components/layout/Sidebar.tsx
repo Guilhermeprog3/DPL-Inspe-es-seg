@@ -18,8 +18,6 @@ const navItems = [
   { label: 'Equipamentos',       href: '/equipamentos/lista',         icon: Briefcase       },
   { label: 'Locais',             href: '/locais/lista',               icon: MapPin          },
   { label: 'QR Codes',           href: '/locais/qr-codes',                   icon: QrCode          },
-  { section: 'Administrativo' },
-  { label: 'Medidas',            href: '/medida-administrativa/lista', icon: ShieldAlert     },
 ]
 
 interface SidebarProps {
