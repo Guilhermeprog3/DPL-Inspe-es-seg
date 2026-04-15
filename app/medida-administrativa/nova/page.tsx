@@ -173,40 +173,56 @@ const selecionarColab = (item: any) => {
 
   // ── Registro Final ──
   async function handleRegister() {
-    if (isRegistering || !allValid) return
-    const token = (session as any)?.access_token || (session as any)?.accessToken
-    if (!token) return
-    setIsRegistering(true)
-    const payload = {
-      colaborador: nomeColab,
-      matricula: matriculaColab,
-      supervisor: matriculaSup,
-      nomeSupervisor,
-      tipo: tipoCategoria,
-      medida: tipoMedida,
-      ocorrencia,
-      gravidade,
-      classificacao,
-      data: new Date(dataMedida).toISOString(),
-      diasSuspensao: diasSuspensao ? Number(diasSuspensao) : null,
-      numeroInspecao: relacionarClick ? numeroInspecao : null,
-    }
-    try {
-      const res = await fetch('http://localhost:3001/medidas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Erro ao registrar')
-      anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
-      setAnexos([])
-      setSuccessModal(true)
-    } catch (error: any) {
-      alert(error.message)
-    } finally {
-      setIsRegistering(false)
-    }
+  if (isRegistering || !allValid) return
+  const token = (session as any)?.access_token || (session as any)?.accessToken
+  if (!token) return
+  
+  setIsRegistering(true)
+
+  // 1. Criar o objeto FormData
+  const formData = new FormData()
+
+  formData.append('colaborador', nomeColab)
+  formData.append('matricula', matriculaColab)
+  formData.append('supervisor', matriculaSup)
+  formData.append('nomeSupervisor', nomeSupervisor)
+  formData.append('tipo', tipoCategoria)
+  formData.append('medida', tipoMedida)
+  formData.append('ocorrencia', ocorrencia)
+  formData.append('gravidade', gravidade)
+  formData.append('classificacao', classificacao)
+  formData.append('data', new Date(dataMedida).toISOString())
+  
+  if (diasSuspensao) formData.append('diasSuspensao', diasSuspensao)
+  if (relacionarClick && numeroInspecao) formData.append('numeroInspecao', numeroInspecao)
+
+  anexos.forEach((anexo) => {
+    formData.append('files', anexo.file)
+  })
+
+  try {
+    const res = await fetch('http://localhost:3001/medidas', {
+      method: 'POST',
+      headers: { 
+        // IMPORTANTE: Remova o 'Content-Type': 'application/json'
+        // O navegador define o Content-Type automaticamente com o boundary correto ao usar FormData
+        'Authorization': `Bearer ${token}` 
+      },
+      body: formData, // Envia o formData em vez do JSON.stringify
+    })
+
+    if (!res.ok) throw new Error('Erro ao registrar')
+    
+    // Limpeza de cache de imagens e estado
+    anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
+    setAnexos([])
+    setSuccessModal(true)
+  } catch (error: any) {
+    alert(error.message)
+  } finally {
+    setIsRegistering(false)
   }
+}
 
   const tabValid: Record<TabKey, boolean> = {
     identificacao: !!nomeColab && !!matriculaColab && !!nomeSupervisor && !!dataMedida,

@@ -185,33 +185,62 @@ function InspecaoInner() {
   }, [pontoIdParam, session, buscarPontoPorId])
 
   const buscarPontoPorQr = useCallback(async (val: string) => {
-    if (!val || loadingQr) return
-    setShowSugestoes(false); setLoadingQr(true); setErroQr('')
-    try {
-      let codigoFinal = val.trim()
-      if (codigoFinal.includes('pontoId=')) {
-        try {
-          const url = new URL(codigoFinal)
-          const idDaUrl = url.searchParams.get('pontoId')
-          if (idDaUrl) codigoFinal = idDaUrl
-        } catch { codigoFinal = codigoFinal.split('pontoId=').pop() || codigoFinal }
-      }
-      const token = (session as any)?.access_token || (session as any)?.accessToken
-      let res = await fetch(`http://localhost:3001/pontos/qrcode/${encodeURIComponent(codigoFinal)}`, { headers: { Authorization: `Bearer ${token}` } })
-      if (!res.ok) res = await fetch(`http://localhost:3001/pontos/${codigoFinal}`, { headers: { Authorization: `Bearer ${token}` } })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setPonto(data); setPontoId(data.id); captureGeo()
-      // Inicializa checklist
-      const cl = CHECKLIST_PADRAO[data.equipamentoAtual?.tipo] ?? CHECKLIST_PADRAO['default']
-      const inicial: Record<string, Resp> = {}
-      cl.forEach(c => { inicial[c.id] = null })
-      setRespostas(inicial)
-    } catch { setErroQr('QR Code inválido ou Ponto de Instalação não cadastrado.') }
-    finally { setLoadingQr(false) }
-  }, [session, captureGeo, loadingQr])
+    // 1. Trava: Se não houver valor, se estiver carregando, OU se já localizou esse mesmo ponto, ignora.
+    if (!val || loadingQr || (ponto && (ponto.id === val || ponto.qrCode === val))) return
 
-  const handleScan = useCallback((val: string) => { buscarPontoPorQr(val) }, [buscarPontoPorQr])
+    setShowSugestoes(false)
+    setLoadingQr(true)
+    setErroQr('')
+
+    try {
+      let codigoFinal = val.trim()
+      if (codigoFinal.includes('pontoId=')) {
+        try {
+          const url = new URL(codigoFinal)
+          const idDaUrl = url.searchParams.get('pontoId')
+          if (idDaUrl) codigoFinal = idDaUrl
+        } catch { codigoFinal = codigoFinal.split('pontoId=').pop() || codigoFinal }
+      }
+
+      const token = (session as any)?.access_token || (session as any)?.accessToken
+      
+      // Chamada inteligente ao backend (Opção 1 que você escolheu)
+      const res = await fetch(`http://localhost:3001/pontos/qrcode/${encodeURIComponent(codigoFinal)}`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      })
+      
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+
+      // 2. Sucesso: Atualiza os dados
+      setPonto(data)
+      setPontoId(data.id)
+      setQrInput(data.qrCode) // Atualiza o input com o código amigável
+      captureGeo()
+
+      // Inicializa checklist
+      const cl = CHECKLIST_PADRAO[data.equipamentoAtual?.tipo] ?? CHECKLIST_PADRAO['default']
+      const inicial: Record<string, Resp> = {}
+      cl.forEach(c => { inicial[c.id] = null })
+      setRespostas(inicial)
+
+      // Opcional: Pular automaticamente para a aba de checklist após localizar
+      // setTimeout(() => setTab('checklist'), 500)
+
+    } catch { 
+      setErroQr('QR Code inválido ou Ponto de Instalação não cadastrado.') 
+    } finally { 
+      setLoadingQr(false) 
+    }
+    // Adicione 'ponto' e 'loadingQr' nas dependências para a trava funcionar
+  }, [session, captureGeo, loadingQr, ponto])
+
+  const handleScan = useCallback((val: string) => {
+    // Só dispara a busca se o valor for diferente do que já está processando
+    if (val && !loadingQr) {
+      buscarPontoPorQr(val)
+    }
+  }, [buscarPontoPorQr, loadingQr])
 
   const buscarSugestoes = useCallback(async (termo: string) => {
     if (termo.length < 2) { setSugestoes([]); setShowSugestoes(false); return }
@@ -444,7 +473,7 @@ function InspecaoInner() {
 
         {/* ══ ABA 1 — PONTO ══ */}
         {tab === 'ponto' && (
-          <div className="fade-up space-y-4 max-w-2xl mx-auto">
+          <div className="fade-up space-y-4 max-w-7xl mx-auto">
 
             {/* Bloco do scanner */}
             <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
@@ -452,15 +481,25 @@ function InspecaoInner() {
               <div className="p-6 space-y-5">
 
                 {/* Scanner QR embutido */}
-                <div className="aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden relative">
-                  {loadingQr ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-20">
-                      <Loader2 className="animate-spin text-white" size={40} />
-                    </div>
-                  ) : (
-                    <QrScanner onScan={handleScan} />
-                  )}
-                </div>
+<div className="aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden relative">
+  {/* O Scanner fica SEMPRE montado */}
+  <QrScanner onScan={handleScan} />
+
+  {/* O Loader aparece POR CIMA, sem remover o scanner do DOM */}
+  {loadingQr && (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-20 backdrop-blur-sm">
+      <Loader2 className="animate-spin text-white mb-2" size={40} />
+      <span className="text-white text-xs font-bold tracking-widest uppercase">Processando...</span>
+    </div>
+  )}
+  
+  {/* Overlay de sucesso se já tiver um ponto (opcional, para indicar que parou de ler) */}
+  {!loadingQr && ponto && (
+    <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/20 z-10 pointer-events-none border-4 border-emerald-500 rounded-2xl">
+        <CheckCircle className="text-emerald-500 bg-white rounded-full" size={48} />
+    </div>
+  )}
+</div>
 
                 {/* Input manual + câmera */}
                 <div className="space-y-2">
@@ -635,7 +674,7 @@ function InspecaoInner() {
 
         {/* ══ ABA 2 — CHECKLIST ══ */}
         {tab === 'checklist' && (
-          <div className="fade-up space-y-4 max-w-2xl mx-auto">
+          <div className="fade-up space-y-4 max-w-7xl mx-auto">
             {!ponto ? (
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm p-10 text-center">
                 <QrCode size={32} className="mx-auto text-slate-200 mb-3" />
@@ -676,7 +715,7 @@ function InspecaoInner() {
                     {checklist.map((item, idx) => {
                       const resp = respostas[item.id]
                       return (
-                        <div key={item.id} className="grid gap-4 items-start py-4 grid-cols-1 sm:grid-cols-[220px_1fr]">
+                        <div key={item.id} className="grid gap-4 items-center py-4 grid-cols-1 sm:grid-cols-[1fr_auto]">
                           <div className="flex items-start gap-2.5">
                             <span className="text-[11px] font-black text-slate-300 mt-0.5 w-5 flex-shrink-0 tabular-nums">
                               {String(idx + 1).padStart(2, '0')}
@@ -735,7 +774,7 @@ function InspecaoInner() {
 
         {/* ══ ABA 3 — AÇÕES CORRETIVAS ══ */}
         {tab === 'acoes' && (
-          <div className="fade-up space-y-4 max-w-2xl mx-auto">
+          <div className="fade-up space-y-4 max-w-7xl mx-auto">
 
             {/* Resumo do status da inspeção */}
             {ponto && (

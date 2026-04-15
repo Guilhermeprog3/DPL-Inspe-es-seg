@@ -11,7 +11,7 @@ const actions = [
     icon: PlusCircle,
     color: '#094780',
     title: 'Nova Medida',
-    description: 'Registre uma nova advertência, suspensão, treinamento ou conversa pedagógica.',
+    description: 'Registre uma nova advertência, suspensão',
     cta: 'Registrar medida',
     href: '/medida-administrativa/nova',
   },

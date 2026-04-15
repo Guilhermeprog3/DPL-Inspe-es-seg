@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
-  Plus, Loader2, Eye,
+  Plus, Loader2, Eye, Edit2,
   MapPin, CheckCircle2, AlertTriangle, XCircle,
   Search, SlidersHorizontal, X, MoreVertical,
 } from 'lucide-react'
@@ -39,7 +39,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ─── Action Menu ──────────────────────────────────────────────────────────────
-function ActionMenu({ onVer }: { onVer: () => void }) {
+// Adicionado parâmetro onEditar
+function ActionMenu({ onVer, onEditar }: { onVer: () => void; onEditar: () => void }) {
   const [open, setOpen]     = useState(false)
   const [coords, setCoords] = useState({ top: 0, right: 0 })
   const btnRef              = useRef<HTMLButtonElement>(null)
@@ -101,6 +102,10 @@ function ActionMenu({ onVer }: { onVer: () => void }) {
         >
           <button className="action-item" onClick={() => { setOpen(false); onVer() }}>
             <Eye size={14} /> Ver Detalhes
+          </button>
+          {/* Novo botão de Editar no menu flutuante */}
+          <button className="action-item" onClick={() => { setOpen(false); onEditar() }}>
+            <Edit2 size={14} /> Editar
           </button>
         </div>
       )}
@@ -290,7 +295,6 @@ export default function ListaInspecoesPage() {
           </div>
 
           <div className="filter-body">
-            {/* Busca com campo selecionável */}
             <div className="filter-field">
               <span className="filter-label">Busca</span>
               <div
@@ -472,7 +476,7 @@ export default function ListaInspecoesPage() {
                         <td style={{ minWidth: 130 }}>
                           <div
                             className="font-bold text-[#094780] text-[13px] font-mono cursor-pointer hover:underline"
-                            onClick={() => router.push(`/inspecao/${item.id}`)}
+                            onClick={() => router.push(`/inspecao/detalhes/${item.id}`)}
                           >
                             #{item.id.slice(-8).toUpperCase()}
                           </div>
@@ -523,7 +527,11 @@ export default function ListaInspecoesPage() {
 
                         <td style={{ textAlign: 'right', minWidth: 60 }}>
                           <div className="flex justify-end">
-                            <ActionMenu onVer={() => router.push(`/inspecao/${item.id}`)} />
+                            {/* Passado onEditar para o componente ActionMenu */}
+                            <ActionMenu 
+                               onVer={() => router.push(`/inspecao/detalhes/${item.id}`)} 
+                               onEditar={() => router.push(`/inspecao/editar/${item.id}`)}
+                            />
                           </div>
                         </td>
                       </tr>

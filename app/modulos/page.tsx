@@ -10,18 +10,17 @@ const ALL_MODULOS = [
   {
     id: 1,
     icon: <ClipboardList size={26} color="#fff" strokeWidth={1.8} />,
-    badge: '3 pendentes',
     title: 'Inspeção de Equipamentos de Segurança',
-    subtitle: 'Gerencie inspeções, acompanhe pendências e registre ocorrências.',
+    subtitle: 'Gerencie inspeções de equipamentos de segurança.',
     route: '/dashboard',
     roles: ['inspetor', 'admin'],
   },
   {
     id: 2,
     icon: <ShieldAlert size={26} color="#fff" strokeWidth={1.8} />,
-    badge: 'Recursos Humanos',
+    badge: '',
     title: 'Medida Administrativa',
-    subtitle: 'Registre advertências, suspensões e conversas pedagógicas vinculadas ao colaborador.',
+    subtitle: 'Registre medidas, advertências e suspensões. vinculadas a colaboradores',
     route: '/medida-administrativa',
     roles: ['agente_cobli', 'admin'],
   },
@@ -34,12 +33,18 @@ export default function ModulosPage() {
   const [search, setSearch] = useState('')
 
   const filteredModulos = useMemo(() => {
+    // Normalizamos para lowercase para evitar problemas de "Admin" vs "admin"
     const userRole = userData?.role?.toLowerCase()
+    
     return ALL_MODULOS.filter((modulo) => {
-      const hasPermission = modulo.roles.includes(userRole)
+      // MODIFICAÇÃO: Se for 'admin', tem permissão automática (true). 
+      // Caso contrário, verifica se a role está incluída no array do módulo.
+      const hasPermission = userRole === 'admin' || modulo.roles.includes(userRole)
+
       const matchesSearch =
         modulo.title.toLowerCase().includes(search.toLowerCase()) ||
         modulo.subtitle.toLowerCase().includes(search.toLowerCase())
+      
       return hasPermission && matchesSearch
     })
   }, [userData?.role, search])
@@ -48,7 +53,7 @@ export default function ModulosPage() {
     <div className="page">
       <header className="header">
         <div className="logo">
-          SIGS<span className="logo-dot" />
+          SIG<span className="logo-dot" />
         </div>
         <div className="user-area">
           <div className="avatar">
