@@ -1,9 +1,0 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/modulos/page": "app/modulos/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/medida-administrativa/editar/[id]/page": "app/medida-administrativa/editar/[id]/page.js",
-  "/medida-administrativa/nova/page": "app/medida-administrativa/nova/page.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/medida-administrativa/lista/page": "app/medida-administrativa/lista/page.js"
-}
