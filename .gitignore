@@ -1,3 +1,26 @@
-node_modules
-.next
+# Dependências
+node_modules/
+.pnpm-debug.log*
+
+# Next.js build e cache
+.next/
+out/
+build/
+
+# Variáveis de Ambiente (CRÍTICO)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma
 /lib/generated/prisma
+schema.prisma.backup
+
+# VS Code e ferramentas
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.log
+sftp.json
