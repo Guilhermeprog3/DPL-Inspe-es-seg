@@ -204,11 +204,9 @@ const selecionarColab = (item: any) => {
     const res = await fetch('http://localhost:3001/medidas', {
       method: 'POST',
       headers: { 
-        // IMPORTANTE: Remova o 'Content-Type': 'application/json'
-        // O navegador define o Content-Type automaticamente com o boundary correto ao usar FormData
         'Authorization': `Bearer ${token}` 
       },
-      body: formData, // Envia o formData em vez do JSON.stringify
+      body: formData,
     })
 
     if (!res.ok) throw new Error('Erro ao registrar')

@@ -8,10 +8,12 @@ import { MedidaLayout } from '@/components/layout/MedidasLayout'
 import {
   Search, Plus, MoreVertical, Eye,
   Loader2, Trash2, Edit2, AlertCircle, X, SlidersHorizontal,
-  Download, Link2,
+  Download, Link2, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+
+const ITEMS_PER_PAGE = 10
 
 const GRAVIDADE_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   LEVE:       { color: '#10b981', bg: '#f0fdf4', border: '#bcf0da' },
@@ -170,6 +172,80 @@ function GravidadeBadge({ gravidade }: { gravidade: string }) {
   )
 }
 
+// ─── Pagination ───────────────────────────────────────────────────────────────
+function Pagination({
+  currentPage,
+  totalPages,
+  totalItems,
+  onPageChange,
+}: {
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  onPageChange: (page: number) => void
+}) {
+  const from = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1
+  const to   = Math.min(currentPage * ITEMS_PER_PAGE, totalItems)
+
+  // Gera os números de página a exibir (janela deslizante)
+  const pages = useMemo(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const result: (number | '...')[] = []
+    result.push(1)
+    if (currentPage > 3) result.push('...')
+    for (let p = Math.max(2, currentPage - 1); p <= Math.min(totalPages - 1, currentPage + 1); p++) {
+      result.push(p)
+    }
+    if (currentPage < totalPages - 2) result.push('...')
+    result.push(totalPages)
+    return result
+  }, [currentPage, totalPages])
+
+  if (totalPages <= 1) return null
+
+  return (
+    <div className="pagination-wrap">
+      <span className="pagination-info">
+        Exibindo <strong>{from}–{to}</strong> de <strong>{totalItems}</strong> registros
+      </span>
+
+      <div className="pagination-controls">
+        <button
+          className="pg-btn"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label="Página anterior"
+        >
+          <ChevronLeft size={15} />
+        </button>
+
+        {pages.map((p, i) =>
+          p === '...'
+            ? <span key={`ellipsis-${i}`} className="pg-ellipsis">…</span>
+            : (
+              <button
+                key={p}
+                className={cn('pg-btn pg-num', p === currentPage && 'pg-active')}
+                onClick={() => onPageChange(p as number)}
+              >
+                {p}
+              </button>
+            )
+        )}
+
+        <button
+          className="pg-btn"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          aria-label="Próxima página"
+        >
+          <ChevronRight size={15} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ListagemMedidasPage() {
   const router = useRouter()
@@ -190,6 +266,9 @@ export default function ListagemMedidasPage() {
   const [filtroGravidade, setFiltroGravidade]         = useState('Todos')
   const [filtroClassificacao, setFiltroClassificacao] = useState('Todos')
   const [filtroData, setFiltroData]                   = useState('')
+
+  // ─── Paginação ───────────────────────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     async function fetchMedidas() {
@@ -259,6 +338,16 @@ export default function ListagemMedidasPage() {
     })
   }, [medidas, busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroClassificacao, filtroData])
 
+  // Reset para página 1 sempre que os filtros mudarem
+  useEffect(() => { setCurrentPage(1) }, [busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroClassificacao, filtroData])
+
+  const totalPages  = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE))
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredData.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredData, currentPage])
+
   const limparFiltros = () => {
     setBusca(''); setCampoBusca('todos'); setFiltroCategoria('Todos')
     setFiltroMedida('Todos'); setFiltroGravidade('Todos')
@@ -323,8 +412,6 @@ export default function ListagemMedidasPage() {
         @media(min-width:1024px){ .ins-row td { padding:14px 20px; } }
         .ins-row:last-child td { border-bottom:none; }
         .ins-row:hover td { background:#fafbfd; }
-
-        /* Divisor vertical entre colunas colaborador e supervisor */
         .col-supervisor { border-left:1px solid #f1f5f9; }
 
         .btn-new { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; text-transform:uppercase; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .2s; white-space:nowrap; }
@@ -332,6 +419,17 @@ export default function ListagemMedidasPage() {
         .btn-export { background:#fff; color:#374151; padding:8px 12px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .2s; white-space:nowrap; }
         .btn-export:hover:not(:disabled) { border-color:#10b981; color:#10b981; background:#f0fdf4; }
         .btn-export:disabled { opacity:.5; cursor:not-allowed; }
+
+        /* ── Paginação ── */
+        .pagination-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:14px 20px; border-top:1px solid #f1f5f9; }
+        .pagination-info { font-size:12px; font-weight:600; color:#8896ab; }
+        .pagination-info strong { color:#374151; }
+        .pagination-controls { display:flex; align-items:center; gap:4px; }
+        .pg-btn { min-width:34px; height:34px; padding:0 6px; border-radius:9px; border:1.5px solid #e3e8ef; background:#fff; color:#374151; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+        .pg-btn:hover:not(:disabled) { border-color:#3d6cf0; color:#3d6cf0; background:#eef2ff; }
+        .pg-btn:disabled { opacity:.35; cursor:not-allowed; }
+        .pg-active { background:#3d6cf0 !important; color:#fff !important; border-color:#3d6cf0 !important; }
+        .pg-ellipsis { font-size:13px; color:#c4cbd6; font-weight:700; padding:0 4px; line-height:34px; }
 
         @keyframes menuIn { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:translateY(0);} }
         .action-item { width:100%; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; color:#4a5568; transition:all .15s; border:none; background:none; cursor:pointer; text-align:left; }
@@ -364,7 +462,7 @@ export default function ListagemMedidasPage() {
             >
               {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               <span className="hidden sm:inline">{isExporting ? 'Exportando...' : 'Exportar Excel'}</span>
-              {!isExporting && filteredData.length > 0 && (
+              {!isExporting && !loading && filteredData.length > 0 && (
                 <span style={{ background: '#f0fdf4', color: '#10b981', fontSize: '10px', fontWeight: 800, padding: '1px 6px', borderRadius: '99px', border: '1px solid #bbf7d0' }}>
                   {filteredData.length}
                 </span>
@@ -392,7 +490,6 @@ export default function ListagemMedidasPage() {
           </div>
 
           <div className="filter-body">
-            {/* Busca com campo selecionável */}
             <div className="filter-field">
               <span className="filter-label">Busca</span>
               <div
@@ -513,101 +610,104 @@ export default function ListagemMedidasPage() {
               <p className="text-[12px] text-[#c4cbd6] mt-1">Tente ajustar os filtros acima</p>
             </div>
           ) : (
-            <div className="table-scroll">
-              <table className="ins-table">
-                <thead>
-                  <tr>
-                    <th>ID / Data</th>
-                    <th>Colaborador</th>
-                    <th className="col-supervisor">Supervisor</th>
-                    <th>Medida</th>
-                    <th>Gravidade</th>
-                    <th>Classificação</th>
-                    <th style={{ textAlign: 'right' }}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.map(item => (
-                    <tr key={item.id} className="ins-row">
-
-                      {/* ── ID / Data / Click ── */}
-                      <td style={{ minWidth: '130px' }}>
-                        <div
-                          className="font-bold text-[#094780] text-[13px] cursor-pointer hover:underline w-fit"
-                          onClick={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
-                        >
-                          #{item.id.slice(-6).toUpperCase()}
-                        </div>
-                        <div className="text-[11px] text-[#8896ab] font-medium mt-0.5">
-                          {new Date(item.data).toLocaleDateString('pt-BR')}
-                        </div>
-                        {item.numeroInspecao && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <Link2 size={9} className="text-amber-500 flex-shrink-0" />
-                            <span className="text-[9px] text-amber-600 font-bold uppercase truncate max-w-[100px]" title={item.numeroInspecao}>
-                              {item.numeroInspecao}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* ── Colaborador ── */}
-                      <td style={{ minWidth: '170px' }}>
-                        <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">{item.colaborador}</div>
-                        <div className="text-[10px] text-[#8896ab] font-bold mt-0.5">Mat: {item.matricula}</div>
-                      </td>
-
-                      {/* ── Supervisor — coluna dedicada ── */}
-                      <td className="col-supervisor" style={{ minWidth: '170px' }}>
-                        <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">
-                          {item.nomeSupervisor || <span className="text-[#c4cbd6] font-normal italic text-[12px]">—</span>}
-                        </div>
-                        <div className="text-[10px] text-[#8896ab] font-bold mt-0.5">Mat: {item.supervisor || '—'}</div>
-                      </td>
-
-                      {/* ── Medida ── */}
-                      <td style={{ minWidth: '170px' }}>
-                        <div className="mb-1.5">
-                          <CategoriaBadge tipo={item.tipo} />
-                        </div>
-                        <MedidaBadge medida={item.medida} />
-                        {item.diasSuspensao && (
-                          <div className="text-[10px] text-purple-500 font-bold mt-1">
-                            {item.diasSuspensao} dia{item.diasSuspensao > 1 ? 's' : ''} suspensão
-                          </div>
-                        )}
-                      </td>
-
-                      {/* ── Gravidade ── */}
-                      <td style={{ minWidth: '110px' }}>
-                        <GravidadeBadge gravidade={item.gravidade} />
-                      </td>
-
-                      {/* ── Classificação ── */}
-                      <td style={{ minWidth: '200px', maxWidth: '240px' }}>
-                        <div
-                          className="text-[11px] font-bold text-[#374151] leading-snug line-clamp-2"
-                          title={item.classificacao}
-                        >
-                          {item.classificacao || <span className="text-[#c4cbd6] font-normal italic">—</span>}
-                        </div>
-                      </td>
-
-                      {/* ── Ações ── */}
-                      <td style={{ textAlign: 'right', minWidth: '60px' }}>
-                        <div className="flex justify-end">
-                          <ActionMenu
-                            onVisualizar={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
-                            onEditar={() => router.push(`/medida-administrativa/editar/${item.id}`)}
-                            onExcluir={() => handleOpenDeleteModal(item.id)}
-                          />
-                        </div>
-                      </td>
+            <>
+              <div className="table-scroll">
+                <table className="ins-table">
+                  <thead>
+                    <tr>
+                      <th>ID / Data</th>
+                      <th>Colaborador</th>
+                      <th className="col-supervisor">Supervisor</th>
+                      <th>Medida</th>
+                      <th>Gravidade</th>
+                      <th>Classificação</th>
+                      <th style={{ textAlign: 'right' }}>Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {paginatedData.map(item => (
+                      <tr key={item.id} className="ins-row">
+
+                        <td style={{ minWidth: '130px' }}>
+                          <div
+                            className="font-bold text-[#094780] text-[13px] cursor-pointer hover:underline w-fit"
+                            onClick={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
+                          >
+                            #{item.id.slice(-6).toUpperCase()}
+                          </div>
+                          <div className="text-[11px] text-[#8896ab] font-medium mt-0.5">
+                            {new Date(item.data).toLocaleDateString('pt-BR')}
+                          </div>
+                          {item.numeroInspecao && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Link2 size={9} className="text-amber-500 flex-shrink-0" />
+                              <span className="text-[9px] text-amber-600 font-bold uppercase truncate max-w-[100px]" title={item.numeroInspecao}>
+                                {item.numeroInspecao}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        <td style={{ minWidth: '170px' }}>
+                          <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">{item.colaborador}</div>
+                          <div className="text-[10px] text-[#8896ab] font-bold mt-0.5">Mat: {item.matricula}</div>
+                        </td>
+
+                        <td className="col-supervisor" style={{ minWidth: '170px' }}>
+                          <div className="font-bold text-[#1a2535] text-[13.5px] leading-tight">
+                            {item.nomeSupervisor || <span className="text-[#c4cbd6] font-normal italic text-[12px]">—</span>}
+                          </div>
+                          <div className="text-[10px] text-[#8896ab] font-bold mt-0.5">Mat: {item.supervisor || '—'}</div>
+                        </td>
+
+                        <td style={{ minWidth: '170px' }}>
+                          <div className="mb-1.5">
+                            <CategoriaBadge tipo={item.tipo} />
+                          </div>
+                          <MedidaBadge medida={item.medida} />
+                          {Number(item.diasSuspensao) > 0 && (
+  <div className="text-[10px] text-purple-500 font-bold mt-1">
+    {item.diasSuspensao} dia{item.diasSuspensao > 1 ? 's' : ''} suspensão
+  </div>
+)}
+                        </td>
+
+                        <td style={{ minWidth: '110px' }}>
+                          <GravidadeBadge gravidade={item.gravidade} />
+                        </td>
+
+                        <td style={{ minWidth: '200px', maxWidth: '240px' }}>
+                          <div
+                            className="text-[11px] font-bold text-[#374151] leading-snug line-clamp-2"
+                            title={item.classificacao}
+                          >
+                            {item.classificacao || <span className="text-[#c4cbd6] font-normal italic">—</span>}
+                          </div>
+                        </td>
+
+                        <td style={{ textAlign: 'right', minWidth: '60px' }}>
+                          <div className="flex justify-end">
+                            <ActionMenu
+                              onVisualizar={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
+                              onEditar={() => router.push(`/medida-administrativa/editar/${item.id}`)}
+                              onExcluir={() => handleOpenDeleteModal(item.id)}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── Paginação ── */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredData.length}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </div>
       </div>
