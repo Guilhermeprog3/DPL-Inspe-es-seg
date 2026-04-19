@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
-import { MedidaLayout } from '@/components/layout/MedidasLayout'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   User, Tag, AlertTriangle, FileText,
   Paperclip, Link2, Loader2, AlertCircle,
   Edit2, Trash2, Calendar, Hash, Shield,
-  CheckCircle2, File, FileImage,
+  CheckCircle2, File, FileImage, LayoutDashboard, PlusCircle, List, Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,15 @@ type AnexoRemoto = {
   tamanho?: number
   tipo?: string
 }
+
+// ─── Menu Lateral (Sidebar) ──────────────────────────────────────────────────
+const navItems = [
+  { section: 'Medida Administrativa' },
+  { label: 'Dashboard', href: '/medida-administrativa', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Nova Medida', href: '/medida-administrativa/nova', icon: PlusCircle },
+  { label: 'Histórico', href: '/medida-administrativa/lista', icon: List },
+]
 
 const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string }> = {
   LEVE:       { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
@@ -75,7 +84,7 @@ function isPdf(tipo?: string, nome?: string) {
 function FileIcon({ tipo, nome, size = 20 }: { tipo?: string; nome?: string; size?: number }) {
   if (isImage(tipo, nome)) return <FileImage size={size} className="text-blue-400" />
   if (isPdf(tipo, nome))   return <File      size={size} className="text-red-400" />
-  return                          <File      size={size} className="text-slate-400" />
+  return                           <File      size={size} className="text-slate-400" />
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -142,16 +151,16 @@ export default function DetalharMedidaPage() {
 
   // ─── LOADING / ERROR ────────────────────────────────────────────────────────
   if (loadState === 'loading') return (
-    <MedidaLayout title="Detalhar Medida">
+    <DashboardLayout title="Detalhar Medida" navItems={navItems}>
       <div className="flex items-center justify-center h-[60vh] gap-3 text-[#9ca3af]">
         <Loader2 size={20} className="animate-spin" />
         <span className="text-[14px]">Carregando medida...</span>
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 
   if (loadState === 'error') return (
-    <MedidaLayout title="Detalhar Medida">
+    <DashboardLayout title="Detalhar Medida" navItems={navItems}>
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-6">
         <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
           <AlertCircle size={24} className="text-red-500" />
@@ -167,10 +176,10 @@ export default function DetalharMedidaPage() {
           ← Voltar
         </button>
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 
-  const grav   = GRAVIDADE_CFG[data.gravidade] ?? GRAVIDADE_CFG['LEVE']
+  const grav     = GRAVIDADE_CFG[data.gravidade] ?? GRAVIDADE_CFG['LEVE']
   const medCfg = MEDIDA_CFG[data.medida]       ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
   const tipCfg = TIPO_CFG[data.tipo]           ?? { color: '#4b5563', bg: '#f8fafc' }
 
@@ -182,7 +191,7 @@ export default function DetalharMedidaPage() {
 
   // ─── RENDER ─────────────────────────────────────────────────────────────────
   return (
-    <MedidaLayout title="Detalhar Medida">
+    <DashboardLayout title="Detalhar Medida" navItems={navItems}>
       <style>{`
         @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
         .fade-up { animation: fadeUp 0.2s ease forwards; }
@@ -536,6 +545,6 @@ export default function DetalharMedidaPage() {
         )}
 
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 }

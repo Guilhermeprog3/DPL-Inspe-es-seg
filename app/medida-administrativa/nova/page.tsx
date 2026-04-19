@@ -3,12 +3,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { MedidaLayout } from '@/components/layout/MedidasLayout'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   User, Tag, AlertTriangle, FileText,
   Paperclip, Link2, CheckCircle, Loader2,
   Search, X, ChevronDown, ArrowLeft,
-  Upload, File, Trash2, FileImage,
+  Upload, File, Trash2, FileImage, LayoutDashboard, PlusCircle, List, Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,17 @@ type TipoMedida =
   | 'ADVERTÊNCIA VERBAL' | 'ADVERTÊNCIA ESCRITA' | 'SUSPENSÃO'
   | 'CONVERSA PEDAGÓGICA' | 'TREINAMENTO' | ''
 type Gravidade = 'LEVE' | 'MÉDIA' | 'GRAVE' | 'GRAVÍSSIMA' | ''
+
+// ─── Menu Lateral (Sidebar) ──────────────────────────────────────────────────
+const navItems = [
+  { section: 'Medida Administrativa' },
+  { label: 'Dashboard', href: '/medida-administrativa', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Nova Medida', href: '/medida-administrativa/nova', icon: PlusCircle },
+  { label: 'Histórico', href: '/medida-administrativa/lista', icon: List },
+  { section: 'Configurações' },
+  { label: 'Colaboradores', href: '/colaboradores', icon: Users },
+]
 
 const CLASSIFICACOES = [
   "ADMNISTRATIVA", "NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE", "VELOCIDADE", "PAPEL DE GUARDIÃO", "CELULAR", "REINTEGRA", "CÂMERA", "LUVA/MANGA ISOLANTE/PROTETOR FACIAL", "OBSTRUÇÃO DE CÂMERA", "REGRAS DE OURO", "LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA", "EPI / EPI'S", "CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO", "CINTO DE SEGURANÇA", "SINALIZAÇÃO/PR", "SONOLÊNCIA", "PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO", "EXCESSO DE VELOCIDADE", "MANTAS ISOLANTES", "VELOCIDADE/ OBSTRUÇÃO", "ATERRAMENTO TEMPORÁRIO BT", "MANOBRA DE RÉ / MANOBRA MARCHA RÉ", "COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO", "BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF", "VELOCIDADE/ CELULAR", "CABO DE MT PARTIDO", "FOLHA DE PONTO", "CAPACETE", "APR", "NÃO UTILIZOU EPI ADEQUADO", "PROTETOR FACIAL", "NÃO COMUNICOU ACIDENTE DE TRABALHO", "BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO", "NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA", "LUVA CLASSE 0", "LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO", "PNEUS", "ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA", "FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO", "RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)", "ERRO DE PROCEDIMENTO OPERACIONAL", "TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO", "BANDEIROLA", "ESCADA/TRAVA QUEDAS", "PROTETOR FACIAL(VISEIRA)", "ESCADA", "AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35", "LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF", "DESCUPRIMENTO DAS LEIS DE TRÂNSITO", "DELIMITAÇÃO DA AREA/EPI", "CELULAR/EXCESSO DE VELOCIDADE", "FREIO ABS/TRAVA QUEDA", "CIGARRO / FUMANDO", "DESVIO DE CONDUTA", "APR PREENCHIDA INCORRETAMENTE E EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO ADEQUADA", "RECUSA INJUSTIFICADA EM CUMPRIR ORDENS DE TRABALHO", "TAXA DE CONTATO", "DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA", "DESCUMPRIR NORMAS E PROCEDIMENTOS INTERNOS DA EMPRESA", "FALHA DE PROCEDIMENTO / ATO INSEGURO", "FALHA DE PROCEDIMENTO / NEGLIGÊNCIA", "EXERCÍCIO INDEVIDO DE FUNÇÃO", "LINHA VIVA", "EPC/PROCEDIMENTO DE SEGURANÇA", "SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO", "SEM SINALIZAÇÃO DA AREA/EPI", "VELOCIDADE/CELULAR", "DESVIOS DE SEGURANÇA", "CNH/DIREÇÃO DISTRAÍDA", "DIREÇÃO DISTRAÍDA", "NÃO UTILIZOU ESCADA/ANCORAGEM/TRAVA QUEDAS/LUVA ISOLANTE/NÃO UTILIZOU VEICULO COMO BARREIRA", "CELULAR/OBSTRUÇÃO CÂMERA", "NÃO UTILIZOU A FITA DE ANCORAGEM", "VELOCIDADE/DIREÇÃO DISTRAÍDA/OBSTRUÇÃO", "CÂMERA OBSTRUIDA/DIREÇÃO DISTRAÍDA", "POSSIVEL USO DO CELULAR", "NEGLIGÊNCIA DURANTE A ATIVIDADE", "NÃO UTILIZOU A FITA DE ANCORAGEM/EPI/EPC", "REALIZANDO A TAREFA COM A ÁREA DE TRABALHO NÃO ISOLADA/EPI/EPC", "FALHA DE PROCEDIMENTO / ATO INSEGURO / SEM GUARDIÃO DA VIDA", "ATO INSEGURO / SEM GUARDIÃO DA VIDA", "ATO INSEGURO", "NÃO UTILIZAÇÃO DOS EPI'S, EPC'S OU ESCADAS, DANIFICADAS E/OU NÃO INSPECIONADOS", "EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM PORTÃO DA BASE", "DEIXOU DE UTILIZAR ACESSÓRIOS OBRIGATÓRIOS PARA MOVIMENTAÇÃO DE CARGA SUSPENSA", "AUTOINSPECÇÃO DIÁRIA", "CONSTRUÇÃO/MANUTENÇÃO", "FICHA SEGURANÇA", "UTILIZAÇÃO DA VESTIMENTA DANIFICADA", "SEM O USO DO CINTO DE SEGURANÇA", "DESCUMPRIMENTO DA LEGISLAÇÃO DE TRÂNSITO VIGENTE DURANTE A CONDUÇÃO DE VEÍCULO DA EMPRESA", "PERMITIR A APROXIMAÇÃO OU PERMANENCIA DE TERCEIROS DENTRO DA AREA ISOLADA PARA SERVIÇO", "DIREÇÃO DISTRAÍDA/VELOCIDADE", "VELOCIDADE/OBSTRUÇÃO", "DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS INTERNOS", "VELOCIDADE/CÂMERA OBSTRUIDA/USO DO CELULAR DURANTE CONDUÇÃO", "VELOCIDADE/DIREÇÃO DISTRAIDA", "NÃO COMUNICAÇÃO DE AVARIA VEICULAR", "OBSTRUÇÃO CÂMERA", "ATERRAMENTO", "DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS", "EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM UM TERCEIRO", "TRABALHAR SEM ESCADA AMARRADA/SEM USAR EPI-EPC/NÃO UTILIZAR LUVAS ISOLANTES BT e AT NA EXECUÇÃO DA ATIVIDADE", "DESCUMPRIMENTO DA HIERARQUIA FUNCIONAL /VIOLAÇÃO PROCEDIMENTO DE SEGURANÇA/INSUBORDINAÇÃO", "COLABORADOR ESTAVA COCHILANDO AO VOLANTE"
@@ -66,7 +77,7 @@ export default function NovaMedidaPage() {
   const [relacionarClick, setRelacionarClick] = useState(false)
   const [numeroInspecao, setNumeroInspecao] = useState('')
 
-  // ── Estados Autocomplete (Taxa de Contato) ──
+  // ── Estados Autocomplete ──
   const [colaboradoresRepo, setColaboradoresRepo] = useState<any[]>([])
   const [showColabDropdown, setShowColabDropdown] = useState(false)
   const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
@@ -75,7 +86,7 @@ export default function NovaMedidaPage() {
   const [anexos, setAnexos] = useState<Anexo[]>([])
   const [isDragging, setIsDragging] = useState(false)
 
-  // ── Busca Colaboradores do Supabase via Backend ──
+  // ── Busca Colaboradores ──
   useEffect(() => {
     const fetchColabs = async () => {
       const token = (session as any)?.access_token || (session as any)?.accessToken
@@ -93,39 +104,31 @@ export default function NovaMedidaPage() {
     fetchColabs()
   }, [session])
 
-  // ── Lógica de Filtro e Seleção ──
-  // ── Lógica de Filtro e Seleção CORRIGIDA ──
-const colabsFiltrados = useMemo(() => {
-  // Garantimos que nomeColab seja tratado como string
-  const termoBusca = String(nomeColab || '').toLowerCase();
-  if (termoBusca.length < 2) return [];
+  const colabsFiltrados = useMemo(() => {
+    const termoBusca = String(nomeColab || '').toLowerCase();
+    if (termoBusca.length < 2) return [];
+    return colaboradoresRepo.filter(c => 
+      String(c.NOME || '').toLowerCase().includes(termoBusca)
+    ).slice(0, 8);
+  }, [nomeColab, colaboradoresRepo]);
 
-  return colaboradoresRepo.filter(c => 
-    String(c.NOME || '').toLowerCase().includes(termoBusca)
-  ).slice(0, 8);
-}, [nomeColab, colaboradoresRepo]);
+  const chapasFiltradas = useMemo(() => {
+    const termoBusca = String(matriculaColab || '').toLowerCase();
+    if (termoBusca.length < 1) return [];
+    return colaboradoresRepo.filter(c => {
+      const chapaStr = String(c.CHAPA || '').toLowerCase(); 
+      return chapaStr.includes(termoBusca);
+    }).slice(0, 8);
+  }, [matriculaColab, colaboradoresRepo]);
 
-const chapasFiltradas = useMemo(() => {
-  // Garantimos que matriculaColab seja tratado como string
-  const termoBusca = String(matriculaColab || '').toLowerCase();
-  if (termoBusca.length < 1) return [];
-
-  return colaboradoresRepo.filter(c => {
-    const chapaStr = String(c.CHAPA || '').toLowerCase(); 
-    return chapaStr.includes(termoBusca);
-  }).slice(0, 8);
-}, [matriculaColab, colaboradoresRepo]);
-
-const selecionarColab = (item: any) => {
-  // O SEGREDO ESTÁ AQUI: Forçar a conversão para String ao selecionar
-  setNomeColab(String(item.NOME || ''));
-  setMatriculaColab(String(item.CHAPA || ''));
-  setNomeSupervisor(String(item.SUPERVISOR || ''));
-  
-  setStatusColab('valid');
-  setShowColabDropdown(false);
-  setShowMatriculaDropdown(false);
-};
+  const selecionarColab = (item: any) => {
+    setNomeColab(String(item.NOME || ''));
+    setMatriculaColab(String(item.CHAPA || ''));
+    setNomeSupervisor(String(item.SUPERVISOR || ''));
+    setStatusColab('valid');
+    setShowColabDropdown(false);
+    setShowMatriculaDropdown(false);
+  };
 
   // ── Handlers de Anexos ──
   function handleFilesAdd(files: FileList | null) {
@@ -162,7 +165,6 @@ const selecionarColab = (item: any) => {
     return () => anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
   }, [])
 
-  // ── Estados Pesquisa Classificação ──
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
 
@@ -173,54 +175,46 @@ const selecionarColab = (item: any) => {
 
   // ── Registro Final ──
   async function handleRegister() {
-  if (isRegistering || !allValid) return
-  const token = (session as any)?.access_token || (session as any)?.accessToken
-  if (!token) return
-  
-  setIsRegistering(true)
-
-  // 1. Criar o objeto FormData
-  const formData = new FormData()
-
-  formData.append('colaborador', nomeColab)
-  formData.append('matricula', matriculaColab)
-  formData.append('supervisor', matriculaSup)
-  formData.append('nomeSupervisor', nomeSupervisor)
-  formData.append('tipo', tipoCategoria)
-  formData.append('medida', tipoMedida)
-  formData.append('ocorrencia', ocorrencia)
-  formData.append('gravidade', gravidade)
-  formData.append('classificacao', classificacao)
-  formData.append('data', new Date(dataMedida).toISOString())
-  
-  if (diasSuspensao) formData.append('diasSuspensao', diasSuspensao)
-  if (relacionarClick && numeroInspecao) formData.append('numeroInspecao', numeroInspecao)
-
-  anexos.forEach((anexo) => {
-    formData.append('files', anexo.file)
-  })
-
-  try {
-    const res = await fetch('http://localhost:3001/medidas', {
-      method: 'POST',
-      headers: { 
-        'Authorization': `Bearer ${token}` 
-      },
-      body: formData,
-    })
-
-    if (!res.ok) throw new Error('Erro ao registrar')
+    if (isRegistering || !allValid) return
+    const token = (session as any)?.access_token || (session as any)?.accessToken
+    if (!token) return
     
-    // Limpeza de cache de imagens e estado
-    anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
-    setAnexos([])
-    setSuccessModal(true)
-  } catch (error: any) {
-    alert(error.message)
-  } finally {
-    setIsRegistering(false)
+    setIsRegistering(true)
+    const formData = new FormData()
+
+    formData.append('colaborador', nomeColab)
+    formData.append('matricula', matriculaColab)
+    formData.append('supervisor', matriculaSup)
+    formData.append('nomeSupervisor', nomeSupervisor)
+    formData.append('tipo', tipoCategoria)
+    formData.append('medida', tipoMedida)
+    formData.append('ocorrencia', ocorrencia)
+    formData.append('gravidade', gravidade)
+    formData.append('classificacao', classificacao)
+    formData.append('data', new Date(dataMedida).toISOString())
+    
+    if (diasSuspensao) formData.append('diasSuspensao', diasSuspensao)
+    if (relacionarClick && numeroInspecao) formData.append('numeroInspecao', numeroInspecao)
+
+    anexos.forEach((anexo) => formData.append('files', anexo.file))
+
+    try {
+      const res = await fetch('http://localhost:3001/medidas', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error('Erro ao registrar')
+      anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
+      setAnexos([])
+      setSuccessModal(true)
+    } catch (error: any) {
+      alert(error.message)
+    } finally {
+      setIsRegistering(false)
+    }
   }
-}
 
   const tabValid: Record<TabKey, boolean> = {
     identificacao: !!nomeColab && !!matriculaColab && !!nomeSupervisor && !!dataMedida,
@@ -240,7 +234,7 @@ const selecionarColab = (item: any) => {
   const labelCls = 'text-[13.5px] font-medium text-[#111827]'
 
   return (
-    <MedidaLayout title="Nova Medida">
+    <DashboardLayout title="Nova Medida" navItems={navItems}>
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -288,15 +282,12 @@ const selecionarColab = (item: any) => {
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-8 pt-6 pb-28">
 
-          {/* ── IDENTIFICAÇÃO (CORRIGIDA) ── */}
           {tab === 'identificacao' && (
            <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl shadow-sm">
               <div className={sectionTitleCls}>Dados do Colaborador (Taxa de Contato)</div>
 
               <div className="grid gap-4 items-start px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
                 <span className={labelCls + " mt-2"}>Nomes *</span>
-                
-                {/* Nome Colaborador com Autocomplete */}
                 <div className="relative">
                   <input
                     type="text"
@@ -322,7 +313,6 @@ const selecionarColab = (item: any) => {
                     </div>
                   )}
                 </div>
-
                 <input
                   type="text"
                   value={nomeSupervisor}
@@ -334,8 +324,6 @@ const selecionarColab = (item: any) => {
 
               <div className="grid gap-4 items-start px-6 py-4 border-b border-[#e3e8ef] grid-cols-1 sm:grid-cols-[200px_1fr_1fr]">
                 <span className={labelCls + " mt-2"}>Matrículas *</span>
-                
-                {/* Chapa/Matrícula com Autocomplete */}
                 <div className="relative">
                   <input
                     type="text"
@@ -361,7 +349,6 @@ const selecionarColab = (item: any) => {
                     </div>
                   )}
                 </div>
-
                 <input
                   type="text"
                   value={matriculaSup}
@@ -383,7 +370,6 @@ const selecionarColab = (item: any) => {
             </div>
           )}
 
-          {/* ── CLASSIFICAÇÃO ── */}
           {tab === 'classificacao' && (
             <div className="fade-up space-y-4">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
@@ -395,9 +381,7 @@ const selecionarColab = (item: any) => {
                       onClick={() => setTipoCategoria(cat as any)}
                       className={cn(
                         'flex-1 py-3 rounded-xl border-2 font-bold text-xs transition-all',
-                        tipoCategoria === cat
-                          ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white'
-                          : 'bg-white border-slate-100 text-slate-400'
+                        tipoCategoria === cat ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white' : 'bg-white border-slate-100 text-slate-400'
                       )}
                     >
                       {cat}
@@ -422,19 +406,13 @@ const selecionarColab = (item: any) => {
                 {tipoMedida === 'SUSPENSÃO' && (
                   <div className="p-6 border-t bg-slate-50/30 flex items-center gap-4">
                     <span className="text-xs font-bold text-slate-500 uppercase">Dias de Suspensão *</span>
-                    <input
-                      type="number"
-                      value={diasSuspensao}
-                      onChange={e => setDiasSuspensao(e.target.value)}
-                      className={cn(inputCls, 'max-w-[120px]')}
-                    />
+                    <input type="number" value={diasSuspensao} onChange={e => setDiasSuspensao(e.target.value)} className={cn(inputCls, 'max-w-[120px]')} />
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* ── GRAVIDADE ── */}
           {tab === 'gravidade' && (
             <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
               <div className={sectionTitleCls}>Nível de Gravidade</div>
@@ -456,18 +434,12 @@ const selecionarColab = (item: any) => {
             </div>
           )}
 
-          {/* ── OCORRÊNCIA ── */}
           {tab === 'ocorrencia' && (
             <div className="fade-up bg-white p-8 rounded-3xl border border-[#eef1f6] shadow-sm space-y-6">
               <div className="relative">
-                <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">
-                  Pesquisar Classificação *
-                </label>
+                <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Pesquisar Classificação *</label>
                 <div className="relative group">
-                  <Search
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#3d6cf0]"
-                    size={18}
-                  />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#3d6cf0]" size={18} />
                   <input
                     type="text"
                     className={cn(inputCls, 'pl-12 h-11')}
@@ -481,78 +453,42 @@ const selecionarColab = (item: any) => {
                       setShowDropdown(true)
                     }}
                   />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearchQuery(''); setClassificacao('') }}
-                      className="absolute right-10 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
+                  {searchQuery && <button type="button" onClick={() => { setSearchQuery(''); setClassificacao('') }} className="absolute right-10 top-1/2 -translate-y-1/2 text-slate-300"><X size={14} /></button>}
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                 </div>
                 {showDropdown && (
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setShowDropdown(false)} />
                     <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-40 max-h-72 overflow-y-auto p-2">
-                      {filteredClassificacoes.length > 0
-                        ? filteredClassificacoes.map((item, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => { setClassificacao(item); setSearchQuery(item); setShowDropdown(false) }}
-                            className={cn(
-                              'w-full text-left px-4 py-3 text-[13px] font-semibold rounded-xl transition-all mb-1 last:mb-0',
-                              classificacao === item ? 'bg-blue-50 text-[#3d6cf0]' : 'text-slate-600 hover:bg-slate-50'
-                            )}
-                          >
-                            {item}
-                          </button>
-                        ))
-                        : (
-                          <div className="p-4 text-center text-slate-400 text-xs">
-                            Nenhum resultado para "{searchQuery}"
-                          </div>
-                        )}
+                      {filteredClassificacoes.length > 0 ? filteredClassificacoes.map((item, i) => (
+                        <button key={i} type="button" onClick={() => { setClassificacao(item); setSearchQuery(item); setShowDropdown(false) }} className={cn('w-full text-left px-4 py-3 text-[13px] font-semibold rounded-xl transition-all mb-1 last:mb-0', classificacao === item ? 'bg-blue-50 text-[#3d6cf0]' : 'text-slate-600 hover:bg-slate-50')}>{item}</button>
+                      )) : <div className="p-4 text-center text-slate-400 text-xs">Nenhum resultado</div>}
                     </div>
                   </>
                 )}
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase">Descrição Detalhada *</label>
-                <textarea
-                  value={ocorrencia}
-                  onChange={e => setOcorrencia(e.target.value)}
-                  rows={6}
-                  className={cn(inputCls, 'h-auto py-3 leading-relaxed')}
-                  placeholder="Descreva detalhadamente o que aconteceu..."
-                />
+                <textarea value={ocorrencia} onChange={e => setOcorrencia(e.target.value)} rows={6} className={cn(inputCls, 'h-auto py-3 leading-relaxed')} placeholder="O que aconteceu..." />
               </div>
             </div>
           )}
 
-          {/* ── ANEXOS & VÍNCULO ── */}
           {tab === 'anexos' && (
             <div className="fade-up space-y-4">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={sectionTitleCls}>Anexos</div>
                 <div className="p-6">
                   <div
-                    className={cn(
-                      'border-2 border-dashed rounded-2xl transition-all cursor-pointer',
-                      isDragging ? 'border-[#3d6cf0] bg-[#eff4ff]' : 'border-slate-200 bg-slate-50/50 hover:border-[#3d6cf0]'
-                    )}
+                    className={cn('border-2 border-dashed rounded-2xl transition-all cursor-pointer', isDragging ? 'border-[#3d6cf0] bg-[#eff4ff]' : 'border-slate-200 bg-slate-50/50 hover:border-[#3d6cf0]')}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}
                   >
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-white border border-slate-200 text-slate-400">
-                        <Upload size={24} />
-                      </div>
-                      <p className="text-sm font-semibold text-slate-600 mb-1">Arraste arquivos aqui ou <span className="text-[#3d6cf0]">clique</span></p>
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-white border border-slate-200 text-slate-400"><Upload size={24} /></div>
+                      <p className="text-sm font-semibold text-slate-600 mb-1">Arraste ou <span className="text-[#3d6cf0]">clique</span></p>
                     </div>
                   </div>
                   <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e => handleFilesAdd(e.target.files)} />
@@ -561,27 +497,23 @@ const selecionarColab = (item: any) => {
                   <div className="px-6 pb-6 space-y-2">
                     {anexos.map(anexo => (
                       <div key={anexo.id} className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group">
-                        {anexo.preview ? <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200"><img src={anexo.preview} className="w-full h-full object-cover" /></div> : <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center">{getFileIcon(anexo.file)}</div>}
+                        <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center">{getFileIcon(anexo.file)}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-semibold text-slate-700 truncate">{anexo.file.name}</p>
                           <p className="text-[11px] text-slate-400">{formatBytes(anexo.file.size)}</p>
                         </div>
-                        <button onClick={() => removerAnexo(anexo.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 group-hover:opacity-100 opacity-0 transition-all"><Trash2 size={15} /></button>
+                        <button onClick={() => removerAnexo(anexo.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400"><Trash2 size={15} /></button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={sectionTitleCls}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className={labelCls}>Inspeção CLICK</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{relacionarClick ? 'Campo ativo' : 'Sem vínculo'}</p>
-                    </div>
-                    <button onClick={() => { setRelacionarClick(v => !v); if (relacionarClick) setNumeroInspecao('') }} className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', relacionarClick ? 'bg-[#3d6cf0]' : 'bg-slate-200')}><span className={cn('inline-block h-4 w-4 rounded-full bg-white shadow transition-transform', relacionarClick ? 'translate-x-6' : 'translate-x-1')} /></button>
+                    <div><p className={labelCls}>Inspeção CLICK</p></div>
+                    <button onClick={() => { setRelacionarClick(v => !v); if (relacionarClick) setNumeroInspecao('') }} className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', relacionarClick ? 'bg-[#3d6cf0]' : 'bg-slate-200')}><span className={cn('inline-block h-4 w-4 rounded-full bg-white transition-transform', relacionarClick ? 'translate-x-6' : 'translate-x-1')} /></button>
                   </div>
                   {relacionarClick && <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)} className={inputCls} placeholder="Número da inspeção" />}
                 </div>
@@ -592,23 +524,12 @@ const selecionarColab = (item: any) => {
 
         <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t px-8 py-4 flex items-center justify-between z-50">
           <div className="hidden md:flex items-center gap-4">
-            <div className="flex gap-1.5">
-              {tabOrder.map((key, idx) => (
-                <div key={key} className={cn('h-1.5 w-6 rounded-full transition-all', idx <= currentIdx ? 'bg-[#3d6cf0]' : 'bg-slate-200')} />
-              ))}
-            </div>
+            <div className="flex gap-1.5">{tabOrder.map((key, idx) => (<div key={key} className={cn('h-1.5 w-6 rounded-full', idx <= currentIdx ? 'bg-[#3d6cf0]' : 'bg-slate-200')} />))}</div>
             <span className="text-[10px] font-black text-slate-400 uppercase">Etapas: {completedCount}/5</span>
           </div>
-
           <div className="flex gap-3 w-full md:w-auto">
             {currentIdx > 0 && <button onClick={() => setTab(tabOrder[currentIdx - 1])} className="flex-1 md:flex-none px-6 py-2 border-2 rounded-xl text-xs font-bold text-slate-500">VOLTAR</button>}
-            <button
-              disabled={currentIdx === 4 ? (!allValid || isRegistering) : false}
-              onClick={() => currentIdx < 4 ? setTab(tabOrder[currentIdx + 1]) : handleRegister()}
-              className={cn('flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white transition-all', (currentIdx < 4 || allValid) ? 'bg-[#3d6cf0]' : 'bg-slate-200 cursor-not-allowed')}
-            >
-              {isRegistering ? <Loader2 className="animate-spin" size={16} /> : currentIdx < 4 ? 'PRÓXIMO' : 'SALVAR REGISTRO'}
-            </button>
+            <button disabled={currentIdx === 4 ? (!allValid || isRegistering) : false} onClick={() => currentIdx < 4 ? setTab(tabOrder[currentIdx + 1]) : handleRegister()} className={cn('flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white transition-all', (currentIdx < 4 || allValid) ? 'bg-[#3d6cf0]' : 'bg-slate-200 cursor-not-allowed')}>{isRegistering ? <Loader2 className="animate-spin" size={16} /> : currentIdx < 4 ? 'PRÓXIMO' : 'SALVAR REGISTRO'}</button>
           </div>
         </div>
 
@@ -617,12 +538,12 @@ const selecionarColab = (item: any) => {
             <div className="bg-white p-10 rounded-3xl text-center shadow-2xl max-w-sm">
               <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={48} className="text-emerald-500" /></div>
               <h3 className="font-black text-xl text-slate-800 mb-2">Sucesso!</h3>
-              <p className="text-slate-500 text-sm mb-8 leading-relaxed">A medida administrativa foi processada e salva.</p>
+              <p className="text-slate-500 text-sm mb-8">A medida foi salva com sucesso.</p>
               <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs tracking-widest">VER LISTAGEM</button>
             </div>
           </div>
         )}
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 }

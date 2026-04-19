@@ -1,17 +1,31 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { MedidaLayout } from '@/components/layout/MedidasLayout'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
-  PlusCircle, List, Search, ArrowRight,
+  PlusCircle, 
+  List, 
+  Search, 
+  ArrowRight,
+  LayoutDashboard,
+  Users,
+  Settings
 } from 'lucide-react'
+
+const navItems = [
+  { section: 'Medida Administrativa' },
+  { label: 'Dashboard', href: '/medida-administrativa', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Nova Medida', href: '/medida-administrativa/nova', icon: PlusCircle },
+  { label: 'Histórico', href: '/medida-administrativa/lista', icon: List },
+]
 
 const actions = [
   {
     icon: PlusCircle,
     color: '#094780',
     title: 'Nova Medida',
-    description: 'Registre uma nova advertência, suspensão',
+    description: 'Registre uma nova advertência, suspensão ou medida educativa para colaboradores.',
     cta: 'Registrar medida',
     href: '/medida-administrativa/nova',
   },
@@ -30,6 +44,7 @@ export default function MedidaDashboardPage() {
   const [search, setSearch] = useState('')
   const [mounted, setMounted] = useState(false)
 
+  
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -42,7 +57,11 @@ export default function MedidaDashboardPage() {
   if (!mounted) return null
 
   return (
-    <MedidaLayout title="Dashboard" breadcrumb="SIGS / Medida Administrativa">
+    <DashboardLayout 
+      title="Dashboard" 
+      breadcrumb="SIGS / Medida Administrativa"
+      navItems={navItems}
+    >
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
 
@@ -107,6 +126,7 @@ export default function MedidaDashboardPage() {
           border: 1px solid rgba(9,71,128,0.1); border-radius: 14px;
           outline: none; transition: all 0.2s;
           font-weight: 500;
+          font-family: 'DM Sans', sans-serif;
         }
         .search-input:focus { border-color: #094780; box-shadow: 0 0 0 4px rgba(9,71,128,0.05); }
       `}} />
@@ -142,6 +162,8 @@ export default function MedidaDashboardPage() {
               className="ac-card" 
               style={{ animationDelay: `${idx * 0.1}s` }}
               onClick={() => router.push(a.href)}
+              role="button"
+              tabIndex={0}
             >
               <div className="ac-icon" style={{ background: `linear-gradient(135deg,${a.color} 0%, ${a.color}dd 100%)` }}>
                 <a.icon size={22} color="#fff" strokeWidth={2} />
@@ -157,11 +179,11 @@ export default function MedidaDashboardPage() {
             </div>
           )) : (
             <div className="py-20 text-center text-[#8896ab]">
-              Nenhuma funcionalidade encontrada.
+              Nenhuma funcionalidade encontrada para "{search}".
             </div>
           )}
         </div>
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 }

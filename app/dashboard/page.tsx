@@ -2,8 +2,32 @@
 import { useState } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, ListChecks, Boxes, ArrowRight, Search, QrCode, MapPin } from 'lucide-react'
+import { 
+  ClipboardList, 
+  ListChecks, 
+  Boxes, 
+  ArrowRight, 
+  Search, 
+  QrCode, 
+  MapPin, 
+  LayoutDashboard, 
+  Settings 
+} from 'lucide-react'
 
+// 1. Definimos os itens que aparecerão na Sidebar (Navegação Lateral)
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
+
+// 2. Definimos os cards de ação rápida que aparecem no centro da página
 const actions = [
   {
     icon: ClipboardList,
@@ -65,8 +89,10 @@ export default function DashboardPage() {
     <DashboardLayout
       title="Dashboard"
       breadcrumb="SIGS / Dashboard / PI · Metropolitana"
+      navItems={navItems} // CORREÇÃO: Passando o prop obrigatório para o Layout
     >
-      <style>{`
+      {/* CORREÇÃO DE HIDRATAÇÃO: Injetando CSS de forma segura para o Next.js */}
+      <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap');
 
         .db-wrap {
@@ -118,14 +144,11 @@ export default function DashboardPage() {
         .db-card-cta-line { height: 1.5px; width: 18px; transition: width 0.2s ease; border-radius: 2px; }
         .db-card:hover .db-card-cta-line { width: 28px; }
 
-        .no-results { grid-column: 1 / -1; text-align: center; padding: 48px 20px; color: #8896ab; font-size: 14px; line-height: 1.6; }
-        .no-results strong { display: block; font-size: 15px; font-weight: 600; color: #4a5568; margin-bottom: 6px; }
-
         @keyframes dbFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 960px) { .db-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .db-grid { grid-template-columns: 1fr; max-width: 420px; } }
-      `}</style>
+      ` }} />
 
       <div className="db-wrap">
         <div className="db-ring db-ring-1" />
@@ -166,9 +189,6 @@ export default function DashboardPage() {
                   className="db-card"
                   style={{ animationDelay: `${0.1 + index * 0.05}s` }}
                   onClick={() => router.push(a.href)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && router.push(a.href)}
                 >
                   <div className="db-card-bar" style={{ background: `linear-gradient(90deg, ${a.color}, ${a.color}88)` }} />
                   <div className="db-card-bg" style={{ background: `radial-gradient(circle, ${a.colorLight} 0%, transparent 70%)` }} />

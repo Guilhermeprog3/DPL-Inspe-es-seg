@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useParams, useRouter } from 'next/navigation'
-import { MedidaLayout } from '@/components/layout/MedidasLayout'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   User, Tag, AlertTriangle, FileText,
   Paperclip, Link2, CheckCircle, Loader2,
   Trash2, Search, X, ChevronDown,
-  Upload, File, FileImage,
+  Upload, File, FileImage, LayoutDashboard, PlusCircle, List, Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,15 @@ type Gravidade = 'LEVE' | 'MÉDIA' | 'GRAVE' | 'GRAVÍSSIMA' | ''
 type LoadState = 'loading' | 'success' | 'error'
 
 type Anexo = { id: string; file: File; preview?: string }
+
+// ─── Menu Lateral (Sidebar) ──────────────────────────────────────────────────
+const navItems = [
+  { section: 'Medida Administrativa' },
+  { label: 'Dashboard', href: '/medida-administrativa', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Nova Medida', href: '/medida-administrativa/nova', icon: PlusCircle },
+  { label: 'Histórico', href: '/medida-administrativa/lista', icon: List }
+]
 
 const CLASSIFICACOES_DATA = [
   "ADMNISTRATIVA", "NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE", "VELOCIDADE", "PAPEL DE GUARDIÃO", "CELULAR", "REINTEGRA", "CÂMERA", "LUVA/MANGA ISOLANTE/PROTETOR FACIAL", "OBSTRUÇÃO DE CÂMERA", "REGRAS DE OURO", "LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA", "EPI / EPI'S", "CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO", "CINTO DE SEGURANÇA", "SINALIZAÇÃO/PR", "SONOLÊNCIA", "PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO", "EXCESSO DE VELOCIDADE", "MANTAS ISOLANTES", "VELOCIDADE/ OBSTRUÇÃO", "ATERRAMENTO TEMPORÁRIO BT", "MANOBRA DE RÉ / MANOBRA MARCHA RÉ", "COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO", "BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF", "VELOCIDADE/ CELULAR", "CABO DE MT PARTIDO", "FOLHA DE PONTO", "CAPACETE", "APR", "NÃO UTILIZOU EPI ADEQUADO", "PROTETOR FACIAL", "NÃO COMUNICOU ACIDENTE DE TRABALHO", "BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO", "NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA", "LUVA CLASSE 0", "LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO", "PNEUS", "ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA", "FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO", "RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)", "ERRO DE PROCEDIMENTO OPERACIONAL", "TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO", "BANDEIROLA", "ESCADA/TRAVA QUEDAS", "PROTETOR FACIAL(VISEIRA)", "ESCADA", "AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35", "LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF", "DESCUPRIMENTO DAS LEIS DE TRÂNSITO", "DELIMITAÇÃO DA AREA/EPI", "CELULAR/EXCESSO DE VELOCIDADE", "FREIO ABS/TRAVA QUEDA", "CIGARRO / FUMANDO", "DESVIO DE CONDUTA", "APR PREENCHIDA INCORRETAMENTE E EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO ADEQUADA", "RECUSA INJUSTIFICADA EM CUMPRIR ORDENS DE TRABALHO", "TAXA DE CONTATO", "DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA", "DESCUMPRIR NORMAS E PROCEDIMENTOS INTERNOS DA EMPRESA", "FALHA DE PROCEDIMENTO / ATO INSEGURO", "FALHA DE PROCEDIMENTO / NEGLIGÊNCIA", "EXERCÍCIO INDEVIDO DE FUNÇÃO", "LINHA VIVA", "EPC/PROCEDIMENTO DE SEGURANÇA", "SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO", "SEM SINALIZAÇÃO DA AREA/EPI", "VELOCIDADE/CELULAR", "DESVIOS DE SEGURANÇA", "CNH/DIREÇÃO DISTRAÍDA", "DIREÇÃO DISTRAÍDA", "NÃO UTILIZOU ESCADA/ANCORAGEM/TRAVA QUEDAS/LUVA ISOLANTE/NÃO UTILIZOU VEICULO COMO BARREIRA", "CELULAR/OBSTRUÇÃO CÂMERA", "NÃO UTILIZOU A FITA DE ANCORAGEM", "VELOCIDADE/DIREÇÃO DISTRAÍDA/OBSTRUÇÃO", "CÂMERA OBSTRUIDA/DIREÇÃO DISTRAÍDA", "POSSIVEL USO DO CELULAR", "NEGLIGÊNCIA DURANTE A ATIVIDADE", "NÃO UTILIZOU A FITA DE ANCORAGEM/EPI/EPC", "REALIZANDO A TAREFA COM A ÁREA DE TRABALHO NÃO ISOLADA/EPI/EPC", "FALHA DE PROCEDIMENTO / ATO INSEGURO / SEM GUARDIÃO DA VIDA", "ATO INSEGURO / SEM GUARDIÃO DA VIDA", "ATO INSEGURO", "NÃO UTILIZAÇÃO DOS EPI'S, EPC'S OU ESCADAS, DANIFICADAS E/OU NÃO INSPECIONADOS", "EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM PORTÃO DA BASE", "DEIXOU DE UTILIZAR ACESSÓRIOS OBRIGATÓRIOS PARA MOVIMENTAÇÃO DE CARGA SUSPENSA", "AUTOINSPECÇÃO DIÁRIA", "CONSTRUÇÃO/MANUTENÇÃO", "FICHA SEGURANÇA", "UTILIZAÇÃO DA VESTIMENTA DANIFICADA", "SEM O USO DO CINTO DE SEGURANÇA", "DESCUMPRIMENTO DA LEGISLAÇÃO DE TRÂNSITO VIGENTE DURANTE A CONDUÇÃO DE VEÍCULO DA EMPRESA", "PERMITIR A APROXIMAÇÃO OU PERMANENCIA DE TERCEIROS DENTRO DA AREA ISOLADA PARA SERVIÇO", "DIREÇÃO DISTRAÍDA/VELOCIDADE", "VELOCIDADE/OBSTRUÇÃO", "DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS INTERNOS", "VELOCIDADE/CÂMERA OBSTRUIDA/USO DO CELULAR DURANTE CONDUÇÃO", "VELOCIDADE/DIREÇÃO DISTRAIDA", "NÃO COMUNICAÇÃO DE AVARIA VEICULAR", "OBSTRUÇÃO CÂMERA", "ATERRAMENTO", "DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS", "EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM UM TERCEIRO", "TRABALHAR SEM ESCADA AMARRADA/SEM USAR EPI-EPC/NÃO UTILIZAR LUVAS ISOLANTES BT e AT NA EXECUÇÃO DA ATIVIDADE", "DESCUMPRIMENTO DA HIERARQUIA FUNCIONAL /VIOLAÇÃO PROCEDIMENTO DE SEGURANÇA/INSUBORDINAÇÃO", "COLABORADOR ESTAVA COCHILANDO AO VOLANTE"
@@ -75,7 +84,7 @@ export default function EditarMedidaPage() {
   const [relacionarClick, setRelacionarClick] = useState(false)
   const [numeroInspecao, setNumeroInspecao] = useState('')
 
-  // ── Estados Autocomplete (Taxa de Contato) ──
+  // ── Estados Autocomplete ──
   const [colaboradoresRepo, setColaboradoresRepo] = useState<any[]>([])
   const [showColabDropdown, setShowColabDropdown] = useState(false)
   const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
@@ -88,7 +97,7 @@ export default function EditarMedidaPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
 
-  // ─── BUSCA COLABORADORES DO SUPABASE VIA BACKEND ────────────────────────
+  // ─── BUSCA COLABORADORES ───
   useEffect(() => {
     const fetchColabs = async () => {
       const token = (session as any)?.access_token || (session as any)?.accessToken
@@ -106,7 +115,6 @@ export default function EditarMedidaPage() {
     fetchColabs()
   }, [session])
 
-  // ─── LÓGICA DE FILTRO AUTOCOMPLETE ──────────────────────────────────────
   const colabsFiltrados = useMemo(() => {
     const termoBusca = String(nomeColab || '').toLowerCase()
     if (termoBusca.length < 2) return []
@@ -123,7 +131,6 @@ export default function EditarMedidaPage() {
     ).slice(0, 8)
   }, [matriculaColab, colaboradoresRepo])
 
-  // Ao selecionar um colaborador do dropdown, preenche todos os campos relacionados
   const selecionarColab = (item: any) => {
     setNomeColab(String(item.NOME || ''))
     setMatriculaColab(String(item.CHAPA || ''))
@@ -132,7 +139,7 @@ export default function EditarMedidaPage() {
     setShowMatriculaDropdown(false)
   }
 
-  // ─── FUNÇÕES ANEXOS ──────────────────────────────────────────────────────
+  // ─── FUNÇÕES ANEXOS ───
   function handleFilesAdd(files: FileList | null) {
     if (!files) return
     const novos = Array.from(files).map(file => {
@@ -174,7 +181,7 @@ export default function EditarMedidaPage() {
     )
   }, [searchQuery])
 
-  // ─── CARREGAR DADOS DA MEDIDA ────────────────────────────────────────────
+  // ─── CARREGAR DADOS DA MEDIDA ───
   useEffect(() => {
     if (!medidaId) return
     const token = (session as any)?.access_token || (session as any)?.accessToken
@@ -226,7 +233,7 @@ export default function EditarMedidaPage() {
     fetchMedida()
   }, [medidaId, session])
 
-  // ─── DETECTAR ALTERAÇÕES ─────────────────────────────────────────────────
+  // ─── DETECTAR ALTERAÇÕES ───
   useEffect(() => {
     if (loadState !== 'success') return
     const current = {
@@ -251,7 +258,7 @@ export default function EditarMedidaPage() {
     ocorrencia, numeroInspecao, relacionarClick, original, loadState,
   ])
 
-  // ─── SALVAR ──────────────────────────────────────────────────────────────
+  // ─── SALVAR ───
   async function handleSave() {
     if (isSaving || !allValid) return
     const token = (session as any)?.access_token || (session as any)?.accessToken
@@ -299,7 +306,7 @@ export default function EditarMedidaPage() {
     }
   }
 
-  // ─── DELETAR ─────────────────────────────────────────────────────────────
+  // ─── DELETAR ───
   async function handleDelete() {
     if (isDeleting) return
     const token = (session as any)?.access_token || (session as any)?.accessToken
@@ -337,16 +344,16 @@ export default function EditarMedidaPage() {
   const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
 
   if (loadState === 'loading') return (
-    <MedidaLayout title="Editar Medida">
+    <DashboardLayout title="Editar Medida" navItems={navItems}>
       <div className="flex items-center justify-center h-[60vh] gap-3 text-[#9ca3af]">
         <Loader2 size={20} className="animate-spin" />
         <span>Carregando dados...</span>
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 
   return (
-    <MedidaLayout title="Editar Medida">
+    <DashboardLayout title="Editar Medida" navItems={navItems}>
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -402,15 +409,11 @@ export default function EditarMedidaPage() {
 
           {/* ── IDENTIFICAÇÃO ── */}
           {tab === 'identificacao' && (
-            // REMOVIDO overflow-hidden para o dropdown não ficar por baixo do card
             <div className="fade-up bg-white border border-[#e3e8ef] rounded-xl shadow-sm">
               <div className={sectionTitleCls + ' rounded-t-xl'}>Identificação</div>
 
-              {/* Nomes: Colaborador (autocomplete por nome) + Supervisor */}
               <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
                 <span className={labelCls}>Nomes *</span>
-
-                {/* Input Nome com Autocomplete */}
                 <div className="relative">
                   <input
                     type="text"
@@ -449,11 +452,8 @@ export default function EditarMedidaPage() {
                 />
               </div>
 
-              {/* Matrículas: Colaborador (autocomplete por chapa) + Supervisor */}
               <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
                 <span className={labelCls}>Matrículas *</span>
-
-                {/* Input Chapa com Autocomplete */}
                 <div className="relative">
                   <input
                     type="text"
@@ -492,7 +492,6 @@ export default function EditarMedidaPage() {
                 />
               </div>
 
-              {/* Data */}
               <div className={cn(formRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
                 <span className={labelCls}>Data *</span>
                 <input
@@ -662,22 +661,13 @@ export default function EditarMedidaPage() {
           {/* ── ANEXOS & VÍNCULO ── */}
           {tab === 'anexos' && (
             <div className="fade-up space-y-4">
-
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={sectionTitleCls}>
-                  Anexos
-                  <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-slate-400">
-                    (imagens e documentos — apenas visualização, não enviados ao sistema)
-                  </span>
-                </div>
-
+                <div className={sectionTitleCls}>Anexos</div>
                 <div className="p-6">
                   <div
                     className={cn(
                       'border-2 border-dashed rounded-2xl transition-all cursor-pointer',
-                      isDragging
-                        ? 'border-[#094780] bg-blue-50'
-                        : 'border-slate-200 bg-slate-50/50 hover:border-[#094780] hover:bg-blue-50/30'
+                      isDragging ? 'border-[#094780] bg-blue-50' : 'border-slate-200 bg-slate-50/50 hover:border-[#094780]'
                     )}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
@@ -685,64 +675,29 @@ export default function EditarMedidaPage() {
                     onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}
                   >
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
-                      <div className={cn(
-                        'w-14 h-14 rounded-2xl flex items-center justify-center mb-4 transition-all',
-                        isDragging ? 'bg-[#094780] text-white' : 'bg-white border border-slate-200 text-slate-400'
-                      )}>
+                      <div className="w-14 h-14 bg-white border border-slate-200 text-slate-400 rounded-2xl flex items-center justify-center mb-4">
                         <Upload size={24} />
                       </div>
-                      <p className="text-sm font-semibold text-slate-600 mb-1">
-                        Arraste arquivos aqui ou{' '}
-                        <span className="text-[#094780]">clique para selecionar</span>
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        Imagens (JPG, PNG, WEBP) · Documentos (PDF) · Máx. 10 MB por arquivo
-                      </p>
+                      <p className="text-sm font-semibold text-slate-600 mb-1">Clique ou arraste arquivos</p>
+                      <p className="text-xs text-slate-400">JPG, PNG, WEBP ou PDF até 10 MB</p>
                     </div>
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={e => handleFilesAdd(e.target.files)}
-                  />
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e => handleFilesAdd(e.target.files)} />
                 </div>
-
                 {anexos.length > 0 && (
                   <div className="px-6 pb-6 space-y-2">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">
-                      {anexos.length} arquivo{anexos.length > 1 ? 's' : ''} selecionado{anexos.length > 1 ? 's' : ''}
-                    </p>
-                    <div className="space-y-2">
-                      {anexos.map(anexo => (
-                        <div
-                          key={anexo.id}
-                          className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group"
-                        >
-                          {anexo.preview ? (
-                            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200">
-                              <img src={anexo.preview} alt={anexo.file.name} className="w-full h-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                              {getFileIcon(anexo.file)}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-slate-700 truncate">{anexo.file.name}</p>
-                            <p className="text-[11px] text-slate-400">{formatBytes(anexo.file.size)}</p>
-                          </div>
-                          <button
-                            onClick={() => removerAnexo(anexo.id)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                    {anexos.map(anexo => (
+                      <div key={anexo.id} className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group">
+                        <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
+                          {getFileIcon(anexo.file)}
                         </div>
-                      ))}
-                    </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-700 truncate">{anexo.file.name}</p>
+                          <p className="text-[11px] text-slate-400">{formatBytes(anexo.file.size)}</p>
+                        </div>
+                        <button onClick={() => removerAnexo(anexo.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100"><Trash2 size={15} /></button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -751,140 +706,53 @@ export default function EditarMedidaPage() {
                 <div className={sectionTitleCls}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <span className={labelCls}>Inspeção CLICK</span>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {relacionarClick ? 'Campo ativo — informe o número' : 'Nenhuma inspeção vinculada'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setRelacionarClick(v => !v)
-                        if (relacionarClick) setNumeroInspecao('')
-                      }}
-                      className={cn(
-                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200',
-                        relacionarClick ? 'bg-[#094780]' : 'bg-slate-200'
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200',
-                          relacionarClick ? 'translate-x-6' : 'translate-x-1'
-                        )}
-                      />
+                    <span className={labelCls}>Inspeção CLICK</span>
+                    <button onClick={() => { setRelacionarClick(v => !v); if (relacionarClick) setNumeroInspecao('') }} className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors', relacionarClick ? 'bg-[#094780]' : 'bg-slate-200')}>
+                      <span className={cn('inline-block h-4 w-4 rounded-full bg-white transition-transform', relacionarClick ? 'translate-x-6' : 'translate-x-1')} />
                     </button>
                   </div>
-
-                  {relacionarClick && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={numeroInspecao}
-                        onChange={e => setNumeroInspecao(e.target.value)}
-                        className={inputCls}
-                        placeholder="Número da inspeção"
-                        autoFocus
-                      />
-                      {numeroInspecao && (
-                        <button
-                          onClick={() => setNumeroInspecao('')}
-                          className="text-slate-300 hover:text-slate-500 transition-colors flex-shrink-0"
-                        >
-                          <X size={15} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {relacionarClick && numeroInspecao && (
-                    <p className="text-[11px] text-[#094780] flex items-center gap-1">
-                      <Link2 size={11} /> Inspeção vinculada
-                    </p>
-                  )}
+                  {relacionarClick && <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)} className={inputCls} placeholder="Número da inspeção" />}
                 </div>
               </div>
-
             </div>
           )}
         </div>
 
         {/* ── FOOTER ── */}
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t px-7 py-4 flex items-center justify-between z-50">
-          <button
-            onClick={() => setDeleteModal(true)}
-            className="flex items-center gap-2 text-red-500 font-bold text-sm hover:text-red-600 transition-colors"
-          >
+          <button onClick={() => setDeleteModal(true)} className="flex items-center gap-2 text-red-500 font-bold text-sm hover:text-red-600 transition-colors">
             <Trash2 size={16} /> Excluir
           </button>
           <div className="flex gap-3">
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 border rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              disabled={!hasChanges || !allValid || isSaving}
-              onClick={handleSave}
-              className={cn(
-                'px-6 py-2 rounded-lg text-white font-bold text-sm transition-all flex items-center gap-2',
-                hasChanges && allValid
-                  ? 'bg-[#094780] shadow-lg shadow-blue-900/20 hover:bg-[#0a5494]'
-                  : 'bg-gray-200 cursor-not-allowed'
-              )}
-            >
+            <button onClick={() => router.back()} className="px-4 py-2 border rounded-lg text-sm font-bold hover:bg-slate-50">Cancelar</button>
+            <button disabled={!hasChanges || !allValid || isSaving} onClick={handleSave} className={cn('px-6 py-2 rounded-lg text-white font-bold text-sm transition-all', hasChanges && allValid ? 'bg-[#094780] shadow-lg shadow-blue-900/20' : 'bg-gray-200 cursor-not-allowed')}>
               {isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Salvar Alterações'}
             </button>
           </div>
         </div>
 
-        {/* ── MODAL SUCESSO ── */}
+        {/* ── MODALS ── */}
         {successModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="bg-white p-10 rounded-[40px] text-center shadow-2xl max-w-sm">
-              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle size={48} className="text-emerald-500" />
-              </div>
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={48} className="text-emerald-500" /></div>
               <h3 className="font-bold text-xl mb-2">Atualizado!</h3>
-              <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                As alterações foram salvas com sucesso no banco de dados.
-              </p>
-              <button
-                onClick={() => router.push('/medida-administrativa/lista')}
-                className="w-full py-4 bg-[#094780] text-white rounded-2xl font-bold hover:bg-[#0a5494]"
-              >
-                Voltar para Lista
-              </button>
+              <p className="text-slate-500 text-sm mb-8">As alterações foram salvas com sucesso.</p>
+              <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#094780] text-white rounded-2xl font-bold">Voltar para Lista</button>
             </div>
           </div>
         )}
 
-        {/* ── MODAL DELETAR ── */}
         {deleteModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="bg-white p-8 rounded-3xl text-center max-w-xs shadow-2xl">
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={32} className="text-red-500" />
-              </div>
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={32} className="text-red-500" /></div>
               <h3 className="font-bold text-lg">Excluir Medida?</h3>
-              <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-                Esta ação removerá permanentemente este registro.
-              </p>
+              <p className="text-slate-500 text-sm mb-6">Esta ação não pode ser desfeita.</p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteModal(false)}
-                  className="flex-1 py-2 border rounded-xl font-bold hover:bg-slate-50"
-                >
-                  Não
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 flex items-center justify-center gap-2"
-                >
-                  {isDeleting ? <Loader2 size={14} className="animate-spin" /> : null}
-                  {isDeleting ? 'Excluindo...' : 'Sim, excluir'}
+                <button onClick={() => setDeleteModal(false)} className="flex-1 py-2 border rounded-xl font-bold">Não</button>
+                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+                  {isDeleting ? <Loader2 size={14} className="animate-spin" /> : 'Sim, excluir'}
                 </button>
               </div>
             </div>
@@ -892,6 +760,6 @@ export default function EditarMedidaPage() {
         )}
 
       </div>
-    </MedidaLayout>
+    </DashboardLayout>
   )
 }
