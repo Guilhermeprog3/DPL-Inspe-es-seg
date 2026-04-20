@@ -7,6 +7,11 @@ import {
   Plus, Loader2, Eye, Edit2,
   MapPin, CheckCircle2, AlertTriangle, XCircle,
   Search, SlidersHorizontal, X, MoreVertical,
+  ClipboardList,
+  LayoutDashboard,
+  ListChecks,
+  Boxes,
+  QrCode,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -23,6 +28,18 @@ const STATUS_CONFIG: Record<string, {
   'ATENCAO':   { label: 'Atenção',   icon: AlertTriangle, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
   'REPROVADO': { label: 'Reprovado', icon: XCircle,       color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
 }
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 function StatusBadge({ status }: { status: string }) {
   const s    = (status ?? '').toUpperCase()
@@ -205,7 +222,7 @@ export default function ListaInspecoesPage() {
   ].filter(Boolean).length
 
   return (
-    <DashboardLayout title="Inspeções" breadcrumb="SIGS / Inspeções / Listagem">
+    <DashboardLayout navItems={navItems} title="Inspeções" breadcrumb="SIGS / Inspeções / Listagem">
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
         .list-root { font-family:'DM Sans',sans-serif; padding:16px; background:#f8fafc; min-height:calc(100vh - 60px); }

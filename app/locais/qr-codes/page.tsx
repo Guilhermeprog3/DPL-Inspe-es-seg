@@ -9,6 +9,12 @@ import {
   Package, Flame, Droplets,
   Zap, Bell, Wind, Plus, Minus,
   ChevronLeft, ChevronRight,
+  LayoutDashboard,
+  ClipboardList,
+  ListChecks,
+  Boxes,
+  QrCode,
+  MapPin,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +22,17 @@ const QRCodeSVG = dynamic(
   () => import('qrcode.react').then(m => m.QRCodeSVG),
   { ssr: false, loading: () => <div className="bg-slate-100 rounded animate-pulse" style={{ width: 80, height: 80 }} /> }
 )
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 const TIPO_CONFIG: Record<string, { color: string; bg: string; border: string; icon: React.ElementType }> = {
   'Extintor':                 { color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe', icon: Flame    },
@@ -202,7 +219,7 @@ export default function QrCodesPage() {
   }
 
   return (
-    <DashboardLayout title="QR Codes" breadcrumb="SIGS / Etiquetas / Gerador">
+    <DashboardLayout navItems={navItems} title="QR Codes" breadcrumb="SIGS / Etiquetas / Gerador">
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
 

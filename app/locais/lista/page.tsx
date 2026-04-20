@@ -8,6 +8,10 @@ import {
   MapPin, Building2, Globe, QrCode, Package,
   Flame, Droplets, Zap, Bell, Wind,
   Search, SlidersHorizontal, X, MoreVertical,
+  LayoutDashboard,
+  ClipboardList,
+  ListChecks,
+  Boxes,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -39,6 +43,18 @@ const TIPO_CONFIG: Record<string, { color: string; bg: string; border: string; i
   'Botoeiras e Sirenes':      { color: '#7c3aed', bg: '#faf5ff', border: '#e9d5ff', icon: Bell     },
   'Detector de Fumaça':       { color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', icon: Wind     },
 }
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 function TipoBadge({ tipo }: { tipo?: string }) {
   if (!tipo) return <span className="text-[10px] text-slate-400 font-bold italic">Sem equip.</span>
@@ -269,7 +285,7 @@ export default function ListaLocaisPage() {
   ].filter(Boolean).length
 
   return (
-    <DashboardLayout title="Locais" breadcrumb="SIGS / Locais / Listagem">
+    <DashboardLayout navItems={navItems} title="Locais" breadcrumb="SIGS / Locais / Listagem">
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
         .list-root { font-family:'DM Sans',sans-serif; padding:16px; background:#f8fafc; min-height:calc(100vh - 60px); }

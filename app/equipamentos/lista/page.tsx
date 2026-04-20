@@ -8,9 +8,27 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Clock,
   Flame, Droplets, Zap, Bell, Wind, Package,
   Search, SlidersHorizontal, X, MoreVertical, Edit2,
+  LayoutDashboard,
+  ClipboardList,
+  ListChecks,
+  Boxes,
+  QrCode,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 // ─── Config Visual ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string; border: string }> = {
@@ -257,7 +275,7 @@ export default function ListaEquipamentosPage() {
   const showExtintorFilters = filtroTipo === 'Extintor' || filtroTipo === 'Todos'
 
   return (
-    <DashboardLayout title="Equipamentos" breadcrumb="SIGS / Equipamentos / Listagem">
+    <DashboardLayout navItems={navItems} title="Equipamentos" breadcrumb="SIGS / Equipamentos / Listagem">
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
         .list-root { font-family:'DM Sans',sans-serif; padding:16px; background:#f8fafc; min-height:calc(100vh - 60px); }

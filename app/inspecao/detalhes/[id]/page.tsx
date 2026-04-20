@@ -7,7 +7,11 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   ArrowLeft, Edit2, CheckCircle2, AlertTriangle, XCircle, Clock,
   ShieldCheck, Wrench, MapPin, Calendar,
-  ClipboardList, AlertCircle, Loader2, MinusCircle,CheckCircle
+  ClipboardList, AlertCircle, Loader2, MinusCircle,CheckCircle,
+  LayoutDashboard,
+  ListChecks,
+  Boxes,
+  QrCode
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -56,6 +60,18 @@ const STATUS_CONFIG: Record<StatusKey, { label: string; icon: React.ElementType;
   REPROVADO: { label: 'Reprovado', icon: XCircle, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
   CANCELADA: { label: 'Cancelada', icon: Clock, color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
 }
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 const TIPO_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   'Extintor': { color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
@@ -120,7 +136,7 @@ export default function DetalhesInspecaoPage() {
 
   if (loading) {
     return (
-      <DashboardLayout title="Detalhes da Inspeção">
+      <DashboardLayout navItems={navItems} title="Detalhes da Inspeção">
         <div className="flex items-center justify-center min-h-[60vh]">
           <Loader2 size={36} className="animate-spin text-[#3d6cf0]" />
         </div>
@@ -130,7 +146,7 @@ export default function DetalhesInspecaoPage() {
 
   if (!inspecao) {
     return (
-      <DashboardLayout title="Detalhes da Inspeção">
+      <DashboardLayout navItems={navItems} title="Detalhes da Inspeção">
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
           <AlertCircle size={40} className="text-[#c4cbd6]" />
           <p className="text-[14px] font-semibold text-[#9ca3af]">Inspeção não encontrada</p>
@@ -160,7 +176,7 @@ export default function DetalhesInspecaoPage() {
   ]
 
   return (
-    <DashboardLayout title="Detalhes da Inspeção">
+    <DashboardLayout navItems={navItems} title="Detalhes da Inspeção">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
         .fade-up { animation: fadeUp 0.2s ease forwards; }

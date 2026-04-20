@@ -10,9 +10,24 @@ import {
   Flame, Droplets, Waves, Radio, Zap, Bell, Wind,
   CheckCircle2, AlertTriangle, XCircle, Clock,
   ClipboardList, Activity, Plus,
+  LayoutDashboard,
+  ListChecks,
+  Boxes,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import QRCode from 'qrcode'
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 // ─── Config Visual ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string; border: string }> = {
@@ -106,7 +121,7 @@ export default function DetalhesLocalPage() {
   }, [local?.qrCode])
 
   if (loading) return (
-    <DashboardLayout title="Detalhes do Local">
+    <DashboardLayout navItems={navItems} title="Detalhes do Local">
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 size={36} className="animate-spin text-[#3d6cf0]" />
       </div>
@@ -126,7 +141,7 @@ export default function DetalhesLocalPage() {
   const historico: any[] = local.inspecoes ?? []
 
   return (
-    <DashboardLayout title="Detalhes do Local">
+    <DashboardLayout navItems={navItems} title="Detalhes do Local">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;} }
         .fade-up { animation: fadeUp 0.2s ease forwards; }

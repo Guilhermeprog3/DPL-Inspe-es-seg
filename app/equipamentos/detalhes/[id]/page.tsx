@@ -9,12 +9,27 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Clock,
   Flame, Droplets, Zap, Bell, Wind, Package, MapPin,
   AlertCircle, Loader2, ClipboardList, ShieldCheck, CalendarClock,
-  Activity, Plus,
+  Activity, Plus,  LayoutDashboard,
+  ListChecks,
+  Boxes,
+  QrCode, 
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 type StatusEquip = 'ativo' | 'vencido' | 'manutencao' | 'inativo'
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string; border: string }> = {
   'ATIVO':      { label: 'Ativo',      icon: CheckCircle2,  color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
@@ -311,7 +326,7 @@ function DetalhesInner() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function DetalhesEquipamentoPage() {
   return (
-    <DashboardLayout title="Detalhes do Equipamento">
+    <DashboardLayout navItems={navItems} title="Detalhes do Equipamento">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;} }
         .fade-up { animation: fadeUp 0.2s ease forwards; }

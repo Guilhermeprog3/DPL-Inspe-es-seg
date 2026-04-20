@@ -14,12 +14,27 @@ import {
   ClipboardList, AlertTriangle, Flame, Droplets,
   Zap, Bell, Wind, Camera, Plus, Trash2,
   ChevronDown, ChevronUp, ExternalLink,
+  LayoutDashboard,
+  ListChecks,
+  Boxes,
 } from 'lucide-react'
 
 const QrScanner = dynamic(
   () => import('@/components/inspecao/QrScanner').then(m => m.QrScanner),
   { ssr: false }
 )
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 // ── Tipos de equipamento ──────────────────────────────────────────────────────
 const TIPO_CONFIG: Record<string, { color: string; bg: string; border: string; icon: React.ElementType }> = {
@@ -1017,7 +1032,7 @@ function InspecaoInner() {
 
 export default function InspecaoPage() {
   return (
-    <DashboardLayout title="Executar Inspeção">
+    <DashboardLayout navItems={navItems} title="Executar Inspeção">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp    { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;} }
         .fade-up             { animation: fadeUp 0.2s ease forwards; }

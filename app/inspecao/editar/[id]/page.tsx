@@ -8,6 +8,11 @@ import {
   ArrowLeft, ShieldCheck, Wrench, CheckCircle, CheckCircle2,
   XCircle, MinusCircle, AlertCircle, Loader2,
   ClipboardList,
+  MapPin,
+  QrCode,
+  ListChecks,
+  Boxes,
+  LayoutDashboard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -44,6 +49,18 @@ const TIPO_CONFIG: Record<string, { color: string; bg: string; border: string }>
   'Botoeiras e Sirenes': { color: '#7c3aed', bg: '#faf5ff', border: '#e9d5ff' },
   'Detector de Fumaça': { color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
 }
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 const TABS = [
   { key: 'checklist' as const, label: 'Inspeção',    icon: ClipboardList },
@@ -192,13 +209,13 @@ export default function EditarInspecaoPage() {
   const labelCls = 'text-[13.5px] font-medium text-[#111827]'
 
   if (loading) return (
-    <DashboardLayout title="Editar Inspeção">
+    <DashboardLayout navItems={navItems} title="Editar Inspeção">
       <div className="flex items-center justify-center min-h-[60vh]"><Loader2 size={36} className="animate-spin text-[#3d6cf0]" /></div>
     </DashboardLayout>
   )
 
   return (
-    <DashboardLayout title="Editar Inspeção">
+    <DashboardLayout navItems={navItems} title="Editar Inspeção">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
         .fade-up { animation: fadeUp 0.2s ease forwards; }

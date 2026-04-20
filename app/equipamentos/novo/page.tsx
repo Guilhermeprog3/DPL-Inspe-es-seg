@@ -9,11 +9,29 @@ import {
   Package, MapPin, Hash,
   Flame, Droplets, Zap, Bell, Wind, Plus, ChevronDown,
   ShieldCheck, CalendarClock,
+  LayoutDashboard,
+  ClipboardList,
+  ListChecks,
+  Boxes,
+  QrCode,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type StatusEquip = 'ativo' | 'vencido' | 'manutencao' | 'inativo'
+
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 const STATUS_OPTIONS: { value: StatusEquip; label: string; color: string }[] = [
   { value: 'ativo',      label: 'Ativo',      color: '#059669' },
@@ -230,7 +248,7 @@ export default function NovoEquipamentoPage() {
   const divi = 'divide-y divide-[#f1f5f9]'
 
   return (
-    <DashboardLayout title="Novo Equipamento">
+    <DashboardLayout navItems={navItems} title="Novo Equipamento">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes fadeUp    { from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;} }
         .fade-up   { animation: fadeUp 0.2s ease forwards; }
