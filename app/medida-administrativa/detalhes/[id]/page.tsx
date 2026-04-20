@@ -157,7 +157,7 @@ export default function DetalharMedidaPage() {
 
       <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]">
 
-        {/* ── Breadcrumb + Tabs — bloco único ── */}
+        {/* ── Breadcrumb + Tabs ── */}
         <div className="bg-white" style={{ borderBottom: '1px solid #e3e8ef', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.05)' }}>
           <div className="px-4 sm:px-7 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #f0f2f5' }}>
             <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
@@ -191,16 +191,21 @@ export default function DetalharMedidaPage() {
             <div className="fade-up space-y-4">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
                 <div className={sectionTitleCls}>Dados do colaborador</div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><User size={13} /> Nomes</span>
-                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.colaborador ?? '—'}</p></div>
-                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.nomeSupervisor ?? '—'}</p></div>
-                </div>
+
+                {/* MATRÍCULAS — primeiro */}
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
                   <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Hash size={13} /> Matrículas</span>
                   <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.matricula ?? '—'}</p></div>
                   <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.supervisor ?? '—'}</p></div>
                 </div>
+
+                {/* NOMES — segundo */}
+                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
+                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><User size={13} /> Nomes</span>
+                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.colaborador ?? '—'}</p></div>
+                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.nomeSupervisor ?? '—'}</p></div>
+                </div>
+
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
                   <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Calendar size={13} /> Data</span>
                   <span className="text-[14px] font-semibold text-[#111827]">{dataFormatada}</span>
@@ -318,7 +323,7 @@ export default function DetalharMedidaPage() {
                 )}
               </div>
 
-              {/* ── Origem ── */}
+              {/* Origem */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={sectionTitleCls}>Origem</div>
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>

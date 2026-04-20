@@ -400,7 +400,6 @@ export default function ListaUsuariosPage() {
                 <option value="Todos">Todos</option>
                 <option value="admin">Administrador</option>
                 <option value="inspetor">Inspetor</option>
-                <option value="sesmt">SESMT</option>
                 <option value="agente_cobli">Agente Cobli</option>
               </select>
             </div>

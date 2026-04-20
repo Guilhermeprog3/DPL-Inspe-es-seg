@@ -202,7 +202,6 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
                 className={cn(inputCls('role'), 'appearance-none pr-10')}>
                 <option value="">Selecione o perfil</option>
                 <option value="inspetor">Inspetor</option>
-                <option value="sesmt">SESMT</option>
                 <option value="agente_cobli">Agente Cobli</option>
                 <option value="admin">Administrador</option>
               </select>

@@ -101,7 +101,7 @@ export default function EditarMedidaPage() {
   const [ocorrencia,     setOcorrencia    ] = useState('')
   const [relacionarClick,setRelacionarClick]=useState(false)
   const [numeroInspecao, setNumeroInspecao] = useState('')
-  const [origem,         setOrigem        ] = useState('') // ← novo
+  const [origem,         setOrigem        ] = useState('')
 
   // Erros
   const [nomeColabError,      setNomeColabError     ] = useState('')
@@ -203,7 +203,7 @@ export default function EditarMedidaPage() {
         setOcorrencia(d.ocorrencia ?? '')
         setNumeroInspecao(d.numeroInspecao ?? '')
         setRelacionarClick(!!d.numeroInspecao)
-        setOrigem(d.origem ?? '') // ← novo
+        setOrigem(d.origem ?? '')
         setOriginal({
           colaborador: d.colaborador ?? '', matricula: d.matricula ?? '',
           supervisor: d.supervisor ?? '', nomeSupervisor: d.nomeSupervisor ?? '',
@@ -211,7 +211,7 @@ export default function EditarMedidaPage() {
           medida: d.medida ?? '', diasSuspensao: d.diasSuspensao ? String(d.diasSuspensao) : '',
           gravidade: d.gravidade ?? '', classificacao: d.classificacao ?? '',
           ocorrencia: d.ocorrencia ?? '', numeroInspecao: d.numeroInspecao ?? '',
-          origem: d.origem ?? '', // ← novo
+          origem: d.origem ?? '',
         })
         setLoadState('success')
       } catch (err) { console.error(err); setLoadState('error') }
@@ -227,7 +227,7 @@ export default function EditarMedidaPage() {
       nomeSupervisor, data: dataMedida, tipo: tipoCategoria, medida: tipoMedida,
       diasSuspensao, gravidade, classificacao, ocorrencia,
       numeroInspecao: relacionarClick ? numeroInspecao : '',
-      origem, // ← novo
+      origem,
     }
     setHasChanges(Object.keys(original).some(k => original[k] !== (current as any)[k]))
   }, [nomeColab, matriculaColab, matriculaSup, nomeSupervisor, dataMedida, tipoCategoria, tipoMedida, diasSuspensao, gravidade, classificacao, ocorrencia, numeroInspecao, relacionarClick, origem, original, loadState])
@@ -242,7 +242,7 @@ export default function EditarMedidaPage() {
       medida: tipoMedida, ocorrencia, gravidade, classificacao,
       diasSuspensao: diasSuspensao ? Number(diasSuspensao) : null,
       numeroInspecao: relacionarClick ? numeroInspecao : null,
-      origem, // ← novo
+      origem,
     }
     try {
       await api.patch(`/medidas/${medidaId}`, payload)
@@ -266,7 +266,7 @@ export default function EditarMedidaPage() {
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade:     true,
     ocorrencia:    !!classificacao && ocorrencia.trim().length >= 10,
-    anexos:        !!origem && (!relacionarClick || !!numeroInspecao.trim()), // ← origem obrigatória
+    anexos:        !!origem && (!relacionarClick || !!numeroInspecao.trim()),
   }
 
   const tabOrder: TabKey[] = ['identificacao','classificacao','gravidade','ocorrencia','anexos']
@@ -338,33 +338,7 @@ export default function EditarMedidaPage() {
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm" style={{ overflow: 'visible' }}>
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Identificação</div>
 
-                <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
-                     style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
-                  <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
-                  <div style={{ position: 'relative', overflow: 'visible' }}>
-                    <input type="text" value={nomeColab} placeholder="Pesquisar nome..."
-                      className={inputCls(!!nomeColabError)}
-                      onChange={e => handleNomeColabChange(e.target.value)}
-                      onFocus={() => setShowColabDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowColabDropdown(false), 200)} />
-                    <FieldError message={nomeColabError} />
-                    <AbsoluteDropdown open={showColabDropdown && colabsFiltrados.length > 0}>
-                      {colabsFiltrados.map((c, i) => (
-                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
-                             onMouseDown={() => selecionarColab(c)}>
-                          <p className="font-bold text-slate-700">{c.NOME}</p>
-                          <p className="text-slate-400">Chapa: {c.CHAPA}</p>
-                        </div>
-                      ))}
-                    </AbsoluteDropdown>
-                  </div>
-                  <div>
-                    <input type="text" value={nomeSupervisor} placeholder="Nome do supervisor"
-                      className={inputCls(!!nomeSuperError)} onChange={e => handleNomeSuperChange(e.target.value)} />
-                    <FieldError message={nomeSuperError} />
-                  </div>
-                </div>
-
+                {/* MATRÍCULAS — primeiro */}
                 <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
                      style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
@@ -390,6 +364,34 @@ export default function EditarMedidaPage() {
                     <input type="text" inputMode="numeric" value={matriculaSup} placeholder="Mat. Supervisor"
                       className={inputCls(!!matriculaSupError)} onChange={e => handleMatriculaSupChange(e.target.value)} />
                     <FieldError message={matriculaSupError} />
+                  </div>
+                </div>
+
+                {/* NOMES — segundo */}
+                <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
+                     style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
+                  <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
+                  <div style={{ position: 'relative', overflow: 'visible' }}>
+                    <input type="text" value={nomeColab} placeholder="Pesquisar nome..."
+                      className={inputCls(!!nomeColabError)}
+                      onChange={e => handleNomeColabChange(e.target.value)}
+                      onFocus={() => setShowColabDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowColabDropdown(false), 200)} />
+                    <FieldError message={nomeColabError} />
+                    <AbsoluteDropdown open={showColabDropdown && colabsFiltrados.length > 0}>
+                      {colabsFiltrados.map((c, i) => (
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
+                             onMouseDown={() => selecionarColab(c)}>
+                          <p className="font-bold text-slate-700">{c.NOME}</p>
+                          <p className="text-slate-400">Chapa: {c.CHAPA}</p>
+                        </div>
+                      ))}
+                    </AbsoluteDropdown>
+                  </div>
+                  <div>
+                    <input type="text" value={nomeSupervisor} placeholder="Nome do supervisor"
+                      className={inputCls(!!nomeSuperError)} onChange={e => handleNomeSuperChange(e.target.value)} />
+                    <FieldError message={nomeSuperError} />
                   </div>
                 </div>
 
@@ -572,7 +574,7 @@ export default function EditarMedidaPage() {
                   </div>
                 )}
 
-                {/* ── ORIGEM ── */}
+                {/* ORIGEM */}
                 <div className={secTitle}>Origem *</div>
                 <div className="px-6 py-5 border-b border-[#e3e8ef]">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { UsuarioForm } from '../../usuarios/novo/page'
+import { UsuarioForm } from '../../novo/page'
 import { Users, Plus, LayoutDashboard, ArrowLeft } from 'lucide-react'
 import { useParams } from 'next/navigation'
 

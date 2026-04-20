@@ -28,7 +28,7 @@ const navItems = [
 
 const CLASSIFICACOES = [
   "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","FALHA DE PROCEDIMENTO / ATO INSEGURO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","DIREÇÃO DISTRAÍDA","NEGLIGÊNCIA DURANTE A ATIVIDADE","ATO INSEGURO","AUTOINSPECÇÃO DIÁRIA","SEM O USO DO CINTO DE SEGURANÇA","OBSTRUÇÃO CÂMERA","ATERRAMENTO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
-  "OUTROS" // ← novo
+  "OUTROS"
 ]
 
 const ORIGENS = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE GENTE']
@@ -93,7 +93,7 @@ export default function NovaMedidaPage() {
   const [ocorrencia,     setOcorrencia    ] = useState('')
   const [relacionarClick,setRelacionarClick] = useState(false)
   const [numeroInspecao, setNumeroInspecao] = useState('')
-  const [origem,         setOrigem        ] = useState('') // ← novo
+  const [origem,         setOrigem        ] = useState('')
 
   const [nomeColabError,      setNomeColabError     ] = useState('')
   const [nomeSuperError,      setNomeSuperError     ] = useState('')
@@ -191,7 +191,7 @@ export default function NovaMedidaPage() {
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade:     true,
     ocorrencia:    !!classificacao && ocorrencia.trim().length >= 10,
-    anexos:        !!origem && (!relacionarClick || !!numeroInspecao.trim()), // ← origem obrigatória
+    anexos:        !!origem && (!relacionarClick || !!numeroInspecao.trim()),
   }
 
   const tabOrder: TabKey[] = ['identificacao','classificacao','gravidade','ocorrencia','anexos']
@@ -253,33 +253,7 @@ export default function NovaMedidaPage() {
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm" style={{ overflow: 'visible' }}>
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Dados do Colaborador (Taxa de Contato)</div>
 
-                <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
-                     style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
-                  <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
-                  <div style={{ position: 'relative', overflow: 'visible' }}>
-                    <input type="text" value={nomeColab} placeholder="Pesquisar nome..."
-                      className={inputCls(!!nomeColabError)}
-                      onChange={e => handleNomeColabChange(e.target.value)}
-                      onFocus={() => setShowColabDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowColabDropdown(false), 200)} />
-                    <FieldError message={nomeColabError} />
-                    <AbsoluteDropdown open={showColabDropdown && colabsFiltrados.length > 0}>
-                      {colabsFiltrados.map((c, i) => (
-                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
-                             onMouseDown={() => selecionarColab(c)}>
-                          <p className="font-bold text-slate-700">{c.NOME}</p>
-                          <p className="text-slate-400">Chapa: {c.CHAPA}</p>
-                        </div>
-                      ))}
-                    </AbsoluteDropdown>
-                  </div>
-                  <div>
-                    <input type="text" value={nomeSupervisor} placeholder="Supervisor"
-                      className={inputCls(!!nomeSuperError)} onChange={e => handleNomeSuperChange(e.target.value)} />
-                    <FieldError message={nomeSuperError} />
-                  </div>
-                </div>
-
+                {/* MATRÍCULAS — primeiro */}
                 <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
                      style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
@@ -306,6 +280,34 @@ export default function NovaMedidaPage() {
                       placeholder="Mat. Sup (apenas números)"
                       className={inputCls(!!matriculaSupError)} onChange={e => handleMatriculaSupChange(e.target.value)} />
                     <FieldError message={matriculaSupError} />
+                  </div>
+                </div>
+
+                {/* NOMES — segundo */}
+                <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
+                     style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
+                  <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
+                  <div style={{ position: 'relative', overflow: 'visible' }}>
+                    <input type="text" value={nomeColab} placeholder="Pesquisar nome..."
+                      className={inputCls(!!nomeColabError)}
+                      onChange={e => handleNomeColabChange(e.target.value)}
+                      onFocus={() => setShowColabDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowColabDropdown(false), 200)} />
+                    <FieldError message={nomeColabError} />
+                    <AbsoluteDropdown open={showColabDropdown && colabsFiltrados.length > 0}>
+                      {colabsFiltrados.map((c, i) => (
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
+                             onMouseDown={() => selecionarColab(c)}>
+                          <p className="font-bold text-slate-700">{c.NOME}</p>
+                          <p className="text-slate-400">Chapa: {c.CHAPA}</p>
+                        </div>
+                      ))}
+                    </AbsoluteDropdown>
+                  </div>
+                  <div>
+                    <input type="text" value={nomeSupervisor} placeholder="Supervisor"
+                      className={inputCls(!!nomeSuperError)} onChange={e => handleNomeSuperChange(e.target.value)} />
+                    <FieldError message={nomeSuperError} />
                   </div>
                 </div>
 
@@ -492,34 +494,20 @@ export default function NovaMedidaPage() {
                   </div>
                 )}
 
-                {/* ── ORIGEM — novo campo ── */}
-                <div className={secTitle}>
-                  Origem *
-                </div>
+                {/* ORIGEM */}
+                <div className={secTitle}>Origem *</div>
                 <div className="px-6 py-5 border-b border-[#e3e8ef]">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ORIGENS.map(op => (
-                      <button
-                        key={op}
-                        type="button"
-                        onClick={() => setOrigem(origem === op ? '' : op)}
-                        className={cn(
-                          'py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative',
-                          origem === op
-                            ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white shadow-sm'
-                            : 'bg-white border-slate-100 text-slate-500 hover:border-[#3d6cf0]/30 hover:bg-blue-50/30'
-                        )}
-                      >
+                      <button key={op} type="button" onClick={() => setOrigem(origem === op ? '' : op)}
+                        className={cn('py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative',
+                          origem === op ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-[#3d6cf0]/30 hover:bg-blue-50/30')}>
                         {op}
-                        {origem === op && (
-                          <CheckCircle size={13} className="absolute top-2 right-2 text-white/80" />
-                        )}
+                        {origem === op && <CheckCircle size={13} className="absolute top-2 right-2 text-white/80" />}
                       </button>
                     ))}
                   </div>
-                  {!origem && (
-                    <p className="text-[11px] text-slate-400 mt-2">Selecione a origem da medida</p>
-                  )}
+                  {!origem && <p className="text-[11px] text-slate-400 mt-2">Selecione a origem da medida</p>}
                 </div>
 
                 {/* Vínculo Externo */}

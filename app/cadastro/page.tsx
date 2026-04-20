@@ -409,36 +409,8 @@ export default function CadastroPage() {
                 </div>
 
                 <p className="success-card-body">
-                  Seus dados foram recebidos. Seu acesso está <strong>pendente de aprovação</strong> por um administrador do sistema. Veja o que acontece agora:
+                  Seus dados foram recebidos. Seu acesso está <strong>pendente de aprovação</strong> por um administrador do sistema.
                 </p>
-
-                <div className="steps">
-                  <div className="step">
-                    <div className="step-num">1</div>
-                    <div className="step-text">
-                      Um <strong>administrador</strong> irá analisar sua solicitação na tela de gestão de usuários.
-                    </div>
-                  </div>
-                  <div className="step">
-                    <div className="step-num">2</div>
-                    <div className="step-text">
-                      Após aprovação, seu perfil será <strong>ativado</strong> e você poderá fazer login normalmente.
-                    </div>
-                  </div>
-                  <div className="step">
-                    <div className="step-num">3</div>
-                    <div className="step-text">
-                      <strong>Enquanto não for aprovado</strong>, o acesso ao sistema estará bloqueado mesmo com e-mail e senha corretos.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pending-note">
-                  <Clock size={14} color="#d97706" style={{ flexShrink: 0 }} />
-                  <p className="pending-note-text">
-                    Caso não receba retorno em até <strong>24 horas</strong>, entre em contato com o setor responsável.
-                  </p>
-                </div>
               </div>
 
               <button className="btn-login" onClick={() => router.push('/login')}>
