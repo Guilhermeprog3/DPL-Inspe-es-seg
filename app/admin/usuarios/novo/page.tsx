@@ -1,4 +1,3 @@
-// ─── admin/usuarios/novo/page.tsx ─────────────────────────────────────────────
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -22,7 +21,6 @@ const navItems = [
   { label: 'Novo Usuário',      href: '/admin/usuarios/novo', icon: Plus },
 ]
 
-// ─── Formulário reutilizável (novo + editar) ─────────────────────────────────
 export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
   const router   = useRouter()
   const params   = useParams()
@@ -41,7 +39,10 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
   const [uf,        setUf       ] = useState<UF | ''>('')
   const [regional,  setRegional ] = useState('')
   const [role,      setRole     ] = useState('')
-  const [status,    setStatus   ] = useState('inativo')
+  
+  // CORREÇÃO: O estado inicial agora é booleano para bater com o Prisma
+  const [ativo,     setAtivo    ] = useState(false) 
+  
   const [senha,     setSenha    ] = useState('')
   const [errors,    setErrors   ] = useState<Record<string, string>>({})
 
@@ -51,12 +52,21 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
       try {
         const r = await api.get(`/users/${userId}`)
         const d = r.data
-        setNome(d.nome ?? ''); setSobrenome(d.sobrenome ?? '')
-        setEmail(d.email ?? ''); setUf(d.uf ?? '')
-        setRegional(d.regional ?? ''); setRole(d.role ?? '')
-        setStatus(d.status ?? 'inativo')
-      } catch { setGlobalError('Erro ao carregar dados do usuário.') }
-      finally { setLoadingData(false) }
+        setNome(d.nome ?? '')
+        setSobrenome(d.sobrenome ?? '')
+        setEmail(d.email ?? '')
+        setUf(d.uf ?? '')
+        setRegional(d.regional ?? '')
+        setRole(d.role ?? '')
+        
+        // CORREÇÃO: Mapeia o campo 'ativo' do banco para o estado do formulário
+        setAtivo(d.ativo ?? false)
+        
+      } catch (err) { 
+        setGlobalError('Erro ao carregar dados do usuário.') 
+      } finally { 
+        setLoadingData(false) 
+      }
     }
     load()
   }, [isEdit, userId, session])
@@ -80,8 +90,20 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
     e.preventDefault()
     if (!validate()) return
     setIsSaving(true); setGlobalError('')
-    const payload: any = { nome, sobrenome, email, uf, regional, role, status }
+
+    // CORREÇÃO: Payload agora envia 'ativo' em vez de 'status'
+    const payload: any = { 
+      nome, 
+      sobrenome, 
+      email, 
+      uf, 
+      regional, 
+      role, 
+      ativo // Envia true/false para o NestJS/Prisma
+    }
+    
     if (!isEdit && senha) payload.password = senha
+    
     try {
       if (isEdit) await api.patch(`/users/${userId}`, payload)
       else        await api.post('/users', payload)
@@ -211,17 +233,23 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
           </div>
 
           <div>
-            <label className={labelCls}>Status</label>
+            <label className={labelCls}>Status de Acesso</label>
             <div className="flex gap-2">
               {[
-                { val: 'ativo',     label: 'Ativo',     color: '#10b981' },
-                { val: 'inativo',   label: 'Pendente',  color: '#f59e0b' },
-                { val: 'bloqueado', label: 'Bloqueado', color: '#ef4444' },
+                { val: true,  label: 'Ativo',    color: '#10b981' },
+                { val: false, label: 'Pendente', color: '#f59e0b' },
               ].map(opt => (
-                <button key={opt.val} type="button" onClick={() => setStatus(opt.val)}
+                <button 
+                  key={String(opt.val)} 
+                  type="button" 
+                  onClick={() => setAtivo(opt.val)}
                   className={cn('flex-1 h-11 rounded-xl border-2 text-[12px] font-bold transition-all',
-                    status === opt.val ? 'text-white border-transparent' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200')}
-                  style={status === opt.val ? { background: opt.color, borderColor: opt.color } : {}}>
+                    ativo === opt.val 
+                      ? 'text-white border-transparent' 
+                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                  )}
+                  style={ativo === opt.val ? { background: opt.color, borderColor: opt.color } : {}}
+                >
                   {opt.label}
                 </button>
               ))}
@@ -265,18 +293,15 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
         </button>
       </div>
 
-      {/* espaço para a barra fixa */}
       <div className="h-20" />
     </form>
   )
 }
 
-// ─── Página Novo ──────────────────────────────────────────────────────────────
 export default function NovoUsuarioPage() {
   const router = useRouter()
   return (
     <DashboardLayout title="Novo Usuário" navItems={navItems} accentColor="#094780">
-      {/* Breadcrumb + header igual às outras telas */}
       <div className="-mx-4 md:-mx-7 -mt-4 md:-mt-7 mb-6 bg-white border-b border-[#e3e8ef] px-4 md:px-7 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
           <button onClick={() => router.push('/admin/usuarios')}

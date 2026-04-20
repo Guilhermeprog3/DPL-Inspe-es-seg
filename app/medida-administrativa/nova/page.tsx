@@ -452,7 +452,7 @@ export default function NovaMedidaPage() {
 
                   {/* Classificação — só aceita seleção via dropdown */}
                   <div>
-                    <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Classificação *</label>
+                    <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Desvio *</label>
                     <div style={{ position: 'relative', overflow: 'visible' }}>
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                       <input type="text" placeholder="Busque e selecione um motivo..." value={searchQuery}
