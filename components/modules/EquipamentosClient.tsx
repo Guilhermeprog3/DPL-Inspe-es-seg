@@ -10,11 +10,27 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { equipamentoSchema, type EquipamentoInput } from '@/lib/validations'
 import { 
   Plus, Search, QrCode, Printer, MapPin, 
-  CheckSquare, Square, FilterX, Calendar, Hash 
+  CheckSquare, Square, FilterX, Calendar, Hash, 
+  LayoutDashboard,
+  ClipboardList,
+  ListChecks,
+  Boxes
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const QRCodeSVG = dynamic(() => import('qrcode.react').then(m => m.QRCodeSVG), { ssr: false })
+
+const navItems = [
+  { section: 'Menu Principal' },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { section: 'Operações' },
+  { label: 'Realizar Inspeção', href: '/inspecao/nova', icon: ClipboardList },
+  { label: 'Lista de Inspeções', href: '/inspecao/lista', icon: ListChecks },
+  { section: 'Gestão' },
+  { label: 'Equipamentos', href: '/equipamentos/lista', icon: Boxes },
+  { label: 'QR Codes', href: '/qr-codes', icon: QrCode },
+  { label: 'Locais', href: '/locais/lista', icon: MapPin },
+]
 
 const statusVariant = {
   ativo: 'ok' as const,
@@ -79,7 +95,7 @@ export default function EquipamentosClient({ initialData }: EquipamentosClientPr
   const resetFiltros = () => setFiltros({ codigo: '', codigoGalao: '', base: '', ponto: '', status: '', dataProxima: '' })
 
   return (
-    <DashboardLayout title="Equipamentos" breadcrumb="SIGS / Inventário">
+    <DashboardLayout navItems={navItems} title="Equipamentos" breadcrumb="SIGS / Inventário">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@800&display=swap');
         .label-title-area { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid rgba(9,71,128,0.1); border-radius: 100px; padding: 6px 12px; margin-bottom: 12px; }
