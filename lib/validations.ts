@@ -6,7 +6,14 @@ export const loginSchema = z
   .object({
     email: z.string().min(1, 'E-mail obrigatório').email('E-mail inválido'),
     senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-    uf: z.enum(['PI', 'MA'], { required_error: 'Selecione o estado' }),
+   // No loginSchema e cadastroSchema:
+uf: z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.enum(['PI', 'MA'], { 
+    required_error: 'Selecione o estado',
+    invalid_type_error: 'Selecione o estado' 
+  })
+),
     regional: z.string().min(1, 'Selecione a regional'),
   })
   .refine(
@@ -39,7 +46,14 @@ export const cadastroSchema = z
     nome: z.string().min(2, 'Nome obrigatório'),
     sobrenome: z.string().min(2, 'Sobrenome obrigatório'),
     email: z.string().email('E-mail inválido'),
-    uf: z.enum(['PI', 'MA'], { required_error: 'Selecione o estado' }),
+    // Localize o uf dentro do cadastroSchema e deixe assim:
+uf: z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.enum(['PI', 'MA'], { 
+    required_error: 'Selecione o estado',
+    invalid_type_error: 'Selecione o estado' 
+  })
+),
     regional: z.string().min(1, 'Selecione a regional'),
     role: z.enum(['inspetor', 'sesmt', 'rh', 'admin', 'agente_cobli']),
     senha: z.string().min(8, 'Mínimo 8 caracteres'),

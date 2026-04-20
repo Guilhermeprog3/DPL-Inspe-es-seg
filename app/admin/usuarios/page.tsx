@@ -59,7 +59,6 @@ export default function AdminUsuariosDashboardPage() {
 
         .usr-wrap {
           font-family: 'DM Sans', sans-serif;
-          background: #fff;
           min-height: calc(100vh - 60px);
           display: flex;
           flex-direction: column;

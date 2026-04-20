@@ -88,7 +88,7 @@ export default function DashboardPage() {
   return (
     <DashboardLayout
       title="Dashboard"
-      breadcrumb="SIGS / Dashboard / PI · Metropolitana"
+      breadcrumb="SIGS / Dashboard"
       navItems={navItems} // CORREÇÃO: Passando o prop obrigatório para o Layout
     >
       {/* CORREÇÃO DE HIDRATAÇÃO: Injetando CSS de forma segura para o Next.js */}
@@ -96,14 +96,21 @@ export default function DashboardPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap');
 
         .db-wrap {
-          font-family: 'DM Sans', sans-serif;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 56px 24px 80px;
-          min-height: calc(100vh - 64px);
-          position: relative;
-        }
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 56px 24px 80px;
+  
+  /* MUDANÇA AQUI: Remova o min-height fixo e use overflow do pai */
+  min-height: 100%; 
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+  
+  /* Garante que os anéis decorativos não criem scroll horizontal */
+  overflow: hidden; 
+}
 
         .db-ring { position: absolute; border-radius: 50%; pointer-events: none; }
         .db-ring-1 { width: 480px; height: 480px; top: -160px; right: -160px; border: 1px solid rgba(9,71,128,0.06); }
@@ -124,7 +131,16 @@ export default function DashboardPage() {
         .search-input:focus { outline: none; border-color: rgba(9,71,128,0.35); box-shadow: 0 0 0 3px rgba(9,71,128,0.08), 0 4px 20px rgba(9,71,128,0.06); }
         .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8896ab; pointer-events: none; display: flex; align-items: center; }
 
-        .db-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; max-width: 1100px; }
+        .db-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 1100px;
+  
+  /* GARANTA QUE O BOX-MODEL NÃO SOMA PADDING À LARGURA */
+  box-sizing: border-box; 
+}
 
         .db-card { background: #fff; border-radius: 18px; border: 1px solid rgba(9,71,128,0.08); padding: 24px 20px 20px; display: flex; flex-direction: column; cursor: pointer; position: relative; overflow: hidden; box-shadow: 0 2px 16px rgba(9,71,128,0.06); transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.2s ease; text-align: left; opacity: 0; animation: dbFadeUp 0.45s ease forwards; }
         .db-card:hover { transform: translateY(-6px); box-shadow: 0 18px 48px rgba(9,71,128,0.12); border-color: rgba(9,71,128,0.13); }
