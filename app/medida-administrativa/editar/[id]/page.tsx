@@ -1,4 +1,3 @@
-// ─── EDITAR MEDIDA (medida-administrativa/editar/[id]/page.tsx) ───────────────
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
@@ -18,7 +17,7 @@ type TipoCategoria = 'SEGURANÇA' | 'ADMINISTRATIVA' | ''
 type TipoMedida    = 'ADVERTÊNCIA VERBAL' | 'ADVERTÊNCIA ESCRITA' | 'SUSPENSÃO' | 'CONVERSA PEDAGÓGICA' | 'TREINAMENTO' | ''
 type Gravidade     = 'LEVE' | 'MÉDIA' | 'GRAVE' | 'GRAVÍSSIMA' | ''
 type LoadState     = 'loading' | 'success' | 'error'
-type Anexo         = { id: string; file: File; preview?: string }
+type Anexo         = { id: string; file?: File; preview?: string; url?: string; nome: string; tipo: string }
 
 const navItems = [
   { section: 'Medida Administrativa' },
@@ -29,7 +28,7 @@ const navItems = [
 ]
 
 const CLASSIFICACOES_DATA = [
-  "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESVIO DE CONDUTA","APR PREENCHIDA INCORRETAMENTE E EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO ADEQUADA","RECUSA INJUSTIFICADA EM CUMPRIR ORDENS DE TRABALHO","TAXA DE CONTATO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","DESCUMPRIR NORMAS E PROCEDIMENTOS INTERNOS DA EMPRESA","FALHA DE PROCEDIMENTO / ATO INSEGURO","FALHA DE PROCEDIMENTO / NEGLIGÊNCIA","EXERCÍCIO INDEVIDO DE FUNÇÃO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","SEM SINALIZAÇÃO DA AREA/EPI","VELOCIDADE/CELULAR","DESVIOS DE SEGURANÇA","CNH/DIREÇÃO DISTRAÍDA","DIREÇÃO DISTRAÍDA","NÃO UTILIZOU ESCADA/ANCORAGEM/TRAVA QUEDAS/LUVA ISOLANTE/NÃO UTILIZOU VEICULO COMO BARREIRA","CELULAR/OBSTRUÇÃO CÂMERA","NÃO UTILIZOU A FITA DE ANCORAGEM","VELOCIDADE/DIREÇÃO DISTRAÍDA/OBSTRUÇÃO","CÂMERA OBSTRUIDA/DIREÇÃO DISTRAÍDA","POSSIVEL USO DO CELULAR","NEGLIGÊNCIA DURANTE A ATIVIDADE","NÃO UTILIZOU A FITA DE ANCORAGEM/EPI/EPC","REALIZANDO A TAREFA COM A ÁREA DE TRABALHO NÃO ISOLADA/EPI/EPC","FALHA DE PROCEDIMENTO / ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO","NÃO UTILIZAÇÃO DOS EPI'S, EPC'S OU ESCADAS, DANIFICADAS E/OU NÃO INSPECIONADOS","EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM PORTÃO DA BASE","DEIXOU DE UTILIZAR ACESSÓRIOS OBRIGATÓRIOS PARA MOVIMENTAÇÃO DE CARGA SUSPENSA","AUTOINSPECÇÃO DIÁRIA","CONSTRUÇÃO/MANUTENÇÃO","FICHA SEGURANÇA","UTILIZAÇÃO DA VESTIMENTA DANIFICADA","SEM O USO DO CINTO DE SEGURANÇA","DESCUMPRIMENTO DA LEGISLAÇÃO DE TRÂNSITO VIGENTE DURANTE A CONDUÇÃO DE VEÍCULO DA EMPRESA","PERMITIR A APROXIMAÇÃO OU PERMANENCIA DE TERCEIROS DENTRO DA AREA ISOLADA PARA SERVIÇO","DIREÇÃO DISTRAÍDA/VELOCIDADE","VELOCIDADE/OBSTRUÇÃO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS INTERNOS","VELOCIDADE/CÂMERA OBSTRUIDA/USO DO CELULAR DURANTE CONDUÇÃO","VELOCIDADE/DIREÇÃO DISTRAIDA","NÃO COMUNICAÇÃO DE AVARIA VEICULAR","OBSTRUÇÃO CÂMERA","ATERRAMENTO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS","EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM UM TERCEIRO","TRABALHAR SEM ESCADA AMARRADA/SEM USAR EPI-EPC/NÃO UTILIZAR LUVAS ISOLANTES BT e AT NA EXECUÇÃO DA ATIVIDADE","DESCUMPRIMENTO DA HIERARQUIA FUNCIONAL /VIOLAÇÃO PROCEDIMENTO DE SEGURANÇA/INSUBORDINAÇÃO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
+  "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESVIO DE CONDUTA","APR PREENCHIDA INCORRETAMENTE E EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO ADEQUADA","RECUSA INJUSTIFICADA EM CUMPRIR ORDENS DE TRABALHO","TAXA DE CONTATO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","DESCUMPRIR NORMAS E PROCEDIMENTOS INTERNOS DA EMPRESA","FALHA DE PROCEDIMENTO / ATO INSEGURO","FALHA DE PROCEDIMENTO / NEGLIGÊNCIA","EXERCÍCIO INDEVIDO DE FUNÇÃO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","SEM SINALIZAÇÃO DA AREA/EPI","VELOCIDADE/CELULAR","DESVIOS DE SEGURANÇA","CNH/DIREÇÃO DISTRAÍDA","DIREÇÃO DISTRAÍDA","NÃO UTILIZOU ESCADA/ANCORAGEM/TRAVA QUEDAS/LUVA ISOLANTE/NÃO UTILIZOU VEICULO COMO BARREIRA","CELULAR/OBSTRUÇÃO CÂMERA","NÃO UTILIZOU A FITA DE ANCORAGEM","VELOCIDADE/DIREÇÃO DISTRAÍDA/OBSTRUÇÃO","CÂMERA OBSTRUIDA/DIREÇÃO DISTRAÍDA","POSSIVEL USO DO CELULAR","NEGLIGÊNCIA DURANTE A ATIVIDADE","NÃO UTILIZOU A FITA DE ANCORAGEM/EPI/EPC","REALIZANDO A TAREFA COM A ÁREA DE TRABALHO NÃO ISOLADA/EPI/EPC","FALHA DE PROCEDIMENTO / ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO","NÃO UTILIZAÇÃO DOS EPI'S, EPC'S OU ESCADAS, DANIFICADAS E/OU NÃO INSPECIONADOS","EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM PORTÃO DA BASE","DEIXOU DE UTILIZAR ACESSÓRIOS OBRIGATÓRIOS PARA MOVIMENTAÇÃO DE CARGA SUSPENSA","AUTOINSPECÇÃO DIÁRIA","CONSTRUÇÃO/MANUTENÇÃO","FICHA SEGURANÇA","UTILIZAÇÃO DA VESTIMENTA DANIFICADA","SEM O USO DO CINTO DE SEGURANÇA","DESCUMPRIMENTO DA LEGISLAÇÃO DE TRÂNSITO VIGENTE DURANTE A CONDUÇÃO DE VEÍCULO DA EMPRESA","PERMITIR A APROXIMAÇÃO OU PERMANENCIA DE TERCEIROS DENTRO DA AREA ISOLADA PARA SERVIÇO","DIREÇÃO DISTRAÍDA/VELOCIDADE","VELOCIDADE/OBSTRUÇÃO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS INTERNOS","VELOCIDADE/CÂMERA OBSTRUIDA/USO DO CELULAR DURANTE CONDUÇÃO","VELOCIDADE/DIREÇÃO DISTRAIDA","NÃO COMUNICAÇÃO DE AVARIA VEICULAR","OBSTRUÇÃO CÂMERA","ATERRAMENTO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS","EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO com UM TERCEIRO","TRABALHAR SEM ESCADA AMARRADA/SEM USAR EPI-EPC/NÃO UTILIZAR LUVAS ISOLANTES BT e AT NA EXECUÇÃO DA ATIVIDADE","DESCUMPRIMENTO DA HIERARQUIA FUNCIONAL /VIOLAÇÃO PROCEDIMENTO DE SEGURANÇA/INSUBORDINAÇÃO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
   "OUTROS"
 ]
 
@@ -43,11 +42,11 @@ const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string;
 }
 
 const TABS = [
-  { key: 'identificacao', label: 'Identificação',    icon: User },
-  { key: 'classificacao', label: 'Classificação',    icon: Tag },
-  { key: 'gravidade',     label: 'Gravidade',        icon: AlertTriangle },
-  { key: 'ocorrencia',   label: 'Ocorrência',       icon: FileText },
-  { key: 'anexos',       label: 'Anexos & Vínculo', icon: Paperclip },
+  { key: 'identificacao', label: 'Identificação',     icon: User },
+  { key: 'classificacao', label: 'Classificação',     icon: Tag },
+  { key: 'gravidade',     label: 'Gravidade',         icon: AlertTriangle },
+  { key: 'ocorrencia',    label: 'Ocorrência',        icon: FileText },
+  { key: 'anexos',        label: 'Anexos & Vínculo', icon: Paperclip },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
@@ -79,35 +78,35 @@ export default function EditarMedidaPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [loadState,   setLoadState  ] = useState<LoadState>('loading')
-  const [tab,         setTab        ] = useState<TabKey>('identificacao')
+  const [tab,         setTab         ] = useState<TabKey>('identificacao')
   const [successModal,setSuccessModal]=useState(false)
   const [deleteModal, setDeleteModal] = useState(false)
-  const [isSaving,    setIsSaving   ] = useState(false)
-  const [isDeleting,  setIsDeleting ] = useState(false)
-  const [hasChanges,  setHasChanges ] = useState(false)
-  const [original,    setOriginal   ] = useState<Record<string, any>>({})
+  const [isSaving,     setIsSaving   ] = useState(false)
+  const [isDeleting,   setIsDeleting ] = useState(false)
+  const [hasChanges,   setHasChanges ] = useState(false)
+  const [original,     setOriginal   ] = useState<Record<string, any>>({})
 
   // Form
-  const [nomeColab,      setNomeColab     ] = useState('')
+  const [nomeColab,       setNomeColab     ] = useState('')
   const [matriculaColab, setMatriculaColab] = useState('')
-  const [matriculaSup,   setMatriculaSup  ] = useState('')
+  const [matriculaSup,    setMatriculaSup   ] = useState('')
   const [nomeSupervisor, setNomeSupervisor] = useState('')
-  const [dataMedida,     setDataMedida    ] = useState('')
-  const [tipoCategoria,  setTipoCategoria ] = useState<TipoCategoria>('')
-  const [tipoMedida,     setTipoMedida    ] = useState<TipoMedida>('')
-  const [diasSuspensao,  setDiasSuspensao ] = useState('')
-  const [gravidade,      setGravidade     ] = useState<Gravidade>('')
-  const [classificacao,  setClassificacao ] = useState('')
-  const [ocorrencia,     setOcorrencia    ] = useState('')
-  const [relacionarClick,setRelacionarClick]=useState(false)
-  const [numeroInspecao, setNumeroInspecao] = useState('')
-  const [origem,         setOrigem        ] = useState('')
+  const [dataMedida,      setDataMedida    ] = useState('')
+  const [tipoCategoria,   setTipoCategoria ] = useState<TipoCategoria>('')
+  const [tipoMedida,      setTipoMedida    ] = useState<TipoMedida>('')
+  const [diasSuspensao,   setDiasSuspensao ] = useState('')
+  const [gravidade,       setGravidade     ] = useState<Gravidade>('')
+  const [classificacao,   setClassificacao ] = useState('')
+  const [ocorrencia,      setOcorrencia    ] = useState('')
+  const [relacionarClick, setRelacionarClick]=useState(false)
+  const [numeroInspecao,  setNumeroInspecao] = useState('')
+  const [origem,          setOrigem        ] = useState('')
 
   // Erros
-  const [nomeColabError,      setNomeColabError     ] = useState('')
-  const [nomeSuperError,      setNomeSuperError     ] = useState('')
+  const [nomeColabError,       setNomeColabError     ] = useState('')
+  const [nomeSuperError,       setNomeSuperError     ] = useState('')
   const [matriculaColabError, setMatriculaColabError] = useState('')
-  const [matriculaSupError,   setMatriculaSupError  ] = useState('')
+  const [matriculaSupError,    setMatriculaSupError  ] = useState('')
 
   // Autocomplete
   const [colaboradoresRepo,     setColaboradoresRepo    ] = useState<any[]>([])
@@ -170,15 +169,32 @@ export default function EditarMedidaPage() {
   function handleFilesAdd(files: FileList | null) {
     if (!files) return
     setAnexos(prev => [...prev, ...Array.from(files).map(file => ({
-      id: Math.random().toString(36).slice(2), file,
+      id: Math.random().toString(36).slice(2), 
+      file,
+      nome: file.name,
+      tipo: file.type,
       preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
     }))])
+    setHasChanges(true)
   }
+
   function removerAnexo(id: string) {
-    setAnexos(prev => { const a = prev.find(x => x.id === id); if (a?.preview) URL.revokeObjectURL(a.preview); return prev.filter(x => x.id !== id) })
+    setAnexos(prev => { 
+      const a = prev.find(x => x.id === id); 
+      if (a?.preview) URL.revokeObjectURL(a.preview); 
+      return prev.filter(x => x.id !== id) 
+    })
+    setHasChanges(true)
   }
+
   const fmt = (n: number) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`
-  const fileIcon = (f: File) => f.type.startsWith('image/') ? <FileImage size={20} className="text-blue-400" /> : f.type === 'application/pdf' ? <FileText size={20} className="text-red-400" /> : <File size={20} className="text-slate-400" />
+  
+  const renderIcon = (tipo: string) => {
+    if (tipo.startsWith('image/')) return <FileImage size={20} className="text-blue-400" />
+    if (tipo.includes('pdf')) return <FileText size={20} className="text-red-400" />
+    return <File size={20} className="text-slate-400" />
+  }
+
   useEffect(() => () => anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview)), [])
 
   // Carregar dados
@@ -204,6 +220,16 @@ export default function EditarMedidaPage() {
         setNumeroInspecao(d.numeroInspecao ?? '')
         setRelacionarClick(!!d.numeroInspecao)
         setOrigem(d.origem ?? '')
+
+        if (d.anexos && Array.isArray(d.anexos)) {
+          setAnexos(d.anexos.map((a: any) => ({
+            id: a.id,
+            nome: a.nome,
+            url: a.url,
+            tipo: a.tipo || 'application/octet-stream'
+          })))
+        }
+
         setOriginal({
           colaborador: d.colaborador ?? '', matricula: d.matricula ?? '',
           supervisor: d.supervisor ?? '', nomeSupervisor: d.nomeSupervisor ?? '',
@@ -229,29 +255,46 @@ export default function EditarMedidaPage() {
       numeroInspecao: relacionarClick ? numeroInspecao : '',
       origem,
     }
-    setHasChanges(Object.keys(original).some(k => original[k] !== (current as any)[k]))
+    const hasFieldsChanged = Object.keys(original).some(k => original[k] !== (current as any)[k]);
+    if(hasFieldsChanged) setHasChanges(true);
   }, [nomeColab, matriculaColab, matriculaSup, nomeSupervisor, dataMedida, tipoCategoria, tipoMedida, diasSuspensao, gravidade, classificacao, ocorrencia, numeroInspecao, relacionarClick, origem, original, loadState])
 
   // Salvar
   async function handleSave() {
     if (isSaving || !allValid) return
     setIsSaving(true)
-    const payload = {
-      colaborador: nomeColab, matricula: matriculaColab, supervisor: matriculaSup,
-      nomeSupervisor, data: new Date(dataMedida).toISOString(), tipo: tipoCategoria,
-      medida: tipoMedida, ocorrencia, gravidade, classificacao,
-      diasSuspensao: diasSuspensao ? Number(diasSuspensao) : null,
-      numeroInspecao: relacionarClick ? numeroInspecao : null,
-      origem,
-    }
+
+    const fd = new FormData()
+    fd.append('colaborador', nomeColab)
+    fd.append('matricula', matriculaColab)
+    fd.append('supervisor', matriculaSup)
+    fd.append('nomeSupervisor', nomeSupervisor)
+    fd.append('data', new Date(dataMedida).toISOString())
+    fd.append('tipo', tipoCategoria)
+    fd.append('medida', tipoMedida)
+    fd.append('ocorrencia', ocorrencia)
+    fd.append('gravidade', gravidade)
+    fd.append('classificacao', classificacao)
+    fd.append('origem', origem)
+    if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
+    if (relacionarClick && numeroInspecao) fd.append('numeroInspecao', numeroInspecao)
+
+    anexos.forEach(a => {
+      if (a.file) fd.append('files', a.file)
+    })
+
     try {
-      await api.patch(`/medidas/${medidaId}`, payload)
-      anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview))
-      setAnexos([])
-      setOriginal({ ...payload, data: dataMedida, diasSuspensao: String(diasSuspensao || ''), numeroInspecao: payload.numeroInspecao || '', origem })
-      setHasChanges(false); setSuccessModal(true)
-    } catch (e: any) { alert(e.response?.data?.message || 'Erro ao salvar.') }
-    finally { setIsSaving(false) }
+      await api.patch(`/medidas/${medidaId}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setAnexos(prev => prev.map(a => ({ ...a, file: undefined, preview: undefined })))
+      setHasChanges(false)
+      setSuccessModal(true)
+    } catch (e: any) { 
+      alert(e.response?.data?.message || 'Erro ao salvar.') 
+    } finally { 
+      setIsSaving(false) 
+    }
   }
 
   async function handleDelete() {
@@ -300,7 +343,6 @@ export default function EditarMedidaPage() {
 
       <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]">
 
-        {/* Breadcrumb + Tabs */}
         <div className="bg-white" style={{ borderBottom: '1px solid #e3e8ef', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.05)' }}>
           <div className="px-7 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #f0f2f5' }}>
             <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
@@ -332,13 +374,11 @@ export default function EditarMedidaPage() {
 
         <div className="flex-1 overflow-y-auto pb-28">
 
-          {/* IDENTIFICAÇÃO */}
           {tab === 'identificacao' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm" style={{ overflow: 'visible' }}>
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Identificação</div>
 
-                {/* MATRÍCULAS — primeiro */}
                 <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
                      style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
@@ -367,7 +407,6 @@ export default function EditarMedidaPage() {
                   </div>
                 </div>
 
-                {/* NOMES — segundo */}
                 <div className="grid gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]"
                      style={{ gridTemplateColumns: '180px 1fr 1fr', overflow: 'visible' }}>
                   <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
@@ -404,7 +443,6 @@ export default function EditarMedidaPage() {
             </div>
           )}
 
-          {/* CLASSIFICAÇÃO */}
           {tab === 'classificacao' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
@@ -438,14 +476,10 @@ export default function EditarMedidaPage() {
             </div>
           )}
 
-          {/* GRAVIDADE */}
           {tab === 'gravidade' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={secTitle}>
-                  Nível de Gravidade
-                  <span className="ml-2 text-[10px] font-normal normal-case text-slate-400">(opcional)</span>
-                </div>
+                <div className={secTitle}>Nível de Gravidade <span className="ml-2 text-[10px] font-normal normal-case text-slate-400">(opcional)</span></div>
                 <div className="p-4 space-y-2">
                   {Object.entries(GRAVIDADE_CFG).map(([g, cfg]) => (
                     <div key={g} onClick={() => setGravidade(gravidade === g ? '' : g as Gravidade)}
@@ -463,23 +497,20 @@ export default function EditarMedidaPage() {
                 </div>
                 {gravidade && (
                   <div className="px-6 pb-4">
-                    <button onClick={() => setGravidade('')} className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2">
-                      Limpar seleção
-                    </button>
+                    <button onClick={() => setGravidade('')} className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2">Limpar seleção</button>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* OCORRÊNCIA */}
           {tab === 'ocorrencia' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm" style={{ overflow: 'visible' }}>
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Detalhes da Ocorrência</div>
                 <div className="p-6 space-y-6" style={{ overflow: 'visible' }}>
                   <div>
-                    <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Classificação *</label>
+                    <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Desvio *</label>
                     <div style={{ position: 'relative', overflow: 'visible' }}>
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                       <input type="text" className={cn(inputCls(), 'pl-10 pr-10 h-11')}
@@ -490,9 +521,7 @@ export default function EditarMedidaPage() {
                         onBlur={() => setTimeout(() => setShowClassifDropdown(false), 200)} />
                       {searchQuery && (
                         <button type="button" onClick={() => { setSearchQuery(''); setClassificacao('') }}
-                          className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors">
-                          <X size={14} />
-                        </button>
+                          className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"><X size={14} /></button>
                       )}
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" size={16} />
                       <AbsoluteDropdown open={showClassifDropdown}>
@@ -501,9 +530,7 @@ export default function EditarMedidaPage() {
                               <button key={i} type="button"
                                 onMouseDown={() => { setClassificacao(item); setSearchQuery(item); setShowClassifDropdown(false) }}
                                 className={cn('w-full text-left px-4 py-3 text-[12.5px] font-medium border-b border-slate-50 last:border-0 transition-colors',
-                                  classificacao === item ? 'bg-blue-50 text-[#094780] font-semibold' : 'text-slate-600 hover:bg-slate-50')}>
-                                {item}
-                              </button>
+                                  classificacao === item ? 'bg-blue-50 text-[#094780] font-semibold' : 'text-slate-600 hover:bg-slate-50')}>{item}</button>
                             ))
                           : <div className="p-6 text-center text-slate-400 text-xs">Nenhum resultado</div>
                         }
@@ -512,13 +539,10 @@ export default function EditarMedidaPage() {
                     {classificacao && searchQuery === classificacao
                       ? <div className="flex items-center gap-1.5 mt-1.5"><CheckCircle size={12} className="text-emerald-500" /><span className="text-[11px] text-emerald-600 font-medium">Classificação selecionada</span></div>
                       : searchQuery && searchQuery !== classificacao
-                        ? <FieldError message="Selecione uma opção da lista" />
-                        : null}
+                        ? <FieldError message="Selecione uma opção da lista" /> : null}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500 uppercase block">
-                      Descrição * <span className="font-normal normal-case text-slate-400">(mín. 10 caracteres)</span>
-                    </label>
+                    <label className="text-[12px] font-bold text-slate-500 uppercase block">Descrição * <span className="font-normal normal-case text-slate-400">(mín. 10 caracteres)</span></label>
                     <textarea value={ocorrencia} onChange={e => setOcorrencia(e.target.value)} rows={6}
                       className={cn('w-full bg-[#f8fafc] border rounded-lg px-3 py-3 text-[13.5px] outline-none transition-all resize-none',
                         ocorrencia.length > 0 && ocorrencia.trim().length < 10 ? 'border-red-300 focus:border-red-400' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
@@ -533,7 +557,6 @@ export default function EditarMedidaPage() {
             </div>
           )}
 
-          {/* ANEXOS */}
           {tab === 'anexos' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
@@ -547,9 +570,7 @@ export default function EditarMedidaPage() {
                     onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}>
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
                       <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border transition-all',
-                        isDragging ? 'bg-blue-100 border-blue-300 text-[#094780]' : 'bg-white border-slate-200 text-slate-400')}>
-                        <Upload size={24} />
-                      </div>
+                        isDragging ? 'bg-blue-100 border-blue-300 text-[#094780]' : 'bg-white border-slate-200 text-slate-400')}><Upload size={24} /></div>
                       <p className="text-sm font-semibold text-slate-600 mb-1">Clique ou <span className="text-[#094780]">arraste arquivos</span></p>
                       <p className="text-[11px] text-slate-400">Imagens e PDFs aceitos</p>
                     </div>
@@ -561,20 +582,39 @@ export default function EditarMedidaPage() {
                   <div className="px-6 py-4 space-y-2 border-b border-[#e3e8ef]">
                     {anexos.map(a => (
                       <div key={a.id} className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-slate-200 transition-all">
-                        <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">{fileIcon(a.file)}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-700 truncate">{a.file.name}</p>
-                          <p className="text-[11px] text-slate-400">{fmt(a.file.size)}</p>
+                        <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+                          {/* CORREÇÃO: Imagem no lugar do ícone se houver URL ou Preview */}
+                          {(a.url || a.preview) && a.tipo.startsWith('image/') ? (
+                             <img 
+                               src={a.preview || `${process.env.NEXT_PUBLIC_API_URL}/medidas/anexo/${a.id}`} 
+                               className="w-full h-full object-cover"
+                               alt={a.nome}
+                             />
+                          ) : renderIcon(a.tipo)}
                         </div>
-                        <button onClick={() => removerAnexo(a.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-slate-700 truncate">{a.nome}</p>
+                          {a.url && <p className="text-[10px] text-[#094780] font-bold uppercase tracking-tight">Salvo no servidor</p>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                           {/* CORREÇÃO: Link de redirecionamento corrigido */}
+                           {a.url && (
+                             <a 
+                               href={`${process.env.NEXT_PUBLIC_API_URL}/medidas/anexo/${a.id}`} 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               className="p-2 text-slate-400 hover:text-[#094780] transition-colors"
+                             >
+                               <Upload size={14} className="rotate-180" />
+                             </a>
+                           )}
+                           <button onClick={() => removerAnexo(a.id)} className="p-2 text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* ORIGEM */}
                 <div className={secTitle}>Origem *</div>
                 <div className="px-6 py-5 border-b border-[#e3e8ef]">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -582,15 +622,12 @@ export default function EditarMedidaPage() {
                       <button key={op} type="button" onClick={() => setOrigem(origem === op ? '' : op)}
                         className={cn('py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative',
                           origem === op ? 'bg-[#094780] border-[#094780] text-white shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-[#094780]/30 hover:bg-blue-50/30')}>
-                        {op}
-                        {origem === op && <CheckCircle size={13} className="absolute top-2 right-2 text-white/80" />}
+                        {op} {origem === op && <CheckCircle size={13} className="absolute top-2 right-2 text-white/80" />}
                       </button>
                     ))}
                   </div>
-                  {!origem && <p className="text-[11px] text-slate-400 mt-2">Selecione a origem da medida</p>}
                 </div>
 
-                {/* Vínculo Externo */}
                 <div className={secTitle}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
                   <div className="flex items-center justify-between">
@@ -613,11 +650,8 @@ export default function EditarMedidaPage() {
           )}
         </div>
 
-        {/* Bottom Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e3e8ef] px-7 py-4 flex items-center justify-between z-50">
-          <button onClick={() => setDeleteModal(true)} className="flex items-center gap-2 text-red-500 font-bold text-sm hover:text-red-600 transition-colors">
-            <Trash2 size={16} /> Excluir
-          </button>
+          <button onClick={() => setDeleteModal(true)} className="flex items-center gap-2 text-red-500 font-bold text-sm hover:text-red-600 transition-colors"><Trash2 size={16} /> Excluir</button>
           <div className="flex gap-3">
             <button onClick={() => router.back()} className="px-4 py-2 border border-[#e3e8ef] rounded-lg text-sm font-bold hover:bg-slate-50 transition-all">Cancelar</button>
             <button disabled={!hasChanges || !allValid || isSaving} onClick={handleSave}
@@ -628,7 +662,6 @@ export default function EditarMedidaPage() {
           </div>
         </div>
 
-        {/* Modais */}
         {successModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
             <div className="bg-white p-10 rounded-[40px] text-center shadow-2xl max-w-sm">
@@ -648,9 +681,10 @@ export default function EditarMedidaPage() {
               <p className="text-slate-500 text-sm mb-6">Esta ação não pode ser desfeita.</p>
               <div className="flex gap-3">
                 <button onClick={() => setDeleteModal(false)} className="flex-1 py-2 border rounded-xl font-bold">Não</button>
-                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
-                  {isDeleting ? <Loader2 size={14} className="animate-spin" /> : 'Sim, excluir'}
-                </button>
+                // Trecho final corrigido:
+<button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+  {isDeleting ? <Loader2 size={14} className="animate-spin" /> : 'Sim, excluir'}
+</button>
               </div>
             </div>
           </div>

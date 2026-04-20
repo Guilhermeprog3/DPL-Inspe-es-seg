@@ -170,21 +170,53 @@ export default function NovaMedidaPage() {
   useEffect(() => () => anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview)), [])
 
   async function handleRegister() {
-    if (isRegistering || !allValid) return
-    setIsRegistering(true)
-    const fd = new FormData()
-    Object.entries({
-      colaborador: nomeColab, matricula: matriculaColab, supervisor: matriculaSup,
-      nomeSupervisor, tipo: tipoCategoria, medida: tipoMedida, ocorrencia,
-      gravidade, classificacao, origem, data: new Date(dataMedida).toISOString()
-    }).forEach(([k, v]) => fd.append(k, v))
-    if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
-    if (relacionarClick && numeroInspecao) fd.append('numeroInspecao', numeroInspecao)
-    anexos.forEach(a => fd.append('files', a.file))
-    try { await api.post('/medidas', fd); setAnexos([]); setSuccessModal(true) }
-    catch (e: any) { alert(e.response?.data?.message || 'Erro ao registrar.') }
-    finally { setIsRegistering(false) }
+  if (isRegistering || !allValid) return
+  setIsRegistering(true)
+
+  const fd = new FormData()
+
+  // Mapeamento exato para o que o Prisma espera no Backend
+  fd.append('colaborador', nomeColab)
+  fd.append('matricula', matriculaColab)
+  fd.append('supervisor', matriculaSup)
+  fd.append('nomeSupervisor', nomeSupervisor) // Campo obrigatório no seu Schema
+  fd.append('tipo', tipoCategoria)             // 'SEGURANÇA' ou 'ADMINISTRATIVA'
+  fd.append('medida', tipoMedida)               // O valor da ação em si
+  fd.append('ocorrencia', ocorrencia)
+  fd.append('gravidade', gravidade)
+  fd.append('classificacao', classificacao)
+  fd.append('origem', origem)
+  fd.append('data', new Date(dataMedida).toISOString())
+
+  // Campos condicionais
+  if (diasSuspensao) {
+    fd.append('diasSuspensao', diasSuspensao) // O backend fará o parseInt
   }
+  
+  if (relacionarClick && numeroInspecao) {
+    fd.append('numeroInspecao', numeroInspecao)
+  }
+
+  // Anexos - O campo DEVE se chamar 'files' para o Multer do NestJS ler
+  anexos.forEach(a => {
+    fd.append('files', a.file)
+  })
+
+  try { 
+    // Certifique-se que o endpoint é exatamente este
+    await api.post('/medidas', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    
+    setAnexos([])
+    setSuccessModal(true) 
+  } catch (e: any) { 
+    console.error("Erro no registro:", e)
+    alert(e.response?.data?.message || 'Erro ao registrar a medida.') 
+  } finally { 
+    setIsRegistering(false) 
+  }
+}
 
   const tabValid: Record<TabKey, boolean> = {
     identificacao: !!nomeColab && !nomeColabError && !!matriculaColab && !matriculaColabError && !!nomeSupervisor && !nomeSuperError && !!dataMedida,
@@ -395,7 +427,7 @@ export default function NovaMedidaPage() {
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Detalhes da Ocorrência</div>
                 <div className="p-6 space-y-6" style={{ overflow: 'visible' }}>
                   <div>
-                    <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Classificação *</label>
+                    <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Desvio *</label>
                     <div style={{ position: 'relative', overflow: 'visible' }}>
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                       <input type="text" className={cn(inputCls(), 'pl-10 pr-10 h-11')}
