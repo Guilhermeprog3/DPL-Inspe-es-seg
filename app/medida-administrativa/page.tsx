@@ -11,6 +11,7 @@ import {
   Users,
   Settings
 } from 'lucide-react'
+import api from '@/lib/api' // Instância centralizada
 
 const navItems = [
   { section: 'Medida Administrativa' },
@@ -44,7 +45,6 @@ export default function MedidaDashboardPage() {
   const [search, setSearch] = useState('')
   const [mounted, setMounted] = useState(false)
 
-  
   useEffect(() => {
     setMounted(true)
   }, [])

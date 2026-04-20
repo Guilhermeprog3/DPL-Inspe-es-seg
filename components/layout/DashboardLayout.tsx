@@ -8,7 +8,8 @@ interface DashboardLayoutProps {
   title: string
   breadcrumb?: string
   navItems: NavItem[]
-  accentColor?: string 
+  accentColor?: string
+  onSidebarChange?: (expanded: boolean) => void
 }
 
 export function DashboardLayout({ 
@@ -16,15 +17,22 @@ export function DashboardLayout({
   title, 
   breadcrumb, 
   navItems, 
-  accentColor = '#E67A0E' 
+  accentColor = '#E67A0E',
+  onSidebarChange,
 }: DashboardLayoutProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
+
+  const handleToggle = () => {
+    const next = !sidebarExpanded
+    setSidebarExpanded(next)
+    onSidebarChange?.(next)
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f0f4f8]">
       <Sidebar
         expanded={sidebarExpanded}
-        onToggle={() => setSidebarExpanded(prev => !prev)}
+        onToggle={handleToggle}
         navItems={navItems}
         accentColor={accentColor}
       />
@@ -33,7 +41,7 @@ export function DashboardLayout({
           title={title}
           breadcrumb={breadcrumb}
           sidebarExpanded={sidebarExpanded}
-          onToggleSidebar={() => setSidebarExpanded(prev => !prev)}
+          onToggleSidebar={handleToggle}
           accentColor={accentColor}
         />
         <main className="flex-1 p-4 md:p-7">

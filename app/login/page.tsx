@@ -8,66 +8,58 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { loginSchema, type LoginInput } from '@/lib/validations'
 import { REGIONAIS_POR_UF, type UF } from '@/types'
-import { Mail, Lock, ChevronDown, LogIn, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Mail, Lock, ChevronDown, LogIn, AlertCircle, Eye, EyeOff, Loader2, ShieldAlert } from 'lucide-react'
+import api from '@/lib/api'
 
 export default function LoginPage() {
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [emailLookup, setEmailLookup] = useState<'idle' | 'loading' | 'found' | 'not-found'>('idle')
 
-const {
-  register,
-  handleSubmit,
-  setValue,
-  watch,
-  clearErrors,
-  formState: { errors, isSubmitting },
-} = useForm<LoginInput>({
-  resolver: zodResolver(loginSchema),
-  mode: 'onBlur',
-  shouldUnregister: false, // <--- ADICIONE ESTA LINHA
-  defaultValues: {
-    email: '',
-    senha: '',
-    uf: '' as UF,
-    regional: '',
-  },
-})
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    clearErrors,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+    shouldUnregister: false,
+    defaultValues: {
+      email: '',
+      senha: '',
+      uf: '' as UF,
+      regional: '',
+    },
+  })
 
-  // Observa os valores em tempo real — sem useState separado
   const ufAtual = watch('uf')
   const regionalAtual = watch('regional')
   const autoFilled = emailLookup === 'found'
 
   async function handleEmailBlur() {
-  const email = watch('email')
-  if (!email || !email.includes('@')) return
+    const email = watch('email')
+    if (!email || !email.includes('@')) return
 
-  setEmailLookup('loading')
-  try {
-    const res = await fetch(`http://localhost:3001/users/by-email?email=${encodeURIComponent(email)}`)
-    if (!res.ok) { 
-      setEmailLookup('not-found')
-      return 
-    }
+    setEmailLookup('loading')
+    try {
+      const res = await api.get(`/users/by-email?email=${encodeURIComponent(email)}`)
+      const data = res.data
 
-    const data = await res.json()
-    if (data.uf && data.regional) {
-      // 1. Definimos os valores
-      setValue('uf', data.uf, { shouldValidate: true, shouldDirty: true })
-      setValue('regional', data.regional, { shouldValidate: true, shouldDirty: true })
-      
-      // 2. Limpamos erros manualmente para garantir
-      clearErrors(['uf', 'regional'])
-      
-      setEmailLookup('found')
-    } else {
+      if (data.uf && data.regional) {
+        setValue('uf', data.uf, { shouldValidate: true, shouldDirty: true })
+        setValue('regional', data.regional, { shouldValidate: true, shouldDirty: true })
+        clearErrors(['uf', 'regional'])
+        setEmailLookup('found')
+      } else {
+        setEmailLookup('not-found')
+      }
+    } catch (err) {
       setEmailLookup('not-found')
     }
-  } catch (error) {
-    setEmailLookup('not-found')
   }
-}
 
   function handleUfChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setValue('uf', e.target.value as UF, { shouldValidate: true })
@@ -94,21 +86,22 @@ const {
         password: data.senha,
         uf: data.uf,
         regional: data.regional,
-        redirect: false,
+        redirect: false, // Necessário para capturar o erro manualmente
       })
 
       if (res?.error) {
-        setError(
-          res.error === 'Configuration'
-            ? 'Erro de configuração: verifique o arquivo .env.local e reinicie o servidor.'
-            : 'E-mail ou senha inválidos. Verifique suas credenciais e tente novamente.'
-        )
+        // Se a mensagem contiver palavras chaves de inatividade vindas do seu AuthService
+        if (res.error.toLowerCase().includes('inativa') || res.error.toLowerCase().includes('aprovação')) {
+          setError(res.error)
+        } else {
+          setError('E-mail ou senha inválidos. Verifique suas credenciais.')
+        }
         return
       }
 
       if (res?.ok) window.location.href = '/modulos'
     } catch {
-      setError('Não foi possível conectar ao servidor. Tente novamente em instantes.')
+      setError('Não foi possível conectar ao servidor.')
     }
   }
 
@@ -122,24 +115,23 @@ const {
 
         <div className="sep" />
 
+        {/* Renderização condicional do banner de erro ou alerta de conta inativa */}
         {error && (
-          <div className="error-banner">
-            <AlertCircle size={15} className="error-banner-icon" />
+          <div className={error.includes('inativa') || error.includes('aprovação') ? "pending-banner" : "error-banner"}>
+            {error.includes('inativa') ? <ShieldAlert size={16} /> : <AlertCircle size={15} className="error-banner-icon" />}
             <p className="error-banner-text">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="fields">
-
             {/* E-mail */}
             <div className="field">
               <div className="field-label-row">
                 <label className="field-label">E-mail</label>
                 {emailLookup === 'loading' && (
                   <span className="field-hint-loading">
-                    <Loader2 size={10} style={{ animation: 'spin 0.7s linear infinite' }} />
-                    Buscando...
+                    <Loader2 size={10} className="animate-spin" /> Buscando...
                   </span>
                 )}
                 {emailLookup === 'found' && (
@@ -155,9 +147,7 @@ const {
                 />
                 <span className="field-icon"><Mail size={15} /></span>
               </div>
-              {errors.email && (
-                <p className="field-error"><AlertCircle size={11} />{errors.email.message}</p>
-              )}
+              {errors.email && <p className="field-error"><AlertCircle size={11} />{errors.email.message}</p>}
             </div>
 
             {/* Senha */}
@@ -170,16 +160,11 @@ const {
                   className={`field-input${errors.senha ? ' has-error' : ''}`}
                   {...register('senha')}
                 />
-                <span
-                  className="field-icon clickable"
-                  onClick={() => setShowPassword(p => !p)}
-                >
+                <span className="field-icon clickable" onClick={() => setShowPassword(p => !p)}>
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </span>
               </div>
-              {errors.senha && (
-                <p className="field-error"><AlertCircle size={11} />{errors.senha.message}</p>
-              )}
+              {errors.senha && <p className="field-error"><AlertCircle size={11} />{errors.senha.message}</p>}
             </div>
 
             {/* UF + Regional */}
@@ -193,9 +178,7 @@ const {
                     <span className="auto-fill-label">Preenchido automaticamente</span>
                     <span className="auto-fill-value">{ufAtual} · {regionalAtual}</span>
                   </div>
-                  <button type="button" className="auto-fill-change" onClick={handleAlterar}>
-                    Alterar
-                  </button>
+                  <button type="button" className="auto-fill-change" onClick={handleAlterar}>Alterar</button>
                 </div>
               </div>
             ) : (
@@ -214,9 +197,7 @@ const {
                     </select>
                     <span className="field-icon"><ChevronDown size={15} /></span>
                   </div>
-                  {errors.uf && (
-                    <p className="field-error"><AlertCircle size={11} />{errors.uf.message}</p>
-                  )}
+                  {errors.uf && <p className="field-error"><AlertCircle size={11} />{errors.uf.message}</p>}
                 </div>
 
                 <div className="field">
@@ -235,20 +216,14 @@ const {
                     </select>
                     <span className="field-icon"><ChevronDown size={15} /></span>
                   </div>
-                  {errors.regional && (
-                    <p className="field-error"><AlertCircle size={11} />{errors.regional.message}</p>
-                  )}
+                  {errors.regional && <p className="field-error"><AlertCircle size={11} />{errors.regional.message}</p>}
                 </div>
               </>
             )}
-
           </div>
 
           <button type="submit" disabled={isSubmitting} className="btn">
-            {isSubmitting
-              ? <><span className="spinner" /> Entrando...</>
-              : <><LogIn size={15} /> Entrar</>
-            }
+            {isSubmitting ? <><span className="spinner" /> Entrando...</> : <><LogIn size={15} /> Entrar</>}
           </button>
         </form>
 
@@ -258,6 +233,24 @@ const {
           <Link href="/recuperar-senha">Esqueceu a senha?</Link>
         </div>
       </div>
+
+      {/* Adicione este CSS no seu login.css ou aqui para o banner de aviso */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .pending-banner {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-left: 4px solid #f59e0b;
+          border-radius: 10px;
+          padding: 12px;
+          margin-bottom: 20px;
+          color: #92400e;
+          font-size: 13px;
+          font-weight: 500;
+        }
+      `}} />
     </div>
   )
 }

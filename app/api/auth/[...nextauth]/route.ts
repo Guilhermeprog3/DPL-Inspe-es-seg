@@ -12,53 +12,69 @@ const handler = NextAuth({
         regional: { label: "Regional", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+  if (!credentials?.email || !credentials?.password) return null;
 
-        // Chamada para o seu backend NestJS
-        const res = await fetch("http://localhost:3001/auth/login", {
-          method: "POST",
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-            uf: credentials.uf,
-            regional: credentials.regional,
-          }),
-          headers: { "Content-Type": "application/json" },
-        });
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({
+      email: credentials.email,
+      password: credentials.password,
+      uf: credentials.uf,
+      regional: credentials.regional,
+    }),
+    headers: { "Content-Type": "application/json" },
+  });
 
-        const user = await res.json();
+  const data = await res.json();
 
-        // Se o login for bem-sucedido e retornar o usuário/token
-        if (res.ok && user) {
-          return user;
-        }
+  // Se o login falhar (401), lançamos o erro com a mensagem do backend
+  if (!res.ok) {
+    throw new Error(data.message || "Falha na autenticação");
+  }
 
-        // Se falhar, retorna null (o NextAuth lidará com o erro)
-        return null;
-      },
+  if (data) {
+    return {
+      id: data.user.id,
+      name: data.user.nome,
+      email: data.user.email,
+      role: data.user.role,
+      uf: data.user.uf,
+      regional: data.user.regional,
+      accessToken: data.access_token,
+    };
+  }
+  return null;
+},
     }),
   ],
   pages: {
-    signIn: "/login", // Sua página customizada
+    signIn: "/login",
   },
   callbacks: {
     async jwt({ token, user }) {
-      // Se o usuário acabou de logar, 'user' contém o retorno do seu backend (access_token + user object)
+      // No momento do login (quando 'user' existe)
       if (user) {
-        return {
-          ...token,
-          accessToken: (user as any).access_token,
-          userData: (user as any).user, // Aqui guardamos nome, email, role, uf...
-        };
+        token.accessToken = (user as any).accessToken;
+        token.role = (user as any).role; // Agora o middleware consegue ler token.role
+        token.uf = (user as any).uf;
+        token.regional = (user as any).regional;
       }
       return token;
     },
     async session({ session, token }) {
-      // Repassamos os dados do token para a sessão do cliente
-      (session as any).access_token = token.accessToken;
-      session.user = token.userData as any; 
+      // Repassamos tudo para a sessão para usar nos componentes (useSession)
+      if (session.user) {
+        (session.user as any).id = token.sub;
+        (session.user as any).role = token.role;
+        (session.user as any).uf = token.uf;
+        (session.user as any).regional = token.regional;
+        (session as any).access_token = token.accessToken;
+      }
       return session;
     },
+  },
+  session: {
+    strategy: "jwt", // Garante que estamos usando JWT
   },
 });
 

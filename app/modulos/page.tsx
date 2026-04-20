@@ -3,7 +3,7 @@
 import './modulos.css'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList, LogOut, ChevronRight, Search, ShieldAlert } from 'lucide-react'
+import { ClipboardList, LogOut, ChevronRight, Search, ShieldAlert,Users } from 'lucide-react'
 import { useState, useMemo } from 'react'
 
 const ALL_MODULOS = [
@@ -24,6 +24,14 @@ const ALL_MODULOS = [
     route: '/medida-administrativa',
     roles: ['agente_cobli', 'admin'],
   },
+  {
+    id: 3,
+    icon: <Users size={26} color="#fff" strokeWidth={1.8} />, // import Users from lucide-react
+    title: 'Administração de Usuários',
+    subtitle: 'Gerencie usuários do sistema, ative, bloqueie ou remova acessos.',
+    route: '/admin/usuarios',
+    roles: ['admin'],
+  }
 ]
 
 export default function ModulosPage() {
