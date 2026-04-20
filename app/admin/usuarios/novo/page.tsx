@@ -21,7 +21,7 @@ const navItems = [
   { label: 'Novo Usuário',      href: '/admin/usuarios/novo', icon: Plus },
 ]
 
-export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
+function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
   const router   = useRouter()
   const params   = useParams()
   const { data: session } = useSession()
