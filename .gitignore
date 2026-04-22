@@ -9,7 +9,7 @@ build/
 
 # Variáveis de Ambiente (CRÍTICO)
 .env
-.env.local
+# .env.local
 .env.development.local
 .env.test.local
 .env.production.local
