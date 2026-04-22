@@ -6,6 +6,8 @@ const api = axios.create({
   timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 5000,
   headers: {
     'Content-Type': 'application/json',
+    // ADICIONE ESTA LINHA ABAIXO:
+    'ngrok-skip-browser-warning': 'true',
   },
 });
 
