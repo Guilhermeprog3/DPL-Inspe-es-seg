@@ -3,7 +3,7 @@ import { getSession } from 'next-auth/react';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 5000,
+  timeout: Number(process.env.NEXT_PUBLIC_API_TIMEOUT) || 300000,
   headers: {
     'Content-Type': 'application/json',
     // ADICIONE ESTA LINHA ABAIXO:
@@ -19,7 +19,7 @@ api.interceptors.request.use(async (config) => {
   }
   
   return config;
-  
+
 });
 
 export default api;
