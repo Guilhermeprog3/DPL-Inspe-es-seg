@@ -26,8 +26,6 @@ const navItems = [
   { section: 'Operações' },
   { label: 'Nova Medida',   href: '/medida-administrativa/nova',  icon: PlusCircle },
   { label: 'Histórico',     href: '/medida-administrativa/lista', icon: List },
-  { section: 'Configurações' },
-  { label: 'Colaboradores', href: '/colaboradores',               icon: Users },
 ]
 
 const CLASSIFICACOES_DATA = [
