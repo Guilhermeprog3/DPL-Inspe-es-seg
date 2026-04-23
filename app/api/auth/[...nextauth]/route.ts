@@ -59,6 +59,9 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // O NextAuth armazena o ID no 'sub' por padrão, 
+        // mas vamos garantir que ele esteja explícito
+        token.id = user.id; 
         token.accessToken = (user as any).accessToken;
         token.role = (user as any).role;
         token.uf = (user as any).uf;
@@ -68,7 +71,8 @@ const handler = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.sub;
+        // Agora mapeamos o ID do token de volta para o user da sessão
+        (session.user as any).id = token.id; 
         (session.user as any).role = token.role;
         (session.user as any).uf = token.uf;
         (session.user as any).regional = token.regional;

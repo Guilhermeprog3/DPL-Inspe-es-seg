@@ -199,6 +199,9 @@ export default function NovaMedidaPage() {
     if (isRegistering || !allValid) return
     setIsRegistering(true)
     const fd = new FormData()
+    if (session?.user?.id) {
+    fd.append('userId', session.user.id) }
+
     fd.append('colaborador',    colabSelecionado.nome)
     fd.append('matricula',      colabSelecionado.chapa)
     fd.append('supervisor',     supSelecionado.chapa)
@@ -213,6 +216,7 @@ export default function NovaMedidaPage() {
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
     if (relacionarClick && numeroInspecao) fd.append('numeroInspecao', numeroInspecao)
     anexos.forEach(a => fd.append('files', a.file))
+  
     try {
       await api.post('/medidas', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setAnexos([])
