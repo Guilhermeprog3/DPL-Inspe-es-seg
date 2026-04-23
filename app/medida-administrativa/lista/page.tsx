@@ -7,11 +7,48 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   Plus, MoreVertical, Eye, Loader2, Trash2, Edit2, AlertCircle,
   SlidersHorizontal, Download, ChevronLeft, ChevronRight,
-  LayoutDashboard, PlusCircle, List
+  LayoutDashboard, PlusCircle, List, MapPin, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import api from '@/lib/api'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+/**
+ * A sessão expõe user.uf (string) e user.regional (string) conforme o Topbar.
+ * Se no futuro o usuário tiver acesso a múltiplas filiais/regionais, basta
+ * trocar para arrays (user.filiais: string[], user.regionais: string[]) e
+ * ajustar as funções normalizeUfs / normalizeRegionais abaixo.
+ */
+
+/**
+ * Verifica se o usuário é administrador.
+ * Ajuste o campo/valor conforme o seu sistema (ex: perfil, role, cargo).
+ * Valores reconhecidos como ADM: 'ADM', 'ADMIN', 'ADMINISTRADOR'.
+ */
+function isAdminUser(user: any): boolean {
+  if (!user) return false
+  const campo = (user.perfil ?? user.role ?? user.cargo ?? '').toString().toUpperCase().trim()
+  return ['ADM', 'ADMIN', 'ADMINISTRADOR'].includes(campo)
+}
+
+/** Normaliza uf para array — suporta string simples ou array */
+function normalizeUfs(user: any): string[] {
+  if (!user) return []
+  if (Array.isArray(user.filiais) && user.filiais.length > 0) return user.filiais
+  if (Array.isArray(user.uf) && user.uf.length > 0) return user.uf
+  if (typeof user.uf === 'string' && user.uf.trim()) return [user.uf.trim()]
+  return []
+}
+
+/** Normaliza regional para array — suporta string simples ou array */
+function normalizeRegionais(user: any): string[] {
+  if (!user) return []
+  if (Array.isArray(user.regionais) && user.regionais.length > 0) return user.regionais
+  if (Array.isArray(user.regional) && user.regional.length > 0) return user.regional
+  if (typeof user.regional === 'string' && user.regional.trim()) return [user.regional.trim()]
+  return []
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const PAGE_SIZE_OPTIONS = [10, 20, 30] as const
@@ -21,9 +58,19 @@ const navItems = [
   { section: 'Medida Administrativa' },
   { label: 'Dashboard',  href: '/medida-administrativa',       icon: LayoutDashboard },
   { section: 'Operações' },
-  { label: 'Nova Medida',href: '/medida-administrativa/nova',  icon: PlusCircle },
-  { label: 'Histórico',  href: '/medida-administrativa/lista', icon: List },
+  { label: 'Nova Medida', href: '/medida-administrativa/nova',  icon: PlusCircle },
+  { label: 'Histórico',   href: '/medida-administrativa/lista', icon: List },
 ]
+
+const UF_LABELS: Record<string, string> = {
+  PI: 'Piauí',
+  MA: 'Maranhão',
+  // adicione mais UFs conforme necessário
+}
+
+// Lista completa de UFs e Regionais — exibida para usuários ADM
+const ALL_UFS       = ['PI', 'MA'] // expanda conforme seu sistema
+const ALL_REGIONAIS = ['METROPOLITANA', 'NORTE', 'SUL', 'NORDESTE', 'SUDESTE']
 
 const GRAVIDADE_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   LEVE:       { color: '#10b981', bg: '#f0fdf4', border: '#bcf0da' },
@@ -41,11 +88,11 @@ const MEDIDA_CONFIG: Record<string, { color: string; bg: string; border: string 
 }
 
 const ORIGEM_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
-  'ESS':              { color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
-  'CLICK':            { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  'NMC':              { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-  'MULTA DE TRÂNSITO':{ color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-  'GESTÃO DE GENTE':  { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'ESS':               { color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
+  'CLICK':             { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  'NMC':               { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+  'MULTA DE TRÂNSITO': { color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'GESTÃO DE GENTE':   { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
 }
 
 const ORIGENS_LIST = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE GENTE']
@@ -54,6 +101,8 @@ const ORIGENS_LIST = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE G
 function exportToExcel(data: any[]) {
   const rows = data.map(m => ({
     'ID':                m.id ?? '',
+    'Filial':            m.uf ?? '',
+    'Regional':          m.regional ?? '',
     'Colaborador':       m.colaborador ?? '',
     'Matrícula Colab.':  m.matricula ?? '',
     'Supervisor':        m.nomeSupervisor ?? '',
@@ -70,12 +119,84 @@ function exportToExcel(data: any[]) {
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   ws['!cols'] = [
-    {wch:28},{wch:28},{wch:14},{wch:28},{wch:14},{wch:14},
+    {wch:28},{wch:10},{wch:15},{wch:28},{wch:14},{wch:28},{wch:14},{wch:14},
     {wch:16},{wch:22},{wch:14},{wch:12},{wch:40},{wch:50},{wch:18},{wch:20},
   ]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Medidas')
   XLSX.writeFile(wb, `medidas_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`)
+}
+
+// ─── Chip Filter (multi-select) ───────────────────────────────────────────────
+/**
+ * Filtro multi-seleção estilo chip/pill.
+ * - value=[] significa "Todas" (sem filtro ativo)
+ * - Clicar em "Todas" limpa a seleção
+ * - Clicar num chip já ativo o remove da seleção
+ * - Clicar num chip inativo o adiciona à seleção
+ */
+function ChipFilter({
+  label,
+  options,
+  value,
+  onChange,
+  renderLabel,
+  dotColor,
+}: {
+  label: string
+  options: string[]
+  value: string[]
+  onChange: (v: string[]) => void
+  renderLabel?: (v: string) => string
+  dotColor?: (v: string) => string
+}) {
+  const allSelected = value.length === 0
+
+  function toggle(opt: string) {
+    if (value.includes(opt)) {
+      const next = value.filter(v => v !== opt)
+      onChange(next) // se ficar vazio → "Todas" automaticamente
+    } else {
+      onChange([...value, opt])
+    }
+  }
+
+  return (
+    <div className="chip-filter-wrap">
+      <span className="chip-filter-label">{label}</span>
+      <div className="chip-group">
+        {/* chip "Todas" */}
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className={cn('chip', allSelected && 'chip-active')}
+        >
+          Todas
+        </button>
+
+        {options.map(opt => {
+          const isActive = value.includes(opt)
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => toggle(opt)}
+              className={cn('chip', isActive && 'chip-active')}
+            >
+              {dotColor && (
+                <span
+                  className="chip-dot"
+                  style={{ background: isActive ? 'rgba(255,255,255,.8)' : dotColor(opt) }}
+                />
+              )}
+              {renderLabel ? renderLabel(opt) : opt}
+              {isActive && <Check size={9} strokeWidth={3} style={{ marginLeft: 2, opacity: .9 }} />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 // ─── Action Menu ──────────────────────────────────────────────────────────────
@@ -140,12 +261,22 @@ function ActionMenu({ onVisualizar, onEditar, onExcluir }: {
 // ─── Badges ───────────────────────────────────────────────────────────────────
 function MedidaBadge({ medida }: { medida: string }) {
   const cfg = MEDIDA_CONFIG[medida] ?? { color:'#4b5563', bg:'#f8fafc', border:'#e3e8ef' }
-  return <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold border" style={{ background:cfg.bg, color:cfg.color, borderColor:cfg.border }}>{medida}</span>
+  return (
+    <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold border"
+      style={{ background:cfg.bg, color:cfg.color, borderColor:cfg.border }}>
+      {medida}
+    </span>
+  )
 }
 
 function GravidadeBadge({ gravidade }: { gravidade: string }) {
   const cfg = GRAVIDADE_CONFIG[gravidade] ?? GRAVIDADE_CONFIG['LEVE']
-  return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border" style={{ background:cfg.bg, color:cfg.color, borderColor:cfg.border }}>{gravidade}</span>
+  return (
+    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border"
+      style={{ background:cfg.bg, color:cfg.color, borderColor:cfg.border }}>
+      {gravidade}
+    </span>
+  )
 }
 
 function OrigemBadge({ origem }: { origem?: string }) {
@@ -183,7 +314,6 @@ function Pagination({
 
   return (
     <div className="pagination-wrap">
-      {/* Info + seletor de tamanho */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="pagination-info">
           Exibindo <strong>{from}–{to}</strong> de <strong>{totalItems}</strong> registros
@@ -209,7 +339,6 @@ function Pagination({
         </div>
       </div>
 
-      {/* Controles de página */}
       {totalPages > 1 && (
         <div className="pagination-controls">
           <button className="pg-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
@@ -234,6 +363,11 @@ export default function ListagemMedidasPage() {
   const router = useRouter()
   const { data: session } = useSession()
 
+  // ADM vê tudo por padrão mas ainda pode filtrar por filial/regional manualmente.
+  const isAdmin       = useMemo(() => isAdminUser(session?.user),                                  [session])
+  const userFiliais   = useMemo(() => isAdmin ? ALL_UFS       : normalizeUfs(session?.user),       [session, isAdmin])
+  const userRegionais = useMemo(() => isAdmin ? ALL_REGIONAIS : normalizeRegionais(session?.user), [session, isAdmin])
+
   const [medidas,         setMedidas        ] = useState<any[]>([])
   const [loading,         setLoading        ] = useState(true)
   const [isDeleting,      setIsDeleting     ] = useState(false)
@@ -248,6 +382,8 @@ export default function ListagemMedidasPage() {
   const [filtroMedida,    setFiltroMedida   ] = useState('Todos')
   const [filtroGravidade, setFiltroGravidade] = useState('Todos')
   const [filtroOrigem,    setFiltroOrigem   ] = useState('Todos')
+  const [filtroUf,        setFiltroUf       ] = useState<string[]>([])
+  const [filtroRegional,  setFiltroRegional ] = useState<string[]>([])
   const [filtroData,      setFiltroData     ] = useState('')
 
   // Paginação
@@ -256,16 +392,25 @@ export default function ListagemMedidasPage() {
 
   useEffect(() => {
     async function fetchMedidas() {
-      if (!session) return
+      if (!session?.user) return
+      const user = session.user as any
       try {
         setLoading(true)
-        const r = await api.get('/medidas')
+        const params = new URLSearchParams({
+          userId:   user.id       ?? '',
+          role:     user.role     ?? '',
+          uf:       user.uf       ?? '',
+          regional: user.regional ?? '',
+        })
+        if (filtroUf.length > 0)       params.set('ufs',       filtroUf.join(','))
+        if (filtroRegional.length > 0) params.set('regionais', filtroRegional.join(','))
+        const r = await api.get(`/medidas?${params.toString()}`)
         setMedidas(r.data)
       } catch (err) { console.error(err) }
       finally { setLoading(false) }
     }
     fetchMedidas()
-  }, [session])
+  }, [session, filtroUf, filtroRegional])
 
   const handleOpenDeleteModal = (id: string) => { setIdParaDeletar(id); setShowDeleteModal(true) }
 
@@ -289,26 +434,31 @@ export default function ListagemMedidasPage() {
         case 'supervisor':    return m.nomeSupervisor?.toLowerCase().includes(t)
         case 'matSupervisor': return m.supervisor?.toLowerCase().includes(t)
         default: return (
-          m.colaborador?.toLowerCase().includes(t)   ||
-          m.matricula?.toLowerCase().includes(t)     ||
-          m.nomeSupervisor?.toLowerCase().includes(t)||
-          m.supervisor?.toLowerCase().includes(t)    ||
+          m.colaborador?.toLowerCase().includes(t)    ||
+          m.matricula?.toLowerCase().includes(t)      ||
+          m.nomeSupervisor?.toLowerCase().includes(t) ||
+          m.supervisor?.toLowerCase().includes(t)     ||
           m.id?.toLowerCase().includes(t)
         )
       }
     })()
     return (
       matchBusca &&
+      (filtroUf.length       === 0 || filtroUf.includes(m.uf)             ) &&
+      (filtroRegional.length === 0 || filtroRegional.includes(m.regional)   ) &&
       (filtroCategoria === 'Todos' || m.tipo      === filtroCategoria) &&
-      (filtroMedida    === 'Todos' || m.medida    === filtroMedida)    &&
+      (filtroMedida    === 'Todos' || m.medida    === filtroMedida   ) &&
       (filtroGravidade === 'Todos' || m.gravidade === filtroGravidade) &&
-      (filtroOrigem    === 'Todos' || m.origem    === filtroOrigem)    &&
+      (filtroOrigem    === 'Todos' || m.origem    === filtroOrigem   ) &&
       (!filtroData || m.data?.split('T')[0] === filtroData)
     )
-  }), [medidas, busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroData])
+  }), [medidas, busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroUf, filtroRegional, filtroData])
 
   // Reset página ao mudar filtro ou tamanho
-  useEffect(() => { setCurrentPage(1) }, [busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroData, pageSize])
+  useEffect(() => { setCurrentPage(1) }, [
+    busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade,
+    filtroOrigem, filtroUf, filtroRegional, filtroData, pageSize,
+  ])
 
   const totalPages    = Math.max(1, Math.ceil(filteredData.length / pageSize))
   const paginatedData = useMemo(() => {
@@ -320,6 +470,7 @@ export default function ListagemMedidasPage() {
     setBusca(''); setCampoBusca('todos')
     setFiltroCategoria('Todos'); setFiltroMedida('Todos')
     setFiltroGravidade('Todos'); setFiltroOrigem('Todos'); setFiltroData('')
+    setFiltroUf([]); setFiltroRegional([])
   }
 
   const filtrosAtivos = [
@@ -328,6 +479,8 @@ export default function ListagemMedidasPage() {
     filtroMedida    !== 'Todos',
     filtroGravidade !== 'Todos',
     filtroOrigem    !== 'Todos',
+    filtroUf.length        > 0,
+    filtroRegional.length  > 0,
     filtroData,
   ].filter(Boolean).length
 
@@ -335,9 +488,15 @@ export default function ListagemMedidasPage() {
     if (isExporting || filteredData.length === 0) return
     setIsExporting(true)
     try { exportToExcel(filteredData) }
-    catch (e) { alert('Erro ao exportar.') }
+    catch { alert('Erro ao exportar.') }
     finally { setIsExporting(false) }
   }, [filteredData, isExporting])
+
+  // Cor do ponto por UF (opcional — personalize conforme sua necessidade)
+  const ufDotColor = (uf: string) => {
+    const colors: Record<string, string> = { PI: '#094780', MA: '#7c3aed' }
+    return colors[uf] ?? '#8896ab'
+  }
 
   return (
     <DashboardLayout title="Gestão de Medidas" breadcrumb="SIGS / Medida Administrativa / Listagem" navItems={navItems}>
@@ -345,32 +504,97 @@ export default function ListagemMedidasPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
         .list-root { font-family:'DM Sans',sans-serif; padding:16px; background:#f8fafc; min-height:calc(100vh - 60px); }
 
-        /* Filtros */
+        /* ── Filtros ── */
         .filter-wrap { background:#fff; border:1px solid #e3e8ef; border-radius:14px; margin-bottom:16px; overflow:hidden; }
         .filter-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #f1f5f9; }
         .filter-badge { background:#3d6cf0; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; }
-        .filter-body { padding:12px 14px; display:grid; grid-template-columns:1fr; gap:10px; }
-        @media(min-width:768px)  { .filter-body { grid-template-columns:1fr 1fr; } }
-        @media(min-width:1280px) { .filter-body { grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr; } }
+
+        /* Grid principal de filtros — selects + chips lado a lado */
+        .filter-body {
+          padding:14px;
+          display:grid;
+          grid-template-columns:1fr;
+          gap:12px;
+        }
+        @media(min-width:768px) {
+          .filter-body { grid-template-columns:1fr 1fr; }
+        }
+        @media(min-width:1280px) {
+          .filter-body { grid-template-columns:1.8fr 1fr 1fr 1fr 1fr 1fr; }
+        }
+
+        /* Faixa inferior exclusiva para chips (UF + Regional) — span full width */
+        .filter-chips-row {
+          padding:0 14px 14px;
+          display:grid;
+          grid-template-columns:1fr;
+          gap:12px;
+          border-top:1px solid #f1f5f9;
+          padding-top:12px;
+        }
+        @media(min-width:768px) {
+          .filter-chips-row { grid-template-columns:1fr 1fr; }
+        }
+
+        /* Inputs select */
+        .filter-label-text { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; display:block; }
         .filter-input { height:36px; background:#f8fafc; border:1px solid #e3e8ef; border-radius:8px; padding:0 10px; font-size:13px; width:100%; outline:none; transition:border .15s; }
         .filter-input:focus { border-color:#094780; }
 
-        /* Tabela */
+        /* ── Chip Filter ── */
+        .chip-filter-wrap { display:flex; flex-direction:column; gap:6px; }
+        .chip-filter-label { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
+        .chip-group { display:flex; flex-wrap:wrap; gap:5px; }
+
+        .chip {
+          display:inline-flex; align-items:center; gap:4px;
+          padding:4px 11px; border-radius:99px; cursor:pointer;
+          font-size:11px; font-weight:700; border:1.5px solid #e3e8ef;
+          background:#fff; color:#64748b;
+          transition:all .15s ease; user-select:none; line-height:1;
+          white-space:nowrap;
+        }
+        .chip:hover {
+          border-color:#094780; color:#094780;
+          background:#eef4fb;
+        }
+        .chip-active {
+          background:#094780 !important;
+          color:#fff !important;
+          border-color:#094780 !important;
+        }
+        .chip-dot {
+          width:6px; height:6px; border-radius:50%; flex-shrink:0;
+          transition:background .15s;
+        }
+
+        /* Divisor entre blocos de chips */
+        .chip-section-divider {
+          display:flex; align-items:center; gap:8px;
+          font-size:10px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:.08em;
+          margin:2px 0;
+        }
+        .chip-section-divider::before,
+        .chip-section-divider::after {
+          content:''; flex:1; height:1px; background:#f1f5f9;
+        }
+
+        /* ── Tabela ── */
         .ins-main-card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; }
-        .ins-table { width:100%; border-collapse:collapse; min-width:1050px; }
+        .ins-table { width:100%; border-collapse:collapse; min-width:1150px; }
         .ins-table th { background:#f8fafc; padding:12px 14px; text-align:left; font-size:10px; font-weight:800; color:#8896ab; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #e2e8f0; }
         .ins-row td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
         .ins-row:last-child td { border-bottom:none; }
         .ins-row:hover td { background:#fafbfc; }
 
-        /* Botões topo */
-        .btn-new    { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s; }
+        /* ── Botões topo ── */
+        .btn-new { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s; }
         .btn-new:hover { opacity:.9; }
         .btn-export { background:#fff; color:#374151; padding:8px 12px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s; }
         .btn-export:hover { border-color:#094780; color:#094780; }
         .btn-export:disabled { opacity:.4; cursor:not-allowed; }
 
-        /* Paginação */
+        /* ── Paginação ── */
         .pagination-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:14px 20px; border-top:1px solid #f1f5f9; }
         .pagination-info { font-size:12px; color:#8896ab; }
         .pagination-controls { display:flex; align-items:center; gap:4px; }
@@ -380,7 +604,7 @@ export default function ListagemMedidasPage() {
         .pg-active { background:#094780 !important; color:#fff !important; border-color:#094780 !important; }
         .pg-ellipsis { padding:0 4px; color:#8896ab; font-size:13px; line-height:34px; }
 
-        /* Action menu */
+        /* ── Action menu ── */
         .action-item { width:100%; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; border:none; background:none; cursor:pointer; color:#374151; transition:background .1s; }
         .action-item:hover { background:#f8fafc; }
         .action-item.delete { color:#ef4444; }
@@ -390,6 +614,7 @@ export default function ListagemMedidasPage() {
       `}} />
 
       <div className="list-root">
+
         {/* ── Header ── */}
         <div className="flex justify-between items-start mb-4 gap-3 flex-wrap">
           <div>
@@ -413,6 +638,8 @@ export default function ListagemMedidasPage() {
 
         {/* ── Filtros ── */}
         <div className="filter-wrap">
+
+          {/* Cabeçalho do bloco de filtros */}
           <div className="filter-header">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
               <SlidersHorizontal size={14} /> Filtros
@@ -424,11 +651,13 @@ export default function ListagemMedidasPage() {
               </button>
             )}
           </div>
+
+          {/* Linha 1: Busca + Categoria + Medida + Gravidade + Origem + Data */}
           <div className="filter-body">
 
-            {/* Busca — campo + select expandido */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Busca</span>
+            {/* Busca */}
+            <div className="flex flex-col">
+              <span className="filter-label-text">Busca</span>
               <div className="flex border border-[#e3e8ef] rounded-lg overflow-hidden h-9 bg-slate-50 focus-within:border-[#094780] transition-colors">
                 <select
                   value={campoBusca}
@@ -457,8 +686,8 @@ export default function ListagemMedidasPage() {
             </div>
 
             {/* Categoria */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Categoria</span>
+            <div className="flex flex-col">
+              <span className="filter-label-text">Categoria</span>
               <select className="filter-input" value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}>
                 <option value="Todos">Todas</option>
                 <option value="SEGURANÇA">Segurança</option>
@@ -467,8 +696,8 @@ export default function ListagemMedidasPage() {
             </div>
 
             {/* Medida */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Medida</span>
+            <div className="flex flex-col">
+              <span className="filter-label-text">Medida</span>
               <select className="filter-input" value={filtroMedida} onChange={e => setFiltroMedida(e.target.value)}>
                 <option value="Todos">Todas</option>
                 <option value="ADVERTÊNCIA VERBAL">Adv. Verbal</option>
@@ -480,8 +709,8 @@ export default function ListagemMedidasPage() {
             </div>
 
             {/* Gravidade */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Gravidade</span>
+            <div className="flex flex-col">
+              <span className="filter-label-text">Gravidade</span>
               <select className="filter-input" value={filtroGravidade} onChange={e => setFiltroGravidade(e.target.value)}>
                 <option value="Todos">Todas</option>
                 {Object.keys(GRAVIDADE_CONFIG).map(g => <option key={g} value={g}>{g}</option>)}
@@ -489,8 +718,8 @@ export default function ListagemMedidasPage() {
             </div>
 
             {/* Origem */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Origem</span>
+            <div className="flex flex-col">
+              <span className="filter-label-text">Origem</span>
               <select className="filter-input" value={filtroOrigem} onChange={e => setFiltroOrigem(e.target.value)}>
                 <option value="Todos">Todas</option>
                 {ORIGENS_LIST.map(o => <option key={o} value={o}>{o}</option>)}
@@ -498,10 +727,34 @@ export default function ListagemMedidasPage() {
             </div>
 
             {/* Data */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Data</span>
+            <div className="flex flex-col">
+              <span className="filter-label-text">Data</span>
               <input className="filter-input" type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
             </div>
+
+          </div>
+
+          {/* Linha 2: Chips de Filial e Regional (baseados nas permissões do usuário) */}
+          <div className="filter-chips-row">
+
+            {/* Filial */}
+            <ChipFilter
+              label="Filial"
+              options={userFiliais}
+              value={filtroUf}
+              onChange={(v) => setFiltroUf(v)}
+              renderLabel={uf => UF_LABELS[uf] ?? uf}
+              dotColor={ufDotColor}
+            />
+
+            {/* Regional */}
+            <ChipFilter
+              label="Regional"
+              options={userRegionais}
+              value={filtroRegional}
+              onChange={(v) => setFiltroRegional(v)}
+              renderLabel={reg => reg.charAt(0) + reg.slice(1).toLowerCase()}
+            />
 
           </div>
         </div>
@@ -531,6 +784,7 @@ export default function ListagemMedidasPage() {
                   <thead>
                     <tr>
                       <th>ID / Data</th>
+                      <th>Local</th>
                       <th>Colaborador</th>
                       <th>Supervisor</th>
                       <th>Medida</th>
@@ -553,6 +807,16 @@ export default function ListagemMedidasPage() {
                           </div>
                           <div className="text-[10px] text-[#8896ab]">
                             {new Date(item.data).toLocaleDateString('pt-BR')}
+                          </div>
+                        </td>
+
+                        {/* Local */}
+                        <td>
+                          <div className="flex items-center gap-1 font-bold text-slate-700 text-[11px] uppercase">
+                            <MapPin size={10} className="text-[#E67A0E]" /> {item.uf || '—'}
+                          </div>
+                          <div className="text-[9px] text-[#8896ab] font-bold">
+                            {item.regional || '—'}
                           </div>
                         </td>
 
