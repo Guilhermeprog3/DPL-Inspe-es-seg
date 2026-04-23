@@ -170,6 +170,7 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
               <option value="">Selecione</option>
               <option value="inspetor">Inspetor</option>
               <option value="admin">Administrador</option>
+              <option value="agente_cobli">Agente Cobli</option>
             </select>
             {fieldErr('role')}
           </div>
