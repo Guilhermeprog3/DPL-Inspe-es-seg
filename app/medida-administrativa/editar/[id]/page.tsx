@@ -230,6 +230,8 @@ export default function EditarMedidaPage() {
         const res = await api.get(`/medidas/${medidaId}`)
         const d   = res.data
 
+        
+
         // Preenche os campos de input com os valores salvos
         setNomeColabInput(d.colaborador ?? '')
         setMatColabInput(d.matricula ?? '')
@@ -315,6 +317,11 @@ export default function EditarMedidaPage() {
     setIsSaving(true)
 
     const fd = new FormData()
+
+    const loggedUserId = (session?.user as any)?.id
+  if (loggedUserId) {
+    fd.append('userId', loggedUserId)
+  }
     fd.append('colaborador',    nomeColabInput)
     fd.append('matricula',      matColabInput)
     fd.append('supervisor',     matSupInput)
