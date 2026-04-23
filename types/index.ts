@@ -8,7 +8,7 @@ export type Regional =
   | 'METROPOLITANA'
   | 'SUL'
   | 'NORTE'
-  | 'SUDESTE'
+  | 'LESTE'
   | 'NOROESTE'
 
 export type Role =
@@ -113,5 +113,5 @@ export interface MetricaConformidade {
 // Mapeamento de regionais por UF
 export const REGIONAIS_POR_UF: Record<UF, Regional[]> = {
   PI: ['METROPOLITANA', 'SUL', 'NORTE'],
-  MA: ['SUL', 'NORTE', 'SUDESTE', 'NOROESTE'],
+  MA: ['SUL', 'NORTE', 'LESTE', 'NOROESTE'],
 }

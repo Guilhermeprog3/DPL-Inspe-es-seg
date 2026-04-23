@@ -70,7 +70,7 @@ const UF_LABELS: Record<string, string> = {
 
 // Lista completa de UFs e Regionais — exibida para usuários ADM
 const ALL_UFS       = ['PI', 'MA'] // expanda conforme seu sistema
-const ALL_REGIONAIS = ['METROPOLITANA', 'NORTE', 'SUL', 'NORDESTE', 'SUDESTE']
+const ALL_REGIONAIS = ['METROPOLITANA', 'NORTE', 'SUL', 'NOROESTE', 'LESTE']
 
 const GRAVIDADE_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
   LEVE:       { color: '#10b981', bg: '#f0fdf4', border: '#bcf0da' },
@@ -97,7 +97,6 @@ const ORIGEM_CONFIG: Record<string, { color: string; bg: string; border: string 
 
 const ORIGENS_LIST = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE GENTE']
 
-// ─── Export ───────────────────────────────────────────────────────────────────
 function exportToExcel(data: any[]) {
   const rows = data.map(m => ({
     'ID':                m.id ?? '',
@@ -127,14 +126,6 @@ function exportToExcel(data: any[]) {
   XLSX.writeFile(wb, `medidas_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`)
 }
 
-// ─── Chip Filter (multi-select) ───────────────────────────────────────────────
-/**
- * Filtro multi-seleção estilo chip/pill.
- * - value=[] significa "Todas" (sem filtro ativo)
- * - Clicar em "Todas" limpa a seleção
- * - Clicar num chip já ativo o remove da seleção
- * - Clicar num chip inativo o adiciona à seleção
- */
 function ChipFilter({
   label,
   options,
@@ -165,7 +156,6 @@ function ChipFilter({
     <div className="chip-filter-wrap">
       <span className="chip-filter-label">{label}</span>
       <div className="chip-group">
-        {/* chip "Todas" */}
         <button
           type="button"
           onClick={() => onChange([])}
@@ -199,7 +189,6 @@ function ChipFilter({
   )
 }
 
-// ─── Action Menu ──────────────────────────────────────────────────────────────
 function ActionMenu({ onVisualizar, onEditar, onExcluir }: {
   onVisualizar: () => void; onEditar: () => void; onExcluir: () => void
 }) {
@@ -258,7 +247,6 @@ function ActionMenu({ onVisualizar, onEditar, onExcluir }: {
   )
 }
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
 function MedidaBadge({ medida }: { medida: string }) {
   const cfg = MEDIDA_CONFIG[medida] ?? { color:'#4b5563', bg:'#f8fafc', border:'#e3e8ef' }
   return (
@@ -502,7 +490,7 @@ export default function ListagemMedidasPage() {
     <DashboardLayout title="Gestão de Medidas" breadcrumb="SIGS / Medida Administrativa / Listagem" navItems={navItems}>
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
-        .list-root { font-family:'DM Sans',sans-serif; padding:16px; background:#f8fafc; min-height:calc(100vh - 60px); }
+        .list-root { font-family:'DM Sans',sans-serif; padding:16px; min-height:calc(100vh - 60px); }
 
         /* ── Filtros ── */
         .filter-wrap { background:#fff; border:1px solid #e3e8ef; border-radius:14px; margin-bottom:16px; overflow:hidden; }
