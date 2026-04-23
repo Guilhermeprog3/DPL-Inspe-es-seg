@@ -7,7 +7,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   Plus, MoreVertical, Eye, Loader2, Trash2, Edit2, AlertCircle,
   SlidersHorizontal, Download, ChevronLeft, ChevronRight,
-  LayoutDashboard, PlusCircle, List
+  LayoutDashboard, PlusCircle, List, MapPin
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -41,11 +41,11 @@ const MEDIDA_CONFIG: Record<string, { color: string; bg: string; border: string 
 }
 
 const ORIGEM_CONFIG: Record<string, { color: string; bg: string; border: string }> = {
-  'ESS':              { color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
-  'CLICK':            { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  'NMC':              { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-  'MULTA DE TRÂNSITO':{ color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-  'GESTÃO DE GENTE':  { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'ESS':               { color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
+  'CLICK':             { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  'NMC':               { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+  'MULTA DE TRÂNSITO': { color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'GESTÃO DE GENTE':   { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
 }
 
 const ORIGENS_LIST = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE GENTE']
@@ -53,24 +53,26 @@ const ORIGENS_LIST = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE G
 // ─── Export ───────────────────────────────────────────────────────────────────
 function exportToExcel(data: any[]) {
   const rows = data.map(m => ({
-    'ID':                m.id ?? '',
-    'Colaborador':       m.colaborador ?? '',
-    'Matrícula Colab.':  m.matricula ?? '',
-    'Supervisor':        m.nomeSupervisor ?? '',
-    'Matrícula Sup.':    m.supervisor ?? '',
-    'Data':              m.data ? new Date(m.data).toLocaleDateString('pt-BR') : '',
-    'Categoria':         m.tipo ?? '',
-    'Tipo de Medida':    m.medida ?? '',
-    'Dias Suspensão':    m.diasSuspensao ?? '',
-    'Gravidade':         m.gravidade ?? '',
-    'Classificação':     m.classificacao ?? '',
-    'Descrição':         m.ocorrencia ?? '',
-    'Origem':            m.origem ?? '',
-    'ID Inspeção Click': m.numeroInspecao ?? '',
+    'ID':                 m.id ?? '',
+    'Filial':             m.uf ?? '',
+    'Regional':           m.regional ?? '',
+    'Colaborador':        m.colaborador ?? '',
+    'Matrícula Colab.':   m.matricula ?? '',
+    'Supervisor':         m.nomeSupervisor ?? '',
+    'Matrícula Sup.':     m.supervisor ?? '',
+    'Data':               m.data ? new Date(m.data).toLocaleDateString('pt-BR') : '',
+    'Categoria':          m.tipo ?? '',
+    'Tipo de Medida':     m.medida ?? '',
+    'Dias Suspensão':     m.diasSuspensao ?? '',
+    'Gravidade':          m.gravidade ?? '',
+    'Classificação':      m.classificacao ?? '',
+    'Descrição':          m.ocorrencia ?? '',
+    'Origem':             m.origem ?? '',
+    'ID Inspeção Click':  m.numeroInspecao ?? '',
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   ws['!cols'] = [
-    {wch:28},{wch:28},{wch:14},{wch:28},{wch:14},{wch:14},
+    {wch:28},{wch:10},{wch:15},{wch:28},{wch:14},{wch:28},{wch:14},{wch:14},
     {wch:16},{wch:22},{wch:14},{wch:12},{wch:40},{wch:50},{wch:18},{wch:20},
   ]
   const wb = XLSX.utils.book_new()
@@ -183,7 +185,6 @@ function Pagination({
 
   return (
     <div className="pagination-wrap">
-      {/* Info + seletor de tamanho */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="pagination-info">
           Exibindo <strong>{from}–{to}</strong> de <strong>{totalItems}</strong> registros
@@ -209,7 +210,6 @@ function Pagination({
         </div>
       </div>
 
-      {/* Controles de página */}
       {totalPages > 1 && (
         <div className="pagination-controls">
           <button className="pg-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
@@ -236,19 +236,21 @@ export default function ListagemMedidasPage() {
 
   const [medidas,         setMedidas        ] = useState<any[]>([])
   const [loading,         setLoading        ] = useState(true)
-  const [isDeleting,      setIsDeleting     ] = useState(false)
-  const [isExporting,     setIsExporting    ] = useState(false)
+  const [isDeleting,      setIsDeleting      ] = useState(false)
+  const [isExporting,     setIsExporting     ] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [idParaDeletar,   setIdParaDeletar  ] = useState<string | null>(null)
 
   // Filtros
-  const [busca,           setBusca          ] = useState('')
-  const [campoBusca,      setCampoBusca     ] = useState('todos')
+  const [busca,           setBusca           ] = useState('')
+  const [campoBusca,      setCampoBusca      ] = useState('todos')
   const [filtroCategoria, setFiltroCategoria] = useState('Todos')
-  const [filtroMedida,    setFiltroMedida   ] = useState('Todos')
+  const [filtroMedida,    setFiltroMedida    ] = useState('Todos')
   const [filtroGravidade, setFiltroGravidade] = useState('Todos')
-  const [filtroOrigem,    setFiltroOrigem   ] = useState('Todos')
-  const [filtroData,      setFiltroData     ] = useState('')
+  const [filtroOrigem,    setFiltroOrigem    ] = useState('Todos')
+  const [filtroUf,        setFiltroUf        ] = useState('Todos')
+  const [filtroRegional,  setFiltroRegional  ] = useState('Todos')
+  const [filtroData,      setFiltroData      ] = useState('')
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1)
@@ -299,16 +301,18 @@ export default function ListagemMedidasPage() {
     })()
     return (
       matchBusca &&
+      (filtroUf === 'Todos' || m.uf === filtroUf) &&
+      (filtroRegional === 'Todos' || m.regional === filtroRegional) &&
       (filtroCategoria === 'Todos' || m.tipo      === filtroCategoria) &&
       (filtroMedida    === 'Todos' || m.medida    === filtroMedida)    &&
       (filtroGravidade === 'Todos' || m.gravidade === filtroGravidade) &&
       (filtroOrigem    === 'Todos' || m.origem    === filtroOrigem)    &&
       (!filtroData || m.data?.split('T')[0] === filtroData)
     )
-  }), [medidas, busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroData])
+  }), [medidas, busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroUf, filtroRegional, filtroData])
 
   // Reset página ao mudar filtro ou tamanho
-  useEffect(() => { setCurrentPage(1) }, [busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroData, pageSize])
+  useEffect(() => { setCurrentPage(1) }, [busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroUf, filtroRegional, filtroData, pageSize])
 
   const totalPages    = Math.max(1, Math.ceil(filteredData.length / pageSize))
   const paginatedData = useMemo(() => {
@@ -320,6 +324,7 @@ export default function ListagemMedidasPage() {
     setBusca(''); setCampoBusca('todos')
     setFiltroCategoria('Todos'); setFiltroMedida('Todos')
     setFiltroGravidade('Todos'); setFiltroOrigem('Todos'); setFiltroData('')
+    setFiltroUf('Todos'); setFiltroRegional('Todos')
   }
 
   const filtrosAtivos = [
@@ -328,6 +333,8 @@ export default function ListagemMedidasPage() {
     filtroMedida    !== 'Todos',
     filtroGravidade !== 'Todos',
     filtroOrigem    !== 'Todos',
+    filtroUf        !== 'Todos',
+    filtroRegional  !== 'Todos',
     filtroData,
   ].filter(Boolean).length
 
@@ -351,20 +358,20 @@ export default function ListagemMedidasPage() {
         .filter-badge { background:#3d6cf0; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; }
         .filter-body { padding:12px 14px; display:grid; grid-template-columns:1fr; gap:10px; }
         @media(min-width:768px)  { .filter-body { grid-template-columns:1fr 1fr; } }
-        @media(min-width:1280px) { .filter-body { grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr; } }
+        @media(min-width:1280px) { .filter-body { grid-template-columns:1.5fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr; } }
         .filter-input { height:36px; background:#f8fafc; border:1px solid #e3e8ef; border-radius:8px; padding:0 10px; font-size:13px; width:100%; outline:none; transition:border .15s; }
         .filter-input:focus { border-color:#094780; }
 
         /* Tabela */
         .ins-main-card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; }
-        .ins-table { width:100%; border-collapse:collapse; min-width:1050px; }
+        .ins-table { width:100%; border-collapse:collapse; min-width:1150px; }
         .ins-table th { background:#f8fafc; padding:12px 14px; text-align:left; font-size:10px; font-weight:800; color:#8896ab; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #e2e8f0; }
         .ins-row td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
         .ins-row:last-child td { border-bottom:none; }
         .ins-row:hover td { background:#fafbfc; }
 
         /* Botões topo */
-        .btn-new    { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s; }
+        .btn-new     { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s; }
         .btn-new:hover { opacity:.9; }
         .btn-export { background:#fff; color:#374151; padding:8px 12px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s; }
         .btn-export:hover { border-color:#094780; color:#094780; }
@@ -456,6 +463,29 @@ export default function ListagemMedidasPage() {
               </div>
             </div>
 
+            {/* Filial */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Filial</span>
+              <select className="filter-input" value={filtroUf} onChange={e => setFiltroUf(e.target.value)}>
+                <option value="Todos">Todas</option>
+                <option value="PI">Piauí</option>
+                <option value="MA">Maranhão</option>
+              </select>
+            </div>
+
+            {/* Regional */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Regional</span>
+              <select className="filter-input" value={filtroRegional} onChange={e => setFiltroRegional(e.target.value)}>
+                <option value="Todos">Todas</option>
+                <option value="METROPOLITANA">Metropolitana</option>
+                <option value="NORTE">Norte</option>
+                <option value="SUL">Sul</option>
+                <option value="NORDESTE">Nordeste</option>
+                <option value="SUDESTE">Sudeste</option>
+              </select>
+            </div>
+
             {/* Categoria */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-slate-400 uppercase">Categoria</span>
@@ -531,6 +561,7 @@ export default function ListagemMedidasPage() {
                   <thead>
                     <tr>
                       <th>ID / Data</th>
+                      <th>Local</th>
                       <th>Colaborador</th>
                       <th>Supervisor</th>
                       <th>Medida</th>
@@ -553,6 +584,16 @@ export default function ListagemMedidasPage() {
                           </div>
                           <div className="text-[10px] text-[#8896ab]">
                             {new Date(item.data).toLocaleDateString('pt-BR')}
+                          </div>
+                        </td>
+
+                        {/* Local */}
+                        <td>
+                          <div className="flex items-center gap-1 font-bold text-slate-700 text-[11px] uppercase">
+                            <MapPin size={10} className="text-[#E67A0E]" /> {item.uf || '—'}
+                          </div>
+                          <div className="text-[9px] text-[#8896ab] font-bold">
+                            {item.regional || '—'}
                           </div>
                         </td>
 
