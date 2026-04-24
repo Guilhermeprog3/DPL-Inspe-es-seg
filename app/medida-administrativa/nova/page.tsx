@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   User, Tag, AlertTriangle, FileText, Paperclip, CheckCircle, Loader2,
-  Search, X, ChevronDown, ArrowLeft, Upload, File, Trash2, FileImage,
-  LayoutDashboard, PlusCircle, List, Users, AlertCircle
+  Search, X, ArrowLeft, Upload, File, Trash2, FileImage,
+  LayoutDashboard, PlusCircle, List, AlertCircle, Link2, Hash
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/lib/api'
@@ -87,16 +87,30 @@ export default function NovaMedidaPage() {
   const [nomeSupPesquisa,   setNomeSupPesquisa  ] = useState('')
   const [matSupPesquisa,    setMatSupPesquisa   ] = useState('')
 
-  const [dataMedida,      setDataMedida    ] = useState('')
-  const [tipoCategoria,   setTipoCategoria ] = useState<TipoCategoria>('')
-  const [tipoMedida,      setTipoMedida    ] = useState<TipoMedida>('')
-  const [diasSuspensao,   setDiasSuspensao ] = useState('')
-  const [gravidade,       setGravidade     ] = useState<Gravidade>('')
-  const [classificacao,   setClassificacao ] = useState('')
-  const [ocorrencia,      setOcorrencia    ] = useState('')
-  const [relacionarClick, setRelacionarClick] = useState(false)
-  const [numeroInspecao,  setNumeroInspecao ] = useState('')
-  const [origem,          setOrigem         ] = useState('')
+  const [dataMedida,    setDataMedida   ] = useState('')
+  const [tipoCategoria, setTipoCategoria] = useState<TipoCategoria>('')
+  const [tipoMedida,    setTipoMedida   ] = useState<TipoMedida>('')
+  const [diasSuspensao, setDiasSuspensao] = useState('')
+  const [gravidade,     setGravidade    ] = useState<Gravidade>('')
+  const [classificacao, setClassificacao] = useState('')
+  const [ocorrencia,    setOcorrencia   ] = useState('')
+  const [origem,        setOrigem       ] = useState('')
+
+  // ── Múltiplas inspeções ──────────────────────────────────────────────────────
+  const [inspecoes,    setInspecoes   ] = useState<string[]>([])
+  const [novaInspecao, setNovaInspecao] = useState('')
+
+  function adicionarInspecao() {
+    const val = novaInspecao.trim()
+    if (!val || inspecoes.includes(val)) return
+    setInspecoes(prev => [...prev, val])
+    setNovaInspecao('')
+  }
+
+  function removerInspecao(idx: number) {
+    setInspecoes(prev => prev.filter((_, i) => i !== idx))
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   const [showColabDropdown,     setShowColabDropdown    ] = useState(false)
   const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
@@ -199,9 +213,11 @@ export default function NovaMedidaPage() {
     if (isRegistering || !allValid) return
     setIsRegistering(true)
     const fd = new FormData()
-    if (session?.user?.id) {
-    fd.append('userId', session.user.id) }
-
+    
+    const loggedUserId = (session?.user as any)?.id
+  if (loggedUserId) {
+    fd.append('userId', loggedUserId)
+  }
     fd.append('colaborador',    colabSelecionado.nome)
     fd.append('matricula',      colabSelecionado.chapa)
     fd.append('supervisor',     supSelecionado.chapa)
@@ -214,9 +230,10 @@ export default function NovaMedidaPage() {
     fd.append('origem',         origem)
     fd.append('data',           new Date(dataMedida).toISOString())
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
-    if (relacionarClick && numeroInspecao) fd.append('numeroInspecao', numeroInspecao)
+    // ── Múltiplas inspeções ──
+    if (inspecoes.length > 0) fd.append('numerosInspecao', JSON.stringify(inspecoes))
+    // ────────────────────────
     anexos.forEach(a => fd.append('files', a.file))
-  
     try {
       await api.post('/medidas', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setAnexos([])
@@ -233,7 +250,7 @@ export default function NovaMedidaPage() {
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade:     true,
     ocorrencia:    !!classificacao && classificacaoSelecionada && ocorrencia.trim().length >= 10,
-    anexos:        !!origem && (!relacionarClick || !!numeroInspecao.trim()),
+    anexos:        !!origem,
   }
 
   const tabOrder: TabKey[] = ['identificacao', 'classificacao', 'gravidade', 'ocorrencia', 'anexos']
@@ -304,7 +321,7 @@ export default function NovaMedidaPage() {
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-visible">
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Dados do Colaborador e Supervisor</div>
 
-                {/* Matrículas — apenas números */}
+                {/* Matrículas */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
                   <div className="relative">
@@ -339,7 +356,7 @@ export default function NovaMedidaPage() {
                   </div>
                 </div>
 
-                {/* Nomes — sem números */}
+                {/* Nomes */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
                   <div className="relative">
@@ -452,7 +469,7 @@ export default function NovaMedidaPage() {
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Detalhes da Ocorrência</div>
                 <div className="p-6 space-y-6" style={{ overflow: 'visible' }}>
 
-                  {/* Classificação — só aceita seleção via dropdown */}
+                  {/* Classificação */}
                   <div>
                     <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Desvio *</label>
                     <div style={{ position: 'relative', overflow: 'visible' }}>
@@ -581,31 +598,64 @@ export default function NovaMedidaPage() {
                   </div>
                 </div>
 
-                {/* Vínculo Externo — Inspeção CLICK */}
+                {/* ── Vínculo Externo — Múltiplas Inspeções CLICK ── */}
                 <div className={secTitle}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={labelCls}>Inspeção CLICK</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Vincular esta medida a uma inspeção existente</p>
+                  <div>
+                    <p className={labelCls}>Inspeções CLICK vinculadas</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 mb-4">
+                      Adicione uma ou mais inspeções para vincular a esta medida
+                    </p>
+
+                    {/* Input + botão Adicionar */}
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={novaInspecao}
+                          onChange={e => setNovaInspecao(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), adicionarInspecao())}
+                          placeholder="Ex: 2024-00123"
+                          className={cn(inputCls(), 'pl-8')}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={adicionarInspecao}
+                        disabled={!novaInspecao.trim() || inspecoes.includes(novaInspecao.trim())}
+                        className={cn(
+                          'px-4 py-2 rounded-lg text-xs font-bold transition-all border shrink-0',
+                          novaInspecao.trim() && !inspecoes.includes(novaInspecao.trim())
+                            ? 'bg-[#3d6cf0] text-white border-[#3d6cf0] hover:bg-[#2f5cd9]'
+                            : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                        )}
+                      >
+                        + Adicionar
+                      </button>
                     </div>
-                    <button
-                      onClick={() => { setRelacionarClick(v => !v); if (relacionarClick) setNumeroInspecao('') }}
-                      className={cn('relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0',
-                        relacionarClick ? 'bg-[#3d6cf0]' : 'bg-slate-200')}>
-                      <span className={cn('inline-block h-4 w-4 rounded-full bg-white shadow transition-transform',
-                        relacionarClick ? 'translate-x-6' : 'translate-x-1')} />
-                    </button>
+
+                    {/* Lista de inspeções adicionadas */}
+                    {inspecoes.length > 0 ? (
+                      <div className="mt-3 space-y-1.5">
+                        {inspecoes.map((insp, idx) => (
+                          <div key={idx} className="scale-in flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <Link2 size={13} className="text-[#3d6cf0] shrink-0" />
+                            <span className="text-[12px] font-bold text-[#3d6cf0] flex-1">CLICK #{insp}</span>
+                            <button
+                              type="button"
+                              onClick={() => removerInspecao(idx)}
+                              className="text-slate-300 hover:text-red-400 transition-colors"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-[11px] text-slate-400 italic">Nenhuma inspeção vinculada</p>
+                    )}
                   </div>
-                  {relacionarClick && (
-                    <div className="scale-in">
-                      <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Número da Inspeção *</label>
-                      <input type="text" value={numeroInspecao} onChange={e => setNumeroInspecao(e.target.value)}
-                        className={cn(inputCls(), !numeroInspecao.trim() && 'border-amber-300 focus:border-amber-400')}
-                        placeholder="Ex: INS-2024-00123" />
-                      {!numeroInspecao.trim() && <FieldError message="Informe o número da inspeção para vincular" />}
-                    </div>
-                  )}
                 </div>
 
               </div>

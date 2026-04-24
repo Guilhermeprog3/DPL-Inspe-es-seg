@@ -1,5 +1,3 @@
-// ─── DETALHAR MEDIDA COMPLETA ─────────────────────────────────────────────────
-// medida-administrativa/detalhes/[id]/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -63,6 +61,24 @@ const TABS = [
 ] as const
 
 type TabKey = typeof TABS[number]['key']
+
+// ─── Correção bug de data ─────────────────────────────────────────────────────
+/**
+ * Formata "YYYY-MM-DDT..." para "DD de mês de YYYY" sem conversão de timezone.
+ * new Date(isoString) interpreta como UTC e converte para local (UTC-3),
+ * fazendo o dia recuar. Ao extrair só a parte da data e usar Date.UTC,
+ * garantimos que o dia exibido é exatamente o que está salvo no banco.
+ */
+function formatDateLong(raw: string | null | undefined): string {
+  if (!raw) return '—'
+  const [y, m, d] = raw.split('T')[0].split('-').map(Number)
+  if (!y || !m || !d) return '—'
+  // Cria a data em UTC para evitar deslocamento de fuso
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('pt-BR', {
+    day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC',
+  })
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -138,11 +154,21 @@ export default function DetalharMedidaPage() {
     </DashboardLayout>
   )
 
-  const medCfg       = MEDIDA_CFG[data.medida]   ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
-  const tipCfg       = TIPO_CFG[data.tipo]        ?? { color: '#4b5563', bg: '#f8fafc' }
-  const origemCfg    = ORIGENS_CFG[data.origem]   ?? null
-  const dataFormatada = data.data ? new Date(data.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'
+  const medCfg    = MEDIDA_CFG[data.medida]  ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
+  const tipCfg    = TIPO_CFG[data.tipo]      ?? { color: '#4b5563', bg: '#f8fafc' }
+  const origemCfg = ORIGENS_CFG[data.origem] ?? null
+
+  // ── Correção aplicada aqui ─────────────────────────────────────────────────
+  const dataFormatada = formatDateLong(data.data)
+  // ──────────────────────────────────────────────────────────────────────────
+
   const anexos: AnexoRemoto[] = Array.isArray(data.anexos) ? data.anexos : []
+
+  const numerosInspecao: string[] = Array.isArray(data.numerosInspecao) && data.numerosInspecao.length > 0
+    ? data.numerosInspecao
+    : data.numeroInspecao
+      ? [data.numeroInspecao]
+      : []
 
   return (
     <DashboardLayout title="Detalhar Medida" navItems={navItems}>
@@ -191,21 +217,16 @@ export default function DetalharMedidaPage() {
             <div className="fade-up space-y-4">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
                 <div className={sectionTitleCls}>Dados do colaborador</div>
-
-                {/* MATRÍCULAS — primeiro */}
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
                   <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Hash size={13} /> Matrículas</span>
                   <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.matricula ?? '—'}</p></div>
                   <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.supervisor ?? '—'}</p></div>
                 </div>
-
-                {/* NOMES — segundo */}
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
                   <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><User size={13} /> Nomes</span>
                   <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.colaborador ?? '—'}</p></div>
                   <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.nomeSupervisor ?? '—'}</p></div>
                 </div>
-
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
                   <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Calendar size={13} /> Data</span>
                   <span className="text-[14px] font-semibold text-[#111827]">{dataFormatada}</span>
@@ -342,17 +363,32 @@ export default function DetalharMedidaPage() {
                 </div>
               </div>
 
-              {/* Vínculo externo */}
+              {/* Vínculo externo — Múltiplas inspeções */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={sectionTitleCls}>Vínculo externo</div>
+                <div className={sectionTitleCls}>
+                  Vínculo externo
+                  {numerosInspecao.length > 0 && (
+                    <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-slate-400">
+                      — {numerosInspecao.length} inspeção(ões)
+                    </span>
+                  )}
+                </div>
                 <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
                   <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5">
-                    <Link2 size={13} /> Inspeção CLICK
+                    <Link2 size={13} /> Inspeções CLICK
                   </span>
-                  {data.numeroInspecao
-                    ? <span className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-[#094780]"><span className="w-2 h-2 rounded-full bg-[#094780]" />{data.numeroInspecao}</span>
-                    : <span className="text-[13.5px] text-[#9ca3af] italic">Nenhuma inspeção vinculada</span>
-                  }
+                  {numerosInspecao.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {numerosInspecao.map((num, i) => (
+                        <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] font-bold text-[#094780]">
+                          <Link2 size={11} />
+                          {num}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-[13.5px] text-[#9ca3af] italic">Nenhuma inspeção vinculada</span>
+                  )}
                 </div>
               </div>
             </div>
