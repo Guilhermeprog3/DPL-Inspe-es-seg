@@ -26,12 +26,20 @@ const ALL_MODULOS = [
   },
   {
     id: 3,
-    icon: <Users size={26} color="#fff" strokeWidth={1.8} />, // import Users from lucide-react
+    icon: <Users size={26} color="#fff" strokeWidth={1.8} />,
     title: 'Administração de Usuários',
     subtitle: 'Gerencie usuários do sistema, ative, bloqueie ou remova acessos.',
     route: '/admin/usuarios',
     roles: ['admin'],
-  }
+  },
+  {
+  id: 4,
+  icon: <Users size={26} color="#fff" strokeWidth={1.8} />,
+  title: 'Taxa de Contato',
+  subtitle: 'Gerencie taxa de contato',
+  route: '/taxa-contato',
+  roles: ['agente_cobli', 'admin', 'gestor'],
+},
 ]
 
 export default function ModulosPage() {
