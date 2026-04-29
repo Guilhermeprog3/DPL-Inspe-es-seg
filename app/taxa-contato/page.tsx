@@ -16,11 +16,8 @@ import api from '@/lib/api'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 const navItems = [
-  { section: 'Gestão de Pessoas' },
-  { label: 'Dashboard',       href: '/gestao-pessoas',               icon: LayoutDashboard },
-  { section: 'Módulos' },
-  { label: 'Taxa de Contato', href: '/gestao-pessoas/taxa-contato', icon: PhoneCall },
-  { label: 'Base de Gente',   href: '/gestao-pessoas/base-gente',   icon: UserCheck },
+  { section: 'Taxa de Contato' },
+  { label: 'Dashboard',       href: '/taxa-contato',               icon: LayoutDashboard },
 ]
 
 function gerarMeses() {
