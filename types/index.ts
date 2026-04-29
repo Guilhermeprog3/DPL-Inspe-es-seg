@@ -14,8 +14,10 @@ export type Regional =
 export type Role =
   | 'admin'
   | 'inspetor'
-  | 'sesmt'
-  | 'rh'
+  | 'agente_cobli'
+  | 'coordenador'
+  | 'gerente'
+  | 'supervisor'
 
 export type StatusInspecao = 'aprovado' | 'reprovado' | 'atencao' | 'pendente'
 

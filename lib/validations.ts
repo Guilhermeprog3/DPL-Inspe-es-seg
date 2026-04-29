@@ -46,16 +46,25 @@ export const cadastroSchema = z
     nome: z.string().min(2, 'Nome obrigatório'),
     sobrenome: z.string().min(2, 'Sobrenome obrigatório'),
     email: z.string().email('E-mail inválido'),
-    // Localize o uf dentro do cadastroSchema e deixe assim:
-uf: z.preprocess(
-  (val) => (val === '' ? undefined : val),
-  z.enum(['PI', 'MA'], { 
-    required_error: 'Selecione o estado',
-    invalid_type_error: 'Selecione o estado' 
-  })
-),
+    uf: z.preprocess(
+      (val) => (val === '' ? undefined : val),
+      z.enum(['PI', 'MA'], { 
+        required_error: 'Selecione o estado',
+        invalid_type_error: 'Selecione o estado' 
+      })
+    ),
     regional: z.string().min(1, 'Selecione a regional'),
-    role: z.enum(['inspetor', 'sesmt', 'rh', 'admin', 'agente_cobli']),
+    // ATUALIZADO: Incluídas as novas roles aqui
+    role: z.enum([
+      'inspetor', 
+      'sesmt', 
+      'rh', 
+      'admin', 
+      'agente_cobli', 
+      'coordenador', 
+      'gerente', 
+      'supervisor'
+    ]),
     senha: z.string().min(8, 'Mínimo 8 caracteres'),
     confirmarSenha: z.string(),
   })

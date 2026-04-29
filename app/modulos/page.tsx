@@ -38,7 +38,7 @@ const ALL_MODULOS = [
   title: 'Taxa de Contato',
   subtitle: 'Gerencie taxa de contato',
   route: '/taxa-contato',
-  roles: ['agente_cobli', 'admin', 'gestor'],
+roles: [ 'admin', 'coordenador', 'gerente', 'supervisor'],
 },
 ]
 

@@ -33,10 +33,14 @@ const STATUS_CFG: Record<string, { color: string; bg: string; border: string; la
 }
 
 const ROLE_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  admin:        { label: 'Administrador', color: '#7c3aed', bg: '#f5f3ff' },
-  inspetor:     { label: 'Inspetor',      color: '#0891b2', bg: '#ecfeff' },
-  sesmt:        { label: 'SESMT',         color: '#10b981', bg: '#f0fdf4' },
-  agente_cobli: { label: 'Agente Cobli',  color: '#E67A0E', bg: '#fff7ed' },
+  admin:         { label: 'Administrador', color: '#7c3aed', bg: '#f5f3ff' },
+  inspetor:      { label: 'Inspetor',      color: '#0891b2', bg: '#ecfeff' },
+  sesmt:         { label: 'SESMT',         color: '#10b981', bg: '#f0fdf4' },
+  agente_cobli:  { label: 'Agente Cobli',  color: '#E67A0E', bg: '#fff7ed' },
+  // ADICIONADO:
+  coordenador:   { label: 'Coordenador',   color: '#2563eb', bg: '#eff6ff' },
+  gerente:       { label: 'Gerente',       color: '#db2777', bg: '#fdf2f8' },
+  supervisor:    { label: 'Supervisor',    color: '#059669', bg: '#ecfdf5' },
 }
 
 // ─── Role Badge ───────────────────────────────────────────────────────────────
@@ -540,9 +544,12 @@ export default function ListaUsuariosPage() {
               <span className="text-[10px] font-bold text-slate-400 uppercase">Perfil</span>
               <select className={inputCls} value={filtroRole} onChange={e => setFiltroRole(e.target.value)}>
                 <option value="Todos">Todos</option>
-                <option value="admin">Administrador</option>
-                <option value="inspetor">Inspetor</option>
-                <option value="agente_cobli">Agente Cobli</option>
+    <option value="admin">Administrador</option>
+    <option value="inspetor">Inspetor</option>
+    <option value="supervisor">Supervisor</option>   
+    <option value="coordenador">Coordenador</option> 
+    <option value="gerente">Gerente</option>         
+    <option value="agente_cobli">Agente Cobli</option>
               </select>
             </div>
 

@@ -165,15 +165,23 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
         <div className={secTitle}>Acesso</div>
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className={labelCls}>Perfil *</label>
-            <select value={role} onChange={e => setRole(e.target.value)} className={inputCls('role')}>
-              <option value="">Selecione</option>
-              <option value="inspetor">Inspetor</option>
-              <option value="admin">Administrador</option>
-              <option value="agente_cobli">Agente Cobli</option>
-            </select>
-            {fieldErr('role')}
-          </div>
+  <label className={labelCls}>Perfil *</label>
+  <select 
+    value={role} 
+    onChange={e => setRole(e.target.value)} 
+    className={inputCls('role')}
+  >
+    <option value="">Selecione</option>
+    <option value="inspetor">Inspetor</option>
+    <option value="supervisor">Supervisor</option>   {/* ADICIONADO */}
+    <option value="coordenador">Coordenador</option> {/* ADICIONADO */}
+    <option value="gerente">Gerente</option>         {/* ADICIONADO */}
+    <option value="agente_cobli">Agente Cobli</option>
+    <option value="sesmt">SESMT</option>             {/* ADICIONADO SE NECESSÁRIO */}
+    <option value="admin">Administrador</option>
+  </select>
+  {fieldErr('role')}
+</div>
           <div>
             <label className={labelCls}>Status</label>
             <div className="flex gap-2">

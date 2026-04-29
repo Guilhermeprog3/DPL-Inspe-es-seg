@@ -496,23 +496,25 @@ export default function CadastroPage() {
                     {errors.regional && <p className="field-error"><AlertCircle size={11} />{errors.regional.message}</p>}
                   </div>
                 </div>
-
                 <div className="field">
-                  <label className="field-label">Perfil de Acesso</label>
-                  <div className="field-wrap">
-                    <select
-                      {...register('role')}
-                      className={`field-select${errors.role ? ' has-error' : ''}`}
-                    >
-                      <option value="">Selecione o Perfil</option>
-                      <option value="inspetor">Inspetor</option>
-                      <option value="agente_cobli">Agente Cobli</option>
-                      <option value="admin">Administrador</option>
-                    </select>
-                    <span className="field-icon"><Briefcase size={14} /></span>
-                  </div>
-                  {errors.role && <p className="field-error"><AlertCircle size={11} />{errors.role.message}</p>}
-                </div>
+  <label className="field-label">Perfil de Acesso</label>
+  <div className="field-wrap">
+    <select
+      {...register('role')}
+      className={`field-select${errors.role ? ' has-error' : ''}`}
+    >
+      <option value="">Selecione o Perfil</option>
+      <option value="inspetor">Inspetor</option>
+      <option value="supervisor">Supervisor</option>
+      <option value="coordenador">Coordenador</option>
+      <option value="gerente">Gerente</option>
+      <option value="agente_cobli">Agente Cobli</option>
+      <option value="admin">Administrador</option>
+    </select>
+    <span className="field-icon"><Briefcase size={14} /></span>
+  </div>
+  {errors.role && <p className="field-error"><AlertCircle size={11} />{errors.role.message}</p>}
+</div>
 
                 <div className="row">
                   <div className="field">
