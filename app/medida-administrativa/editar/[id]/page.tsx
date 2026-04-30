@@ -143,7 +143,7 @@ export default function EditarMedidaPage() {
 
   useEffect(() => {
     if (!session) return
-    api.get('/taxa-contato/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
+    api.get('/base-gente/recentes/').then(r => setColaboradoresRepo(r.data)).catch(console.error)
   }, [session])
 
   const colabsFiltradosNome = useMemo(() => {
