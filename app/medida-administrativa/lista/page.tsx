@@ -797,7 +797,7 @@ export default function ListagemMedidasPage() {
                             className="font-bold text-[#094780] text-[12px] cursor-pointer hover:underline"
                             onClick={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
                           >
-                            #{item.id.slice(-6).toUpperCase()}
+                            #{String(item.id).slice(-6).toUpperCase()}
                           </div>
                           <div className="text-[10px] text-[#8896ab]">
                             {formatDateBR(item.data)}
