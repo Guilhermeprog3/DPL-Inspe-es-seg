@@ -2,8 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 const handler = NextAuth({
-  // 1. ADICIONE ESSA LINHA (Fundamental para a Vercel)
-  secret: process.env.NEXTAUTH_SECRET, 
+  secret: process.env.NEXTAUTH_SECRET,
 
   providers: [
     CredentialsProvider({
@@ -11,76 +10,81 @@ const handler = NextAuth({
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
-        uf: { label: "UF", type: "text" },
-        regional: { label: "Regional", type: "text" },
+        // CORREÇÃO: uf e regional removidos — o backend os lê do banco,
+        // não aceita mais esses valores vindos do cliente.
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-          method: "POST",
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password,
-            uf: credentials.uf,
-            regional: credentials.regional,
-          }),
-          headers: { 
-            "Content-Type": "application/json",
-            // 2. ADICIONE ISSO AQUI TAMBÉM para o ngrok não barrar o fetch do servidor
-            "ngrok-skip-browser-warning": "true" 
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+              // CORREÇÃO: uf e regional removidos do body.
+            }),
+            headers: {
+              "Content-Type": "application/json",
+              "ngrok-skip-browser-warning": "true",
+            },
           },
-        });
+        );
 
         const data = await res.json();
 
         if (!res.ok) {
+          // CORREÇÃO: lança a mensagem real do backend para que o login.tsx
+          // consiga detectar "inativa" / "aprovação" e mostrar o banner correto.
           throw new Error(data.message || "Falha na autenticação");
         }
 
-        if (data) {
-          return {
-            id: data.user.id,
-            name: data.user.nome,
-            email: data.user.email,
-            role: data.user.role,
-            uf: data.user.uf,
-            regional: data.user.regional,
-            accessToken: data.access_token,
-          };
-        }
-        return null;
+        return {
+          id: data.user.id,
+          name: data.user.nome,
+          email: data.user.email,
+          role: data.user.role,
+          uf: data.user.uf,
+          regional: data.user.regional,
+          chapa: data.user.chapa,
+          accessToken: data.access_token,
+        };
       },
     }),
   ],
+
   pages: {
     signIn: "/login",
   },
+
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        // O NextAuth armazena o ID no 'sub' por padrão, 
-        // mas vamos garantir que ele esteja explícito
-        token.id = user.id; 
-        token.accessToken = (user as any).accessToken;
-        token.role = (user as any).role;
-        token.uf = (user as any).uf;
-        token.regional = (user as any).regional;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        // Agora mapeamos o ID do token de volta para o user da sessão
-        (session.user as any).id = token.id; 
-        (session.user as any).role = token.role;
-        (session.user as any).uf = token.uf;
-        (session.user as any).regional = token.regional;
-        (session as any).access_token = token.accessToken;
-      }
-      return session;
-    },
+  if (user) {
+    token.id = user.id;
+    token.accessToken = (user as any).accessToken;
+    token.role = (user as any).role;
+    token.uf = (user as any).uf;
+    token.regional = (user as any).regional;
+    // Garante que a chapa vinda do authorize seja salva no token JWT
+    token.chapa = (user as any).chapa; 
+  }
+  return token;
+},
+async session({ session, token }) {
+  if (session.user) {
+    (session.user as any).id = token.id;
+    (session.user as any).role = token.role;
+    (session.user as any).uf = token.uf;
+    (session.user as any).regional = token.regional;
+    (session.user as any).access_token = token.accessToken;
+    // Garante que a chapa do token seja exposta na sessão do frontend e enviada no cabeçalho
+    (session.user as any).chapa = token.chapa; 
+  }
+  return session;
+},
   },
+
   session: {
     strategy: "jwt",
   },

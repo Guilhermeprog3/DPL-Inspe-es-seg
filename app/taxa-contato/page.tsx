@@ -54,7 +54,8 @@ const STATUS_OPTIONS = ['ATIVO', 'FÉRIAS', 'AFASTADO', 'DESLIGADO', 'PENDENTE']
 
 const UF_LABELS: Record<string, string> = { PI: 'Piauí', MA: 'Maranhão' }
 
-type SortField = 'supervisor' | 'nome'
+// ── Adicionado 'data' como campo ordenável ──
+type SortField = 'supervisor' | 'nome' | 'data'
 type SortDir   = 'asc' | 'desc'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -263,6 +264,17 @@ function DeleteModal({ row, onConfirm, onCancel, isDeleting }: { row: any; onCon
 }
 
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
+interface DynamicOptions {
+  areas: string[]
+  situacoes: string[]
+  bases: string[]
+  funcoes: string[]
+  ufs: string[]
+  regionais: string[]
+  locais: string[]
+  ufToRegionais: Record<string, Set<string>>
+}
+
 function EditModal({
   row,
   onClose,
@@ -277,51 +289,51 @@ function EditModal({
   const [editMode, setEditMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
- 
+
   const INITIAL_FORM = {
-    nome:           row?.nome           ?? '',
-    chapa:          row?.chapa          ?? '',
-    funcao:         row?.funcao         ?? '',
-    area:           row?.area           ?? '',
-    base:           row?.base           ?? '',
-    local:          row?.local          ?? '',
-    filial:         row?.filial         ?? '',
-    regional:       row?.regional       ?? '',
-    codsituacao:    row?.codsituacao    ?? '',
-    supervisor:     row?.supervisor     ?? '',
+    nome:            row?.nome            ?? '',
+    chapa:           row?.chapa           ?? '',
+    funcao:          row?.funcao          ?? '',
+    area:            row?.area            ?? '',
+    base:            row?.base            ?? '',
+    local:           row?.local           ?? '',
+    filial:          row?.filial          ?? '',
+    regional:        row?.regional        ?? '',
+    codsituacao:     row?.codsituacao     ?? '',
+    supervisor:      row?.supervisor      ?? '',
     chapaSupervisor: row?.chapaSupervisor ?? '',
-    email:          row?.email          ?? '',
+    email:           row?.email           ?? '',
   }
   const [form, setForm] = useState(INITIAL_FORM)
- 
+
   function handleChange(field: string, value: string) {
     setForm(f => ({ ...f, [field]: value }))
   }
- 
+
   const [colaboradoresRepo, setColaboradoresRepo] = useState<any[]>([])
   useEffect(() => {
     api.get('/base-gente/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
   }, [])
- 
+
   // ── Colaborador ───────────────────────────────────────────────────────────
   const [colabSelecionado,  setColabSelecionado ] = useState<any>({ nome: row?.nome, chapa: row?.chapa })
   const [nomeColabPesquisa, setNomeColabPesquisa] = useState(row?.nome  ?? '')
   const [matColabPesquisa,  setMatColabPesquisa ] = useState(row?.chapa ?? '')
   const [showColabNome, setShowColabNome] = useState(false)
   const [showColabMat,  setShowColabMat ] = useState(false)
- 
+
   const colabsFiltradosNome = useMemo(() => {
     const t = nomeColabPesquisa.trim().toLowerCase()
     if (t.length < 2) return []
     return colaboradoresRepo.filter(c => String(c.nome || '').toLowerCase().includes(t)).slice(0, 8)
   }, [nomeColabPesquisa, colaboradoresRepo])
- 
+
   const colabsFiltradosMat = useMemo(() => {
     const t = matColabPesquisa.trim()
     if (!t) return []
     return colaboradoresRepo.filter(c => String(c.chapa || '').includes(t)).slice(0, 8)
   }, [matColabPesquisa, colaboradoresRepo])
- 
+
   function selecionarColab(item: any) {
     setColabSelecionado(item)
     setNomeColabPesquisa(item.nome)
@@ -330,26 +342,28 @@ function EditModal({
     setShowColabNome(false)
     setShowColabMat(false)
   }
- 
+
   // ── Supervisor ────────────────────────────────────────────────────────────
-  const [supSelecionado,  setSupSelecionado ] = useState<any>(row?.supervisor ? { nome: row.supervisor, chapa: row.chapaSupervisor } : null)
-  const [nomeSupPesquisa, setNomeSupPesquisa] = useState(row?.supervisor ?? '')
+  const [supSelecionado,  setSupSelecionado ] = useState<any>(
+    row?.supervisor ? { nome: row.supervisor, chapa: row.chapaSupervisor } : null
+  )
+  const [nomeSupPesquisa, setNomeSupPesquisa] = useState(row?.supervisor      ?? '')
   const [matSupPesquisa,  setMatSupPesquisa ] = useState(row?.chapaSupervisor ?? '')
   const [showSupNome, setShowSupNome] = useState(false)
   const [showSupMat,  setShowSupMat ] = useState(false)
- 
+
   const supsFiltradosNome = useMemo(() => {
     const t = nomeSupPesquisa.trim().toLowerCase()
     if (t.length < 2) return []
     return colaboradoresRepo.filter(c => String(c.nome || '').toLowerCase().includes(t)).slice(0, 8)
   }, [nomeSupPesquisa, colaboradoresRepo])
- 
+
   const supsFiltradosMat = useMemo(() => {
     const t = matSupPesquisa.trim()
     if (!t) return []
     return colaboradoresRepo.filter(c => String(c.chapa || '').includes(t)).slice(0, 8)
   }, [matSupPesquisa, colaboradoresRepo])
- 
+
   function selecionarSupervisor(item: any) {
     setSupSelecionado(item)
     setNomeSupPesquisa(item.nome)
@@ -358,7 +372,7 @@ function EditModal({
     setShowSupNome(false)
     setShowSupMat(false)
   }
- 
+
   async function handleSave() {
     setIsSaving(true)
     try {
@@ -374,22 +388,22 @@ function EditModal({
       setIsSaving(false)
     }
   }
- 
-  const selectCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
+
+  const selectCls  = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13px] outline-none transition-all'
-  const labelCls  = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
-  const viewCls   = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
- 
+  const labelCls   = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
+  const viewCls    = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
+
   function ViewValue({ value }: { value: string }) {
     return value
       ? <p className={viewCls}>{value}</p>
       : <p className="text-slate-300 font-normal italic text-[12px] py-1">—</p>
   }
- 
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
- 
+
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 gap-3">
           <div className="min-w-0">
@@ -415,16 +429,16 @@ function EditModal({
             </button>
           </div>
         </div>
- 
+
         {/* ── Body ── */}
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
- 
+
           {/* ── Identificação do colaborador ── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">
               Colaborador {editMode && <span className="text-red-400">*</span>}
             </p>
- 
+
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
                 <div style={{ position: 'relative' }}>
@@ -460,7 +474,7 @@ function EditModal({
                     </div>
                   )}
                 </div>
- 
+
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Matrícula</label>
                   <input
@@ -492,7 +506,7 @@ function EditModal({
                     </div>
                   )}
                 </div>
- 
+
                 {!colabSelecionado && (nomeColabPesquisa || matColabPesquisa) && (
                   <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
                     <AlertCircle size={11} /> Selecione um colaborador da lista
@@ -512,13 +526,13 @@ function EditModal({
               </div>
             )}
           </div>
- 
+
           <div className="border-t border-slate-50" />
- 
+
           {/* ── Supervisor ── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Supervisor (opcional)</p>
- 
+
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
                 {/* Nome supervisor */}
@@ -555,7 +569,7 @@ function EditModal({
                     </div>
                   )}
                 </div>
- 
+
                 {/* Matrícula supervisor */}
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Matrícula</label>
@@ -606,16 +620,15 @@ function EditModal({
               </div>
             )}
           </div>
- 
+
           <div className="border-t border-slate-50" />
- 
+
           {/* ── Lotação ── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Lotação</p>
- 
+
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
- 
                 <div>
                   <label className={labelCls}>Situação</label>
                   <div className="relative">
@@ -626,7 +639,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
                 <div>
                   <label className={labelCls}>Função</label>
                   <div className="relative">
@@ -637,7 +649,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
                 <div>
                   <label className={labelCls}>Área</label>
                   <div className="relative">
@@ -648,7 +659,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
                 <div>
                   <label className={labelCls}>Base</label>
                   <div className="relative">
@@ -659,7 +669,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
                 <div>
                   <label className={labelCls}>Local</label>
                   <div className="relative">
@@ -670,7 +679,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
                 <div>
                   <label className={labelCls}>Filial (UF)</label>
                   <div className="relative">
@@ -681,7 +689,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
                 <div className="col-span-2">
                   <label className={labelCls}>Regional</label>
                   <div className="relative">
@@ -692,7 +699,6 @@ function EditModal({
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
                 </div>
- 
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -728,7 +734,7 @@ function EditModal({
             )}
           </div>
         </div>
- 
+
         {/* ── Footer ── */}
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
           {editMode ? (
@@ -804,8 +810,6 @@ function NovaFuncaoModal({ onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
       <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-[#e3e8ef] animate-scaleIn">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center">
@@ -820,8 +824,6 @@ function NovaFuncaoModal({ onClose, onSaved }: {
             <X size={16} />
           </button>
         </div>
-
-        {/* Body */}
         <div className="px-6 py-5">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
             Nome da função
@@ -841,8 +843,6 @@ function NovaFuncaoModal({ onClose, onSaved }: {
             </p>
           )}
         </div>
-
-        {/* Footer */}
         <div className="px-6 pb-5 flex gap-2">
           <button onClick={onClose} disabled={isSaving}
             className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">
@@ -872,20 +872,14 @@ function NovaFuncaoModal({ onClose, onSaved }: {
 }
 
 // ─── Modal Associar ───────────────────────────────────────────────────────────
-interface DynamicOptions {
-  areas: string[]
-  situacoes: string[]
-  bases: string[]
-  funcoes: string[]
-  ufs: string[]
-  regionais: string[]
-  locais: string[]
-  ufToRegionais: Record<string, Set<string>>
-}
-
-function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
-  userRole: string; userName: string; userEmail: string
-  onClose: () => void; onSaved: (updated: any) => void
+function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional, onClose, onSaved }: {
+  userRole: string
+  userName: string
+  userChapa: string
+  userEmail: string
+  userRegional: string
+  onClose: () => void
+  onSaved: (updated: any) => void
 }) {
   const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
@@ -895,9 +889,10 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
   const [busca,       setBusca      ] = useState('')
   const [selected,    setSelected   ] = useState<any>(null)
 
-  const [novoSupervisor, setNovoSupervisor] = useState(isSupervisor ? userName.toUpperCase() : '')
-  const [novaArea,       setNovaArea      ] = useState('')
-  const [novaBase,       setNovaBase      ] = useState('')
+  const [novoSupervisor,      setNovoSupervisor     ] = useState('')
+  const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
+  const [novaArea,            setNovaArea           ] = useState('')
+  const [novaBase,            setNovaBase           ] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
@@ -924,27 +919,45 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
     setSelected(colab)
     setNovaArea(colab.area ?? '')
     setNovaBase(colab.base ?? '')
-    if (!isSupervisor) setNovoSupervisor(colab.supervisor ?? '')
   }
 
   async function handleSave() {
     if (!selected || isSaving) return
     setIsSaving(true)
     try {
-      const payload: any = {
-        supervisorName:  isSupervisor ? userName.toUpperCase() : novoSupervisor,
-        supervisorEmail: isSupervisor ? userEmail : '',
-      }
+      const payload: any = isSupervisor
+        ? {
+            supervisorName:  userName.toUpperCase(),
+            chapaSupervisor: userChapa,
+            supervisorEmail: userEmail,
+          }
+        : {
+            supervisorName:  novoSupervisor.toUpperCase(),
+            chapaSupervisor: novaChapaSupervisor,
+            supervisorEmail: '',
+          }
+
       if (isGerenteOuCoordenador) {
         if (novaArea) payload.area = novaArea
         if (novaBase) payload.base = novaBase
       }
+
       const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
-      setTimeout(() => onSaved(res.data ?? { ...selected, supervisor: payload.supervisorName, email: payload.supervisorEmail }), 1000)
-    } catch (e: any) { alert(e.response?.data?.message || 'Erro ao associar.') }
-    finally { setIsSaving(false) }
+      setTimeout(() => onSaved(res.data ?? {
+        ...selected,
+        supervisor:      payload.supervisorName,
+        chapaSupervisor: payload.chapaSupervisor,
+        email:           payload.supervisorEmail,
+      }), 1000)
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao associar.')
+    } finally {
+      setIsSaving(false)
+    }
   }
+
+  const canSave = selected && (isSupervisor || novoSupervisor.trim().length > 0)
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
@@ -957,11 +970,15 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
             <div>
               <p className="text-[15px] font-bold text-[#1a2535]">Associar Colaborador</p>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {isGerenteOuCoordenador ? 'Vincule qualquer colaborador e defina supervisor, área e base' : 'Vincule qualquer colaborador à sua supervisão'}
+                {isSupervisor
+                  ? 'Vincule colaboradores à sua supervisão'
+                  : 'Vincule colaboradores e defina supervisor, área e base'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all"><X size={16} /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
+            <X size={16} />
+          </button>
         </div>
 
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
@@ -992,7 +1009,11 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
                       Mat. {c.chapa} · {c.funcao || 'Sem função'} · <span className="text-slate-500">{c.regional || '—'}</span>
                     </p>
                   </div>
-                  {c.supervisor && <span className="text-[10px] text-slate-400 italic shrink-0 hidden sm:block">{c.supervisor.split(' ')[0]}</span>}
+                  {c.supervisor && (
+                    <span className="text-[10px] text-slate-400 italic shrink-0 hidden sm:block">
+                      {c.supervisor.split(' ')[0]}
+                    </span>
+                  )}
                   {selected?.id === c.id && <CheckCircle size={14} className="text-emerald-500 shrink-0" />}
                 </button>
               ))}
@@ -1010,15 +1031,41 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
               </div>
 
               <div>
-                <label className={labelCls}>Novo supervisor</label>
+                <label className={labelCls}>Supervisor que será atribuído</label>
                 {isSupervisor ? (
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg h-9 px-3 flex items-center">
-                    <p className="text-[13px] font-bold text-[#1a2535]">{userName.toUpperCase()}</p>
-                    <span className="ml-auto text-[10px] text-slate-400 italic">Automático</span>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3">
+                    <UserCheck size={14} className="text-emerald-600 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-bold text-[#1a2535]">{userName.toUpperCase()}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        Chapa: <strong>{userChapa}</strong>
+                        {userRegional && <> · Regional: <strong>{userRegional}</strong></>}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-slate-400 italic shrink-0">Automático</span>
                   </div>
                 ) : (
-                  <input className={inputCls} placeholder="Nome do supervisor..."
-                    value={novoSupervisor} onChange={e => setNovoSupervisor(e.target.value.toUpperCase())} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Nome do supervisor <span className="text-red-400">*</span></label>
+                      <input
+                        className={inputCls}
+                        placeholder="Nome completo..."
+                        value={novoSupervisor}
+                        onChange={e => setNovoSupervisor(e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Chapa do supervisor</label>
+                      <input
+                        className={inputCls}
+                        placeholder="Matrícula..."
+                        inputMode="numeric"
+                        value={novaChapaSupervisor}
+                        onChange={e => setNovaChapaSupervisor(e.target.value.replace(/[^0-9]/g, ''))}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -1039,11 +1086,17 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">Cancelar</button>
-          <button onClick={handleSave} disabled={!selected || isSaving || success}
+          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={!canSave || isSaving || success}
             className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
-              selected && !success ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
-            {success ? <><CheckCircle size={14} /> Associado!</> : isSaving ? <Loader2 size={14} className="animate-spin" /> : <><Link2 size={14} /> Associar colaborador</>}
+              canSave && !success ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
+            {success
+              ? <><CheckCircle size={14} /> Associado!</>
+              : isSaving
+                ? <Loader2 size={14} className="animate-spin" />
+                : <><Link2 size={14} /> Associar colaborador</>}
           </button>
         </div>
       </div>
@@ -1052,9 +1105,12 @@ function AssociarModal({ userRole, userName, userEmail, onClose, onSaved }: {
 }
 
 // ─── Modal Desassociar ────────────────────────────────────────────────────────
-function DesassociarModal({ userRole, userName, onClose, onSaved }: {
-  userRole: string; userName: string
-  onClose: () => void; onSaved: (updated: any) => void
+function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
+  userRole: string
+  userName: string
+  userChapa: string
+  onClose: () => void
+  onSaved: (updated: any) => void
 }) {
   const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
@@ -1065,10 +1121,11 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
   const [selected,    setSelected   ] = useState<any>(null)
   const [modoAcao,    setModoAcao   ] = useState<'transferir' | 'soltar'>('transferir')
 
-  const [novoSupervisor, setNovoSupervisor] = useState('')
-  const [novaArea,       setNovaArea      ] = useState('')
-  const [novaBase,       setNovaBase      ] = useState('')
-  const [novaRegional,   setNovaRegional  ] = useState('')
+  const [novoSupervisor,      setNovoSupervisor     ] = useState('')
+  const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
+  const [novaArea,            setNovaArea           ] = useState('')
+  const [novaBase,            setNovaBase           ] = useState('')
+  const [novaRegional,        setNovaRegional       ] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
@@ -1084,9 +1141,14 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
   }, [])
 
   const dataFiltrada = useMemo(() => {
-    if (isSupervisor) return allData.filter(d => d.supervisor?.toUpperCase() === userName.toUpperCase())
+    if (isSupervisor) {
+      return allData.filter(d =>
+        d.chapaSupervisor === userChapa ||
+        d.supervisor?.toUpperCase() === userName.toUpperCase()
+      )
+    }
     return allData.filter(d => !!d.supervisor)
-  }, [allData, isSupervisor, userName])
+  }, [allData, isSupervisor, userName, userChapa])
 
   const filteredColabs = useMemo(() => {
     const t = busca.toLowerCase().trim()
@@ -1102,6 +1164,7 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
     setNovaBase(colab.base ?? '')
     setNovaRegional(colab.regional ?? '')
     setNovoSupervisor('')
+    setNovaChapaSupervisor('')
   }
 
   async function handleSave() {
@@ -1112,7 +1175,11 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
       if (modoAcao === 'soltar') {
         res = await api.patch(`/taxa-contato/${selected.id}/soltar`)
       } else {
-        const payload: any = { supervisorName: novoSupervisor, supervisorEmail: '' }
+        const payload: any = {
+          supervisorName:  novoSupervisor.toUpperCase(),
+          chapaSupervisor: novaChapaSupervisor,
+          supervisorEmail: '',
+        }
         if (isGerenteOuCoordenador) {
           if (novaArea)     payload.area     = novaArea
           if (novaBase)     payload.base     = novaBase
@@ -1123,11 +1190,15 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
       setSuccess(true)
       setTimeout(() => onSaved(res.data ?? {
         ...selected,
-        supervisor: modoAcao === 'soltar' ? null : novoSupervisor,
-        regional:   novaRegional || selected.regional,
+        supervisor:      modoAcao === 'soltar' ? null : novoSupervisor,
+        chapaSupervisor: modoAcao === 'soltar' ? null : novaChapaSupervisor,
+        regional:        novaRegional || selected.regional,
       }), 1000)
-    } catch (e: any) { alert(e.response?.data?.message || 'Erro ao processar.') }
-    finally { setIsSaving(false) }
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao processar.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const canSave = selected && (modoAcao === 'soltar' || novoSupervisor.trim().length > 0)
@@ -1143,11 +1214,15 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
             <div>
               <p className="text-[15px] font-bold text-[#1a2535]">Desassociar / Transferir</p>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {isSupervisor ? 'Transfira ou libere colaboradores da sua equipe' : 'Transfira entre regionais ou libere o vínculo de supervisão'}
+                {isSupervisor
+                  ? 'Transfira ou libere colaboradores da sua equipe'
+                  : 'Transfira entre regionais ou libere o vínculo de supervisão'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all"><X size={16} /></button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
+            <X size={16} />
+          </button>
         </div>
 
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
@@ -1180,7 +1255,8 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
                     <p className="text-[12.5px] font-bold text-[#1a2535] truncate uppercase">{c.nome}</p>
                     <p className="text-[10px] text-slate-400 font-medium">
                       Mat. {c.chapa} · Sup: <span className="text-slate-600 font-semibold">{c.supervisor}</span>
-                      {c.regional && <> · <span className="text-[#094780]">{c.regional}</span></>}
+                      {c.chapaSupervisor && <> · <span className="text-[#094780]">Chapa: {c.chapaSupervisor}</span></>}
+                      {c.regional && <> · <span className="text-slate-500">{c.regional}</span></>}
                     </p>
                   </div>
                   {selected?.id === c.id && <CheckCircle size={14} className="text-orange-500 shrink-0" />}
@@ -1196,7 +1272,9 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
                 <div className="min-w-0">
                   <p className="text-[12px] font-bold text-orange-800 truncate uppercase">{selected.nome}</p>
                   <p className="text-[10px] text-orange-600">
-                    Supervisor atual: <strong>{selected.supervisor}</strong> · Regional: <strong>{selected.regional || '—'}</strong>
+                    Supervisor atual: <strong>{selected.supervisor}</strong>
+                    {selected.chapaSupervisor && <> · Chapa: <strong>{selected.chapaSupervisor}</strong></>}
+                    {' '}· Regional: <strong>{selected.regional || '—'}</strong>
                   </p>
                 </div>
               </div>
@@ -1219,10 +1297,19 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
 
               {modoAcao === 'transferir' && (
                 <div className="space-y-3">
-                  <div>
-                    <label className={labelCls}>Novo supervisor</label>
-                    <input className={inputCls} placeholder="Nome do novo supervisor..."
-                      value={novoSupervisor} onChange={e => setNovoSupervisor(e.target.value.toUpperCase())} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Novo supervisor <span className="text-red-400">*</span></label>
+                      <input className={inputCls} placeholder="Nome do novo supervisor..."
+                        value={novoSupervisor} onChange={e => setNovoSupervisor(e.target.value.toUpperCase())} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Chapa do novo supervisor</label>
+                      <input className={inputCls} placeholder="Matrícula..."
+                        inputMode="numeric"
+                        value={novaChapaSupervisor}
+                        onChange={e => setNovaChapaSupervisor(e.target.value.replace(/[^0-9]/g, ''))} />
+                    </div>
                   </div>
                   {isGerenteOuCoordenador && (
                     <>
@@ -1251,7 +1338,7 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   <AlertCircle size={14} className="text-red-500 shrink-0" />
                   <p className="text-[12px] text-red-700 font-medium">
-                    O campo de supervisor será <strong>apagado</strong>. O colaborador ficará sem supervisão atribuída.
+                    O supervisor e a chapa do supervisor serão <strong>apagados</strong>. O colaborador ficará sem supervisão atribuída.
                   </p>
                 </div>
               )}
@@ -1260,15 +1347,20 @@ function DesassociarModal({ userRole, userName, onClose, onSaved }: {
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">Cancelar</button>
+          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">
+            Cancelar
+          </button>
           <button onClick={handleSave} disabled={!canSave || isSaving || success}
             className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
               canSave && !success
                 ? modoAcao === 'soltar' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#094780] text-white hover:bg-[#0a5494]'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
-            {success ? <><CheckCircle size={14} /> Concluído!</>
-              : isSaving ? <Loader2 size={14} className="animate-spin" />
-                : modoAcao === 'soltar' ? <><Unlink2 size={14} /> Liberar colaborador</>
+            {success
+              ? <><CheckCircle size={14} /> Concluído!</>
+              : isSaving
+                ? <Loader2 size={14} className="animate-spin" />
+                : modoAcao === 'soltar'
+                  ? <><Unlink2 size={14} /> Liberar colaborador</>
                   : <><UserCheck size={14} /> Confirmar transferência</>}
           </button>
         </div>
@@ -1290,15 +1382,15 @@ export default function TaxaContatoPage() {
   const [data,    setData   ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [busca,          setBusca        ] = useState('')
-  const [campoBusca,     setCampoBusca   ] = useState('todos')
-  const [filtroArea,     setFiltroArea   ] = useState('')
-  const [filtroStatus,   setFiltroStatus ] = useState('')
-  const [filtroBase,     setFiltroBase   ] = useState('')
-  const [filtroFuncao,   setFiltroFuncao ] = useState('')
-  const [filtroUf,       setFiltroUf     ] = useState<string[]>([])
+  const [busca,          setBusca         ] = useState('')
+  const [campoBusca,     setCampoBusca    ] = useState('todos')
+  const [filtroArea,     setFiltroArea    ] = useState('')
+  const [filtroStatus,   setFiltroStatus  ] = useState('')
+  const [filtroBase,     setFiltroBase    ] = useState('')
+  const [filtroFuncao,   setFiltroFuncao  ] = useState('')
+  const [filtroUf,       setFiltroUf      ] = useState<string[]>([])
   const [filtroRegional, setFiltroRegional] = useState<string[]>([])
-  const [filtroMes,      setFiltroMes    ] = useState(getMesPadrao)
+  const [filtroMes,      setFiltroMes     ] = useState(getMesPadrao)
 
   const [sortField,   setSortField  ] = useState<SortField>('nome')
   const [sortDir,     setSortDir    ] = useState<SortDir>('asc')
@@ -1320,13 +1412,13 @@ export default function TaxaContatoPage() {
     const ufToRegionais: Record<string, Set<string>> = {}
 
     data.forEach(item => {
-      if (item.local)      locais.add(item.local)
-      if (item.area)       areas.add(item.area)
+      if (item.local)       locais.add(item.local)
+      if (item.area)        areas.add(item.area)
       if (item.codsituacao) situacoes.add(item.codsituacao.toUpperCase())
-      if (item.base)       bases.add(item.base)
-      if (item.funcao)     funcoes.add(item.funcao)
-      if (item.filial)     ufs.add(item.filial)
-      if (item.regional)   regionais.add(item.regional)
+      if (item.base)        bases.add(item.base)
+      if (item.funcao)      funcoes.add(item.funcao)
+      if (item.filial)      ufs.add(item.filial)
+      if (item.regional)    regionais.add(item.regional)
       if (item.filial && item.regional) {
         if (!ufToRegionais[item.filial]) ufToRegionais[item.filial] = new Set()
         ufToRegionais[item.filial].add(item.regional)
@@ -1376,7 +1468,6 @@ export default function TaxaContatoPage() {
     if (novasRegionais.length !== filtroRegional.length) setFiltroRegional(novasRegionais)
   }, [filtroUf]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // filtrosAtivos: removed filtroEmailSup
   const filtrosAtivos = [busca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf.length > 0, filtroRegional.length > 0].filter(Boolean).length
 
   useEffect(() => { fetchData(filtroMes) }, [filtroMes]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1390,7 +1481,7 @@ export default function TaxaContatoPage() {
     finally { setLoading(false) }
   }
 
-  // ── Exportação para Excel ─────────────────────────────────────────────────
+  // ── Exportação ────────────────────────────────────────────────────────────
   async function handleExport() {
     try {
       const XLSX = await import('xlsx')
@@ -1405,7 +1496,7 @@ export default function TaxaContatoPage() {
         'Filial (UF)':       s.filial            ?? '',
         'Regional':          s.regional          ?? '',
         'Supervisor':        s.supervisor        ?? '',
-        'Mat. Supervisor':   s.chapaSupervisor   ?? '',
+        'Chapa Supervisor':  s.chapaSupervisor   ?? '',
         'E-mail Supervisor': s.email             ?? '',
         'Situação':          s.codsituacao       ?? '',
         'Data': s.data
@@ -1420,7 +1511,6 @@ export default function TaxaContatoPage() {
       }))
 
       const ws = XLSX.utils.json_to_sheet(exportData)
-
       ws['!cols'] = [
         { wch: 36 }, { wch: 12 }, { wch: 26 }, { wch: 22 },
         { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 18 },
@@ -1440,9 +1530,7 @@ export default function TaxaContatoPage() {
 
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Taxa de Contato')
-
-      const mesFormatted = filtroMes.replace('/', '-')
-      XLSX.writeFile(wb, `taxa-contato-${mesFormatted}.xlsx`)
+      XLSX.writeFile(wb, `taxa-contato-${filtroMes.replace('/', '-')}.xlsx`)
     } catch (err) {
       console.error('Erro ao exportar:', err)
       alert('Erro ao gerar o arquivo Excel.')
@@ -1482,7 +1570,17 @@ export default function TaxaContatoPage() {
     setShowDesassociar(false)
   }
 
-  // filtered: removed filtroEmailSup
+  // ── Helper para formatar data da coluna ──────────────────────────────────
+  function formatarData(raw: string | null | undefined): string | null {
+    if (!raw) return null
+    const s = String(raw).trim()
+    const ano = s.substring(0, 4)
+    const dia = s.substring(5, 7)
+    const mes = s.substring(8, 10)
+    if (!ano || !mes || !dia) return null
+    return `${dia}/${mes}/${ano}`
+  }
+
   const filtered = useMemo(() => {
     const t = busca.toLowerCase().trim()
     return data.filter(s => {
@@ -1508,7 +1606,13 @@ export default function TaxaContatoPage() {
       if (filtroRegional.length > 0 && !filtroRegional.includes(s.regional)) return false
       return true
     }).sort((a, b) => {
-      const diff = (a[sortField] || '').localeCompare(b[sortField] || '', 'pt-BR')
+      let diff: number
+      if (sortField === 'data') {
+        // Compara lexicograficamente — formato "YYYY-01-MM 00:00:00.000" ordena corretamente
+        diff = (a.data ?? '').localeCompare(b.data ?? '')
+      } else {
+        diff = (a[sortField] || '').localeCompare(b[sortField] || '', 'pt-BR')
+      }
       return sortDir === 'asc' ? diff : -diff
     })
   }, [data, busca, campoBusca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf, filtroRegional, sortField, sortDir])
@@ -1517,6 +1621,8 @@ export default function TaxaContatoPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const mesLabel   = MESES_OPTIONS.find(m => m.value === filtroMes)?.label ?? filtroMes
   const userFullName = `${userData?.nome ?? ''} ${userData?.sobrenome ?? ''}`.trim()
+  const userChapa    = userData?.chapa ?? ''
+  const userRegional = userData?.regional ?? ''
 
   return (
     <DashboardLayout title="Taxa de Contato" breadcrumb="SIGS / Gestão de Pessoas / Taxa de Contato" navItems={navItems}>
@@ -1537,14 +1643,14 @@ export default function TaxaContatoPage() {
         .chip-active { background:#094780 !important; color:#fff !important; border-color:#094780 !important; }
         .main-card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; }
         .table-scroll { overflow-x:auto; }
-        .gp-table { width:100%; border-collapse:collapse; min-width:1280px; }
+        .gp-table { width:100%; border-collapse:collapse; min-width:1380px; }
         .gp-table th { background:#f8fafc; padding:11px 14px; text-align:left; font-size:10px; font-weight:800; color:#8896ab; text-transform:uppercase; border-bottom:1px solid #e2e8f0; white-space:nowrap; }
         .gp-table th.sortable { cursor:pointer; user-select:none; }
         .gp-table th.sortable:hover { color:#094780; }
         .gp-row td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; font-size:13px; }
         .gp-row:hover td { background:#fafbfc; }
         .pag-wrap { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid #f1f5f9; }
-        .pg-btn { min-width:32px; height:32px; border-radius:8px; border:1.5px solid #e3e8ef; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+        .pg-btn { min-width:32px; height:32px; border-radius:8px; border:1.5px solid #e3e8ef; background:#fff; cursor:pointer; display:flex; align-items:center; justify-center; font-size:12px; font-weight:600; }
         .pg-btn:disabled { opacity:.4; cursor:not-allowed; }
         .btn-outline { background:#fff; color:#374151; padding:8px 13px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .15s; }
         .btn-outline:hover { border-color:#094780; color:#094780; }
@@ -1621,7 +1727,6 @@ export default function TaxaContatoPage() {
 
           <div className="filter-body">
             <div className="filter-row-main" style={{ alignItems: 'flex-end', gap: 8 }}>
-              {/* Search with Mat. Supervisor option added, email removed */}
               <div className="flex flex-col gap-1.5" style={{ flex: '0 0 auto', width: 340 }}>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Busca</span>
                 <div className="search-container">
@@ -1645,7 +1750,6 @@ export default function TaxaContatoPage() {
                 </div>
               </div>
 
-              {/* Filter selects: email removed */}
               <div className="flex gap-2 flex-1" style={{ minWidth: 0 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <FilterSelect label="Situação" value={filtroStatus} onChange={(v: string) => { setFiltroStatus(v); setCurrentPage(1) }} options={dynamicOptions.situacoes} />
@@ -1697,17 +1801,28 @@ export default function TaxaContatoPage() {
                 <table className="gp-table">
                   <thead>
                     <tr>
+                      {/* ── Colaborador ── */}
                       <th className="sortable" onClick={() => handleSort('nome')}>
                         Colaborador {sortField === 'nome' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
                       <th>Função / Área</th>
                       <th>Base / Local</th>
+
+                      {/* ── Supervisor — nome + matrícula juntos ── */}
                       <th className="sortable" onClick={() => handleSort('supervisor')}>
                         Supervisor {sortField === 'supervisor' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
-                      <th>Mat. Supervisor</th>
+
+                      {/* ── E-mail do supervisor ── */}
+                      <th>E-mail Supervisor</th>
+
                       <th>Filial / Regional</th>
-                      <th>Data</th>
+
+                      {/* ── Data — ordenável ── */}
+                      <th className="sortable" onClick={() => handleSort('data')}>
+                        Data {sortField === 'data' && (sortDir === 'asc' ? '↑' : '↓')}
+                      </th>
+
                       <th>Situação</th>
                       {isAdmin && <th style={{ width: 52 }} />}
                     </tr>
@@ -1715,49 +1830,67 @@ export default function TaxaContatoPage() {
                   <tbody>
                     {paginated.map((s: any) => (
                       <tr key={s.id} className="gp-row">
+                        {/* ── Colaborador ── */}
                         <td>
                           <div className="font-bold text-[#1a2535] uppercase">{s.nome}</div>
                           <div className="text-[10px] text-slate-400 font-bold">MATRÍCULA: {s.chapa}</div>
                         </td>
+
+                        {/* ── Função / Área ── */}
                         <td>
                           <div className="flex items-center gap-1.5 text-slate-700 font-bold">
                             <Briefcase size={12} className="text-slate-400" /> {s.funcao || 'N/I'}
                           </div>
                           <div className="text-[10px] text-[#8896ab] font-bold mt-0.5 uppercase">{s.area}</div>
                         </td>
+
+                        {/* ── Base / Local ── */}
                         <td>
-                          <div className="font-semibold text-slate-700">{s.base || <span className="text-slate-300 italic font-normal text-xs">—</span>}</div>
+                          <div className="font-semibold text-slate-700">
+                            {s.base || <span className="text-slate-300 italic font-normal text-xs">—</span>}
+                          </div>
                           <div className="text-[10px] text-slate-400 font-medium mt-0.5">{s.local || ''}</div>
                         </td>
+
+                        {/* ── Supervisor — nome + matrícula (mesmo padrão do colaborador) ── */}
                         <td>
-                          <div className="font-bold text-[#1a2535]">{s.supervisor || 'NÃO ASSUMIDO'}</div>
-                        </td>
-                        {/* Matrícula supervisor column */}
-                        <td>
+                          <div className="font-bold text-[#1a2535]">
+                            {s.supervisor || <span className="text-slate-400 font-semibold italic text-[11px]">NÃO ASSUMIDO</span>}
+                          </div>
                           {s.chapaSupervisor
-                            ? <div className="text-[12px] font-semibold text-slate-600">{s.chapaSupervisor}</div>
-                            : <span className="text-slate-300 italic text-xs">—</span>}
+                            ? <div className="text-[10px] text-slate-400 font-bold">MATRÍCULA: {s.chapaSupervisor}</div>
+                            : null
+                          }
                         </td>
+
+                        {/* ── E-mail do supervisor ── */}
+                        <td>
+                          {s.email
+                            ? (
+                              <div className="flex items-center gap-1.5 text-[12px] text-slate-600 font-medium">
+                                <Mail size={11} className="text-slate-300 shrink-0" />
+                                {s.email}
+                              </div>
+                            )
+                            : <span className="text-slate-300 italic text-xs">—</span>
+                          }
+                        </td>
+
+                        {/* ── Filial / Regional ── */}
                         <td>
                           <div className="font-bold text-slate-700">{s.filial}</div>
                           <div className="text-[10px] text-slate-400 font-bold">{s.regional}</div>
                         </td>
+
+                        {/* ── Data ── */}
                         <td>
-                          {s.data
-                            ? (() => {
-                                const raw = String(s.data).trim()
-                                const ano = raw.substring(0, 4)
-                                const dia = raw.substring(5, 7)
-                                const mes = raw.substring(8, 10)
-                                if (!ano || !mes || !dia) return <span className="text-slate-300 italic text-xs">—</span>
-                                return (
-                                  <div className="text-[12px] font-semibold text-slate-600">
-                                    {dia}/{mes}/{ano}
-                                  </div>
-                                )
-                              })()
-                            : <span className="text-slate-300 italic text-xs">—</span>}
+                          {formatarData(s.data)
+                            ? <div className="text-[12px] font-semibold text-slate-600">{formatarData(s.data)}</div>
+                            : <span className="text-slate-300 italic text-xs">—</span>
+                          }
                         </td>
+
+                        {/* ── Situação ── */}
                         <td>
                           <StatusSelector
                             row={s}
@@ -1765,6 +1898,7 @@ export default function TaxaContatoPage() {
                             canEdit={canEditStatus}
                           />
                         </td>
+
                         {isAdmin && <td><ActionMenu row={s} onEdit={setEditTarget} onDelete={setDeleteTarget} /></td>}
                       </tr>
                     ))}
@@ -1810,7 +1944,9 @@ export default function TaxaContatoPage() {
         <AssociarModal
           userRole={userData?.role}
           userName={userFullName}
+          userChapa={userChapa}
           userEmail={userData?.email ?? ''}
+          userRegional={userRegional}
           onClose={() => setShowAssociar(false)}
           onSaved={handleAssociacaoSaved}
         />
@@ -1820,6 +1956,7 @@ export default function TaxaContatoPage() {
         <DesassociarModal
           userRole={userData?.role}
           userName={userFullName}
+          userChapa={userChapa}
           onClose={() => setShowDesassociar(false)}
           onSaved={handleAssociacaoSaved}
         />
