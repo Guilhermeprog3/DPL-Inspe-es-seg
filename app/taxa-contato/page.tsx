@@ -1377,7 +1377,7 @@ export default function TaxaContatoPage() {
   const isSupervisor = userData?.role === 'supervisor'
   const isGerenteOuCoordenador = userData?.role === 'gerente' || userData?.role === 'coordenador'
   const canManageAssociation = isSupervisor || isGerenteOuCoordenador
-  const canEditStatus = isAdmin || isGerenteOuCoordenador
+  const canEditStatus = isAdmin || isGerenteOuCoordenador || isSupervisor
 
   const [data,    setData   ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
