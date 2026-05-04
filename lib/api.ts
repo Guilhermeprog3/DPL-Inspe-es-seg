@@ -14,12 +14,13 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   const session = await getSession() as any;
   
-  if (session?.access_token || session?.accessToken) {
-    config.headers.Authorization = `Bearer ${session.access_token || session.accessToken}`;
+  const token = session?.user?.access_token || session?.user?.accessToken || session?.access_token;
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   
   return config;
-
 });
 
 export default api;

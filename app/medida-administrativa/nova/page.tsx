@@ -215,9 +215,6 @@ export default function NovaMedidaPage() {
     const fd = new FormData()
     
     const loggedUserId = (session?.user as any)?.id
-  if (loggedUserId) {
-    fd.append('userId', loggedUserId)
-  }
     fd.append('colaborador',    colabSelecionado.nome)
     fd.append('matricula',      colabSelecionado.chapa)
     fd.append('supervisor',     supSelecionado.chapa)
@@ -228,7 +225,7 @@ export default function NovaMedidaPage() {
     fd.append('gravidade',      gravidade)
     fd.append('classificacao',  classificacao)
     fd.append('origem',         origem)
-    fd.append('data',           new Date(dataMedida).toISOString())
+    fd.append('data', new Date(dataMedida).toISOString())
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
     // ── Múltiplas inspeções ──
     if (inspecoes.length > 0) fd.append('numerosInspecao', JSON.stringify(inspecoes))

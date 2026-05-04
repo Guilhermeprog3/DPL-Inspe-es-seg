@@ -29,17 +29,17 @@ const navItems = [
 ]
 
 const CLASSIFICACOES_DATA = [
-  "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESVIO DE CONDUTA","APR PREENCHIDA INCORRETAMENTE E EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO ADEQUADA","RECUSA INJUSTIFICADA EM CUMPRIR ORDENS DE TRABALHO","TAXA DE CONTATO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","DESCUMPRIR NORMAS E PROCEDIMENTOS INTERNOS DA EMPRESA","FALHA DE PROCEDIMENTO / ATO INSEGURO","FALHA DE PROCEDIMENTO / NEGLIGÊNCIA","EXERCÍCIO INDEVIDO DE FUNÇÃO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","SEM SINALIZAÇÃO DA AREA/EPI","VELOCIDADE/CELULAR","DESVIOS DE SEGURANÇA","CNH/DIREÇÃO DISTRAÍDA","DIREÇÃO DISTRAÍDA","NÃO UTILIZOU ESCADA/ANCORAGEM/TRAVA QUEDAS/LUVA ISOLANTE/NÃO UTILIZOU VEICULO COMO BARREIRA","CELULAR/OBSTRUÇÃO CÂMERA","NÃO UTILIZOU A FITA DE ANCORAGEM","VELOCIDADE/DIREÇÃO DISTRAÍDA/OBSTRUÇÃO","CÂMERA OBSTRUIDA/DIREÇÃO DISTRAÍDA","POSSIVEL USO DO CELULAR","NEGLIGÊNCIA DURANTE A ATIVIDADE","NÃO UTILIZOU A FITA DE ANCORAGEM/EPI/EPC","REALIZANDO A TAREFA COM A ÁREA DE TRABALHO NÃO ISOLADA/EPI/EPC","FALHA DE PROCEDIMENTO / ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO","NÃO UTILIZAÇÃO DOS EPI'S, EPC'S OU ESCADAS, DANIFICADAS E/OU NÃO INSPECIONADOS","EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM PORTÃO DA BASE","DEIXOU DE UTILIZAR ACESSÓRIOS OBRIGATÓRIOS PARA MOVIMENTAÇÃO DE CARGA SUSPENSA","AUTOINSPECÇÃO DIÁRIA","CONSTRUÇÃO/MANUTENÇÃO","FICHA SEGURANÇA","UTILIZAÇÃO DA VESTIMENTA DANIFICADA","SEM O USO DO CINTO DE SEGURANÇA","DESCUMPRIMENTO DA LEGISLAÇÃO DE TRÂNSITO VIGENTE DURANTE A CONDUÇÃO DE VEÍCULO DA EMPRESA","PERMITIR A APROXIMAÇÃO OU PERMANENCIA DE TERCEIROS DENTRO DA AREA ISOLADA PARA SERVIÇO","DIREÇÃO DISTRAÍDA/VELOCIDADE","VELOCIDADE/OBSTRUÇÃO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS INTERNOS","VELOCIDADE/CÂMERA OBSTRUIDA/USO DO CELULAR DURANTE CONDUÇÃO","VELOCIDADE/DIREÇÃO DISTRAIDA","NÃO COMUNICAÇÃO DE AVARIA VEICULAR","OBSTRUÇÃO CÂMERA","ATERRAMENTO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS","EFETUOU MANOBRA DE RÉ SEM AUXILIO DO GUARDIÃO/ACABOU COLIDINDO com UM TERCEIRO","TRABALHAR SEM ESCADA AMARRADA/SEM USAR EPI-EPC/NÃO UTILIZAR LUVAS ISOLANTES BT e AT NA EXECUÇÃO DA ATIVIDADE","DESCUMPRIMENTO DA HIERARQUIA FUNCIONAL /VIOLAÇÃO PROCEDIMENTO DE SEGURANÇA/INSUBORDINAÇÃO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
+  "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESVIO DE CONDUTA","APR PREENCHIDA INCORRETAMENTE E EXECUÇÃO DA TAREFA SEM SINALIZAÇÃO ADEQUADA","RECUSA INJUSTIFICADA EM CUMPRIR ORDENS DE TRABALHO","TAXA DE CONTATO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","DESCUMPRIR NORMAS E PROCEDIMENTOS INTERNOS DA EMPRESA","FALHA DE PROCEDIMENTO / ATO INSEGURO","FALHA DE PROCEDIMENTO / NEGLIGÊNCIA","EXERCÍCIO INDEVIDO DE FUNÇÃO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","SEM SINALIZAÇÃO DA AREA/EPI","VELOCIDADE/CELULAR","DESVIOS DE SEGURANÇA","CNH/DIREÇÃO DISTRAÍDA","DIREÇÃO DISTRAÍDA","NÃO UTILIZOU ESCADA/ANCORAGEM/TRAVA QUEDAS/LUVA ISOLANTE/NÃO UTILIZOU VEICULO COMO BARREIRA","CELULAR/OBSTRUÇÃO CÂMERA","NÃO UTILIZOU A FITA DE ANCORAGEM","VELOCIDADE/DIREÇÃO DISTRAÍDA/OBSTRUÇÃO","CÂMERA OBSTRUIDA/DIREÇÃO DISTRAÍDA","POSSIVEL USO DO CELULAR","NEGLIGÊNCIA DURANTE A ATIVIDADE","NÃO UTILIZOU A FITA DE ANCORAGEM/EPI/EPC","REALIZANDO A TAREFA COM A ÁREA DE TRABALHO NÃO ISOLADA/EPI/EPC","FALHA DE PROCEDIMENTO / ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO / SEM GUARDIÃO DA VIDA","ATO INSEGURO","NÃO UTILIZAÇÃO DOS EPI'S, EPC'S OU ESCADAS, DANIFICADAS E/OU NÃO INSPECIONADOS","EFETUOU MANOBRA DE RÉ WITHOUT AUXILIO DO GUARDIÃO/ACABOU COLIDINDO COM PORTÃO DA BASE","DEIXOU DE UTILIZAR ACESSÓRIOS OBRIGATÓRIOS PARA MOVIMENTAÇÃO DE CARGA SUSPENSA","AUTOINSPECÇÃO DIÁRIA","CONSTRUÇÃO/MANUTENÇÃO","FICHA SEGURANÇA","UTILIZAÇÃO DA VESTIMENTA DANIFICADA","SEM O USO DO CINTO DE SEGURANÇA","DESCUMPRIMENTO DA LEGISLAÇÃO DE TRÂNSITO VIGENTE DURANTE A CONDUÇÃO DE VEÍCULO DA EMPRESA","PERMITIR A APROXIMAÇÃO OU PERMANENCIA DE TERCEIROS DENTRO DA AREA ISOLADA PARA SERVIÇO","DIREÇÃO DISTRAÍDA/VELOCIDADE","VELOCIDADE/OBSTRUÇÃO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS INTERNOS","VELOCIDADE/CÂMERA OBSTRUIDA/USO DO CELULAR DURANTE CONDUÇÃO","VELOCIDADE/DIREÇÃO DISTRAIDA","NÃO COMUNICAÇÃO DE AVARIA VEICULAR","OBSTRUÇÃO CÂMERA","ATERRAMENTO","DESCUMPRIMENTO DE NORMAS E PROCEDIMENTOS","EFETUOU MANOBRA DE RÉ WITHOUT AUXILIO DO GUARDIÃO/ACABOU COLIDINDO com UM TERCEIRO","TRABALHAR SEM ESCADA AMARRADA/SEM USAR EPI-EPC/NÃO UTILIZAR LUVAS ISOLANTES BT e AT NA EXECUÇÃO DA ATIVIDADE","DESCUMPRIMENTO DA HIERARQUIA FUNCIONAL /VIOLAÇÃO PROCEDIMENTO DE SEGURANÇA/INSUBORDINAÇÃO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
   "OUTROS"
 ]
 
 const ORIGENS = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE GENTE']
 
 const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string; label: string }> = {
-  LEVE:              { color: '#10b981', bg: '#f0fdf4', border: '#10b981', label: 'Ocorrência de baixo impacto' },
-  MÉDIA:             { color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b', label: 'Requer atenção e acompanhamento' },
-  GRAVE:             { color: '#ef4444', bg: '#fef2f2', border: '#ef4444', label: 'Impacto significativo na segurança' },
-  GRAVÍSSIMA:        { color: '#a855f7', bg: '#faf5ff', border: '#a855f7', label: 'Risco crítico — ação imediata' },
+  LEVE:               { color: '#10b981', bg: '#f0fdf4', border: '#10b981', label: 'Ocorrência de baixo impacto' },
+  MÉDIA:              { color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b', label: 'Requer atenção e acompanhamento' },
+  GRAVE:              { color: '#ef4444', bg: '#fef2f2', border: '#ef4444', label: 'Impacto significativo na segurança' },
+  GRAVÍSSIMA:         { color: '#a855f7', bg: '#faf5ff', border: '#a855f7', label: 'Risco crítico — ação imediata' },
   'TOLERÂNCIA ZERO': { color: '#000000', bg: '#f1f5f9', border: '#000000', label: 'Violação de norma absoluta' },
 }
 
@@ -105,7 +105,6 @@ export default function EditarMedidaPage() {
   const [ocorrencia,    setOcorrencia   ] = useState('')
   const [origem,        setOrigem       ] = useState('')
 
-  // ── Múltiplas inspeções ──────────────────────────────────────────────────────
   const [inspecoes,    setInspecoes   ] = useState<string[]>([])
   const [novaInspecao, setNovaInspecao] = useState('')
 
@@ -121,7 +120,6 @@ export default function EditarMedidaPage() {
     setInspecoes(prev => prev.filter((_, i) => i !== idx))
     setHasChanges(true)
   }
-  // ────────────────────────────────────────────────────────────────────────────
 
   const [showColabDropdown,     setShowColabDropdown    ] = useState(false)
   const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
@@ -143,7 +141,10 @@ export default function EditarMedidaPage() {
 
   useEffect(() => {
     if (!session) return
-    api.get('/base-gente/recentes/').then(r => setColaboradoresRepo(r.data)).catch(console.error)
+    api.get('/base-gente/recentes/').then(r => {
+      const data = Array.isArray(r.data) ? r.data : (r.data?.data || [])
+      setColaboradoresRepo(data)
+    }).catch(console.error)
   }, [session])
 
   const colabsFiltradosNome = useMemo(() => {
@@ -171,9 +172,7 @@ export default function EditarMedidaPage() {
   }, [matSupInput, colaboradoresRepo])
 
   const filteredClassificacoes = useMemo(() =>
-    searchQuery
-      ? CLASSIFICACOES_DATA.filter(i => i.toLowerCase().includes(searchQuery.toLowerCase()))
-      : CLASSIFICACOES_DATA
+    searchQuery ? CLASSIFICACOES_DATA.filter(i => i.toLowerCase().includes(searchQuery.toLowerCase())) : CLASSIFICACOES_DATA
   , [searchQuery])
 
   function selecionarColab(item: any) {
@@ -226,7 +225,6 @@ export default function EditarMedidaPage() {
 
   useEffect(() => () => anexos.forEach(a => a.preview && URL.revokeObjectURL(a.preview)), [])
 
-  // ── Carrega dados da medida existente ────────────────────────────────────────
   useEffect(() => {
     if (!medidaId || !session) return
     async function fetchMedida() {
@@ -240,29 +238,25 @@ export default function EditarMedidaPage() {
         setMatSupInput(d.supervisor ?? '')
         setNomeSupInput(d.nomeSupervisor ?? '')
         setDataMedida(d.data ? d.data.slice(0, 10) : '')
-        setTipoCategoria((d.tipo      as TipoCategoria) ?? '')
-        setTipoMedida((d.medida       as TipoMedida)    ?? '')
+        setTipoCategoria((d.tipo as TipoCategoria) ?? '')
+        setTipoMedida((d.medida as TipoMedida) ?? '')
         setDiasSuspensao(d.diasSuspensao ? String(d.diasSuspensao) : '')
-        setGravidade((d.gravidade     as Gravidade)     ?? '')
+        setGravidade((d.gravidade as Gravidade) ?? '')
         setClassificacao(d.classificacao ?? '')
-        setSearchQuery(d.classificacao   ?? '')
-        setOcorrencia(d.ocorrencia       ?? '')
+        setSearchQuery(d.classificacao ?? '')
+        setOcorrencia(d.ocorrencia ?? '')
         setOrigem(d.origem ?? '')
 
-        // ── Múltiplas inspeções: carrega do array retornado pelo service ──
         if (Array.isArray(d.numerosInspecao) && d.numerosInspecao.length > 0) {
           setInspecoes(d.numerosInspecao)
         } else if (d.numeroInspecao) {
-          // fallback legado: campo antigo como string simples
           setInspecoes([d.numeroInspecao])
         } else {
           setInspecoes([])
         }
-        // ─────────────────────────────────────────────────────────────────
 
         if (d.classificacao) setClassificacaoSelecionada(true)
-
-        if (d.colaborador)    setColabSelecionado({ nome: d.colaborador, chapa: d.matricula })
+        if (d.colaborador) setColabSelecionado({ nome: d.colaborador, chapa: d.matricula })
         if (d.nomeSupervisor) setSupSelecionado({ nome: d.nomeSupervisor, chapa: d.supervisor })
 
         if (d.anexos && Array.isArray(d.anexos)) {
@@ -298,7 +292,6 @@ export default function EditarMedidaPage() {
     fetchMedida()
   }, [medidaId, session])
 
-  // ── Detecta mudanças ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (loadState !== 'success') return
     const current = {
@@ -325,12 +318,7 @@ export default function EditarMedidaPage() {
     setIsSaving(true)
 
     const fd = new FormData()
-
-    const loggedUserId = (session?.user as any)?.id
-  if (loggedUserId) {
-    fd.append('userId', loggedUserId)
-  }
-  
+    
     fd.append('colaborador',    nomeColabInput)
     fd.append('matricula',      matColabInput)
     fd.append('supervisor',     matSupInput)
@@ -343,9 +331,7 @@ export default function EditarMedidaPage() {
     fd.append('classificacao',  classificacao)
     fd.append('origem',         origem)
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
-    // ── Múltiplas inspeções ──
     if (inspecoes.length > 0) fd.append('numerosInspecao', JSON.stringify(inspecoes))
-    // ────────────────────────
     anexos.forEach(a => { if (a.file) fd.append('files', a.file) })
 
     try {
@@ -354,7 +340,8 @@ export default function EditarMedidaPage() {
       setHasChanges(false)
       setSuccessModal(true)
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Erro ao salvar.')
+      const msg = e.response?.data?.message
+      alert(Array.isArray(msg) ? msg.join('\n') : (msg || 'Erro ao salvar.'))
     } finally {
       setIsSaving(false)
     }
@@ -813,7 +800,6 @@ export default function EditarMedidaPage() {
                       Adicione ou remova inspeções vinculadas a esta medida
                     </p>
 
-                    {/* Input + botão Adicionar */}
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -841,7 +827,6 @@ export default function EditarMedidaPage() {
                       </button>
                     </div>
 
-                    {/* Lista de inspeções */}
                     {inspecoes.length > 0 ? (
                       <div className="mt-3 space-y-1.5">
                         {inspecoes.map((insp, idx) => (
