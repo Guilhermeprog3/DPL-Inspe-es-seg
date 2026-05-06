@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Search, SlidersHorizontal, Download, LayoutDashboard,
-  PhoneCall, UserCheck, AlertCircle,
+  UserCheck, AlertCircle,
   ChevronLeft, RefreshCw, Calendar,
   ChevronDown, MoreVertical, Edit2, Trash2, Plus, Loader2,
   CheckCircle, ChevronRight, X, Pencil, Save, Ban, Mail, Briefcase,
@@ -20,28 +20,6 @@ const navItems = [
   { label: 'Dashboard', href: '/taxa-contato', icon: LayoutDashboard },
 ]
 
-function gerarMeses() {
-  const meses = []
-  const nomeMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-  const hoje = new Date(2026, 3, 1)
-  for (let i = 0; i < 24; i++) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)
-    const value = `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-    const label = `${nomeMes[d.getMonth()]}/${d.getFullYear()}`
-    meses.push({ value, label })
-  }
-  return meses
-}
-const MESES_OPTIONS = gerarMeses()
-
-function getMesPadrao(): string {
-  const hoje = new Date()
-  const mes = String(hoje.getMonth() + 1).padStart(2, '0')
-  const ano = String(hoje.getFullYear())
-  const mesAtual = `${mes}/${ano}`
-  return MESES_OPTIONS.find(m => m.value === mesAtual)?.value ?? MESES_OPTIONS[0].value
-}
-
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   'ATIVO':     { label: 'Ativo',     color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
   'FÉRIAS':    { label: 'Férias',    color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
@@ -51,10 +29,8 @@ const STATUS_CFG: Record<string, { label: string; color: string; bg: string; bor
 }
 
 const STATUS_OPTIONS = ['ATIVO', 'FÉRIAS', 'AFASTADO', 'DESLIGADO', 'PENDENTE']
-
 const UF_LABELS: Record<string, string> = { PI: 'Piauí', MA: 'Maranhão' }
 
-// ── Adicionado 'data' como campo ordenável ──
 type SortField = 'supervisor' | 'nome' | 'data'
 type SortDir   = 'asc' | 'desc'
 
@@ -71,7 +47,6 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-// ─── Inline Status Selector ───────────────────────────────────────────────────
 function StatusSelector({ row, onStatusChange, canEdit }: {
   row: any
   onStatusChange: (id: string, newStatus: string) => void
@@ -205,7 +180,6 @@ function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
   )
 }
 
-// ─── Action Menu ──────────────────────────────────────────────────────────────
 function ActionMenu({ row, onEdit, onDelete }: { row: any; onEdit: (row: any) => void; onDelete: (row: any) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -238,7 +212,6 @@ function ActionMenu({ row, onEdit, onDelete }: { row: any; onEdit: (row: any) =>
   )
 }
 
-// ─── Delete Modal ─────────────────────────────────────────────────────────────
 function DeleteModal({ row, onConfirm, onCancel, isDeleting }: { row: any; onConfirm: () => void; onCancel: () => void; isDeleting: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
@@ -263,7 +236,6 @@ function DeleteModal({ row, onConfirm, onCancel, isDeleting }: { row: any; onCon
   )
 }
 
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
 interface DynamicOptions {
   areas: string[]
   situacoes: string[]
@@ -315,7 +287,6 @@ function EditModal({
     api.get('/base-gente/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
   }, [])
 
-  // ── Colaborador ───────────────────────────────────────────────────────────
   const [colabSelecionado,  setColabSelecionado ] = useState<any>({ nome: row?.nome, chapa: row?.chapa })
   const [nomeColabPesquisa, setNomeColabPesquisa] = useState(row?.nome  ?? '')
   const [matColabPesquisa,  setMatColabPesquisa ] = useState(row?.chapa ?? '')
@@ -343,7 +314,6 @@ function EditModal({
     setShowColabMat(false)
   }
 
-  // ── Supervisor ────────────────────────────────────────────────────────────
   const [supSelecionado,  setSupSelecionado ] = useState<any>(
     row?.supervisor ? { nome: row.supervisor, chapa: row.chapaSupervisor } : null
   )
@@ -389,7 +359,7 @@ function EditModal({
     }
   }
 
-  const selectCls  = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
+  const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13px] outline-none transition-all'
   const labelCls   = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
   const viewCls    = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
@@ -403,8 +373,6 @@ function EditModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
-
-        {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 gap-3">
           <div className="min-w-0">
             <p className="text-[15px] font-bold text-[#1a2535] truncate">{form.nome || 'Registro'}</p>
@@ -429,16 +397,11 @@ function EditModal({
             </button>
           </div>
         </div>
-
-        {/* ── Body ── */}
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
-
-          {/* ── Identificação do colaborador ── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">
               Colaborador {editMode && <span className="text-red-400">*</span>}
             </p>
-
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
                 <div style={{ position: 'relative' }}>
@@ -474,7 +437,6 @@ function EditModal({
                     </div>
                   )}
                 </div>
-
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Matrícula</label>
                   <input
@@ -506,7 +468,6 @@ function EditModal({
                     </div>
                   )}
                 </div>
-
                 {!colabSelecionado && (nomeColabPesquisa || matColabPesquisa) && (
                   <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
                     <AlertCircle size={11} /> Selecione um colaborador da lista
@@ -526,16 +487,11 @@ function EditModal({
               </div>
             )}
           </div>
-
           <div className="border-t border-slate-50" />
-
-          {/* ── Supervisor ── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Supervisor (opcional)</p>
-
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
-                {/* Nome supervisor */}
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Nome</label>
                   <input
@@ -569,8 +525,6 @@ function EditModal({
                     </div>
                   )}
                 </div>
-
-                {/* Matrícula supervisor */}
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Matrícula</label>
                   <input
@@ -620,13 +574,9 @@ function EditModal({
               </div>
             )}
           </div>
-
           <div className="border-t border-slate-50" />
-
-          {/* ── Lotação ── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Lotação</p>
-
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -734,8 +684,6 @@ function EditModal({
             )}
           </div>
         </div>
-
-        {/* ── Footer ── */}
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
           {editMode ? (
             <>
@@ -778,7 +726,6 @@ function EditModal({
   )
 }
 
-// ─── Nova Função Modal ────────────────────────────────────────────────────────
 function NovaFuncaoModal({ onClose, onSaved }: {
   onClose: () => void
   onSaved: () => void
@@ -870,34 +817,34 @@ function NovaFuncaoModal({ onClose, onSaved }: {
     </div>
   )
 }
-
-// ─── Modal Associar ───────────────────────────────────────────────────────────
-function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional, onClose, onSaved }: {
+function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional, userUf, onClose, onSaved }: {
   userRole: string
   userName: string
   userChapa: string
   userEmail: string
   userRegional: string
+  userUf: string // Adicionado para resolver o erro de tipagem
   onClose: () => void
   onSaved: (updated: any) => void
 }) {
   const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
 
-  const [allData,     setAllData    ] = useState<any[]>([])
+  const [allData, setAllData] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [busca,       setBusca      ] = useState('')
-  const [selected,    setSelected   ] = useState<any>(null)
+  const [busca, setBusca] = useState('')
+  const [selected, setSelected] = useState<any>(null)
 
-  const [novoSupervisor,      setNovoSupervisor     ] = useState('')
+  // Estados para os campos editáveis
+  const [novoSupervisor, setNovoSupervisor] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
-  const [novaArea,            setNovaArea           ] = useState('')
-  const [novaBase,            setNovaBase           ] = useState('')
+  const [novaArea, setNovaArea] = useState('')
+  const [novaBase, setNovaBase] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
-  const [success,  setSuccess ] = useState(false)
+  const [success, setSuccess] = useState(false)
 
-  const inputCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
+  const inputCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all'
   const labelCls = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
   useEffect(() => {
@@ -927,29 +874,24 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
     try {
       const payload: any = isSupervisor
         ? {
-            supervisorName:  userName.toUpperCase(),
+            supervisorName: userName.toUpperCase(),
             chapaSupervisor: userChapa,
             supervisorEmail: userEmail,
+            regional: userRegional, 
+            filial: userUf,         
           }
         : {
-            supervisorName:  novoSupervisor.toUpperCase(),
+            supervisorName: novoSupervisor.toUpperCase(),
             chapaSupervisor: novaChapaSupervisor,
             supervisorEmail: '',
           }
 
-      if (isGerenteOuCoordenador) {
-        if (novaArea) payload.area = novaArea
-        if (novaBase) payload.base = novaBase
-      }
+      payload.area = novaArea.toUpperCase()
+      payload.base = novaBase.toUpperCase()
 
       const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
-      setTimeout(() => onSaved(res.data ?? {
-        ...selected,
-        supervisor:      payload.supervisorName,
-        chapaSupervisor: payload.chapaSupervisor,
-        email:           payload.supervisorEmail,
-      }), 1000)
+      setTimeout(() => onSaved(res.data), 1000)
     } catch (e: any) {
       alert(e.response?.data?.message || 'Erro ao associar.')
     } finally {
@@ -962,18 +904,15 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
+        
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-              <Link2 size={15} className="text-emerald-600" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+              <Link2 size={15} />
             </div>
             <div>
               <p className="text-[15px] font-bold text-[#1a2535]">Associar Colaborador</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {isSupervisor
-                  ? 'Vincule colaboradores à sua supervisão'
-                  : 'Vincule colaboradores e defina supervisor, área e base'}
-              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Vincule o colaborador à sua gestão</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
@@ -982,129 +921,140 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
         </div>
 
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
-          <div>
-            <label className={labelCls}>Buscar colaborador — toda a base</label>
-            <div className="relative mb-2">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input className="w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 pl-9 pr-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all"
-                placeholder="Nome, matrícula ou função..." value={busca} onChange={e => setBusca(e.target.value)} autoFocus />
-            </div>
-            <div className="border border-[#e3e8ef] rounded-xl overflow-hidden max-h-52 overflow-y-auto">
-              {loadingData ? (
-                <div className="py-8 text-center text-[12px] text-slate-400 flex items-center justify-center gap-2">
-                  <Loader2 size={14} className="animate-spin" /> Carregando base de dados...
-                </div>
-              ) : filteredColabs.length === 0 ? (
-                <div className="py-8 text-center text-[12px] text-slate-400 font-medium">Nenhum colaborador encontrado</div>
-              ) : filteredColabs.map(c => (
-                <button key={c.id} onClick={() => handleSelectColab(c)}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0',
-                    selected?.id === c.id ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : 'hover:bg-slate-50')}>
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-slate-500">
-                    {c.nome?.charAt(0)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12.5px] font-bold text-[#1a2535] truncate uppercase">{c.nome}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">
-                      Mat. {c.chapa} · {c.funcao || 'Sem função'} · <span className="text-slate-500">{c.regional || '—'}</span>
-                    </p>
-                  </div>
-                  {c.supervisor && (
-                    <span className="text-[10px] text-slate-400 italic shrink-0 hidden sm:block">
-                      {c.supervisor.split(' ')[0]}
-                    </span>
-                  )}
-                  {selected?.id === c.id && <CheckCircle size={14} className="text-emerald-500 shrink-0" />}
-                </button>
-              ))}
-            </div>
-          </div>
+          {!selected ? (
+            <div>
+              <label className={labelCls}>Buscar colaborador</label>
+              <div className="relative mb-2">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input className={inputCls + " pl-9"} placeholder="Nome ou matrícula..." value={busca} onChange={e => setBusca(e.target.value)} />
+              </div>
+              <div className="border border-slate-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
 
-          {selected && (
+{filteredColabs.map(c => {
+  const jaEhDaEquipe = c.chapaSupervisor === userChapa;
+  
+  return (
+    <button 
+      key={c.id} 
+      // Se já for da equipe, o clique não faz nada
+      onClick={() => !jaEhDaEquipe && handleSelectColab(c)} 
+      disabled={jaEhDaEquipe}
+      className={cn(
+        "w-full px-4 py-3 text-left border-b last:border-0 flex items-center justify-between transition-all",
+        jaEhDaEquipe 
+          ? "bg-slate-50 cursor-not-allowed opacity-70" // Estilo visual de bloqueado
+          : "hover:bg-slate-50 cursor-pointer"
+      )}
+    >
+      <div className="flex flex-col">
+        <span className="text-[13px] font-bold uppercase">{c.nome}</span>
+        <span className="text-[10px] text-slate-400">Mat. {c.chapa} • {c.funcao}</span>
+      </div>
+      
+      {/* Indicadores Visuais */}
+      {jaEhDaEquipe ? (
+        <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+          <UserCheck size={10} /> Sua Equipe
+        </span>
+      ) : c.supervisor ? (
+        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+          Outro Supervisor
+        </span>
+      ) : (
+        <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
+          Disponível
+        </span>
+      )}
+    </button>
+  );
+})}
+              </div>
+            </div>
+          ) : (
             <div className="space-y-4 animate-fadeIn">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 flex items-center gap-3">
-                <CheckCircle size={15} className="text-emerald-600 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[12px] font-bold text-emerald-800 truncate uppercase">{selected.nome}</p>
-                  <p className="text-[10px] text-emerald-600">Chapa {selected.chapa} · Regional atual: {selected.regional || '—'}</p>
-                </div>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                <p className="text-[10px] font-bold text-emerald-600 uppercase">Colaborador Selecionado</p>
+                <p className="text-[13px] font-bold text-emerald-900 uppercase">{selected.nome}</p>
+                <button onClick={() => setSelected(null)} className="text-[10px] text-emerald-600 underline mt-1">Trocar colaborador</button>
               </div>
 
-              <div>
-                <label className={labelCls}>Supervisor que será atribuído</label>
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Conferência de Supervisor</p>
+                
                 {isSupervisor ? (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3">
-                    <UserCheck size={14} className="text-emerald-600 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-bold text-[#1a2535]">{userName.toUpperCase()}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        Chapa: <strong>{userChapa}</strong>
-                        {userRegional && <> · Regional: <strong>{userRegional}</strong></>}
-                      </p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-2">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase">Supervisor</span>
+                         <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Automático</span>
+                      </div>
+                      <p className="text-[12px] font-bold text-slate-700">{userName}</p>
+                      <div className="grid grid-cols-2 gap-4 mt-2 pt-2 border-t border-slate-200">
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">Matrícula</span>
+                          <span className="text-[11px] font-semibold text-slate-600">{userChapa}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">E-mail</span>
+                          <span className="text-[11px] font-semibold text-slate-600 truncate block">{userEmail}</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mt-2">
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">Regional</span>
+                          <span className="text-[11px] font-semibold text-slate-600">{userRegional}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 block">UF</span>
+                          <span className="text-[11px] font-semibold text-slate-600">{userUf}</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-[10px] text-slate-400 italic shrink-0">Automático</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={labelCls}>Nome do supervisor <span className="text-red-400">*</span></label>
-                      <input
-                        className={inputCls}
-                        placeholder="Nome completo..."
-                        value={novoSupervisor}
-                        onChange={e => setNovoSupervisor(e.target.value.toUpperCase())}
-                      />
+                    <div className="col-span-2">
+                      <label className={labelCls}>Nome do Supervisor</label>
+                      <input className={inputCls} value={novoSupervisor} onChange={e => setNovoSupervisor(e.target.value)} />
                     </div>
                     <div>
-                      <label className={labelCls}>Chapa do supervisor</label>
-                      <input
-                        className={inputCls}
-                        placeholder="Matrícula..."
-                        inputMode="numeric"
-                        value={novaChapaSupervisor}
-                        onChange={e => setNovaChapaSupervisor(e.target.value.replace(/[^0-9]/g, ''))}
-                      />
+                      <label className={labelCls}>Chapa Supervisor</label>
+                      <input className={inputCls} value={novaChapaSupervisor} onChange={e => setNovaChapaSupervisor(e.target.value)} />
                     </div>
                   </div>
                 )}
               </div>
 
-              {isGerenteOuCoordenador && (
+              <div className="pt-2 space-y-3">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ajuste de Lotação</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Área</label>
-                    <input className={inputCls} placeholder="Ex: Comercial..." value={novaArea} onChange={e => setNovaArea(e.target.value)} />
+                    <input className={inputCls} value={novaArea} onChange={e => setNovaArea(e.target.value)} />
                   </div>
                   <div>
                     <label className={labelCls}>Base</label>
-                    <input className={inputCls} placeholder="Ex: Teresina..." value={novaBase} onChange={e => setNovaBase(e.target.value)} />
+                    <input className={inputCls} value={novaBase} onChange={e => setNovaBase(e.target.value)} />
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">
-            Cancelar
-          </button>
-          <button onClick={handleSave} disabled={!canSave || isSaving || success}
-            className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
-              canSave && !success ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
-            {success
-              ? <><CheckCircle size={14} /> Associado!</>
-              : isSaving
-                ? <Loader2 size={14} className="animate-spin" />
-                : <><Link2 size={14} /> Associar colaborador</>}
+          <button onClick={onClose} className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[13px] font-medium">Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave || isSaving} className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all', canSave ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-200 text-slate-400')}>
+            {isSaving ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Confirmar Associação'}
           </button>
         </div>
       </div>
     </div>
   )
 }
-
-// ─── Modal Desassociar ────────────────────────────────────────────────────────
+// ─── DesassociarModal ─────────────────────────────────────────────────────────
+// Transfere colaboradores para um novo supervisor com autocomplete (base-gente).
+// A opção "liberar sem supervisor" foi removida — o único modo é transferência.
 function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   userRole: string
   userName: string
@@ -1115,24 +1065,35 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
 
-  const [allData,     setAllData    ] = useState<any[]>([])
+  // ── Lista de colaboradores da base ────────────────────────────────────────
+  const [allData,      setAllData    ] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [busca,       setBusca      ] = useState('')
-  const [selected,    setSelected   ] = useState<any>(null)
-  const [modoAcao,    setModoAcao   ] = useState<'transferir' | 'soltar'>('transferir')
+  const [busca,        setBusca      ] = useState('')
+  const [selected,     setSelected   ] = useState<any>(null)
 
+  // ── Campos do novo supervisor ─────────────────────────────────────────────
   const [novoSupervisor,      setNovoSupervisor     ] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
   const [novaArea,            setNovaArea           ] = useState('')
   const [novaBase,            setNovaBase           ] = useState('')
   const [novaRegional,        setNovaRegional       ] = useState('')
 
+  // ── Autocomplete do novo supervisor (base-gente) ──────────────────────────
+  const [colaboradoresRepo,  setColaboradoresRepo ] = useState<any[]>([])
+  const [novoSupSelecionado, setNovoSupSelecionado] = useState<any>(null)
+  const [nomeSupPesquisa,    setNomeSupPesquisa   ] = useState('')
+  const [matSupPesquisa,     setMatSupPesquisa    ] = useState('')
+  const [showSupNome,        setShowSupNome       ] = useState(false)
+  const [showSupMat,         setShowSupMat        ] = useState(false)
+
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
 
   const inputCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
+  const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-9 px-3 text-[13px] outline-none transition-all'
   const labelCls = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
+  // Carrega lista geral de colaboradores associados
   useEffect(() => {
     api.get('/taxa-contato/todos')
       .then(res => setAllData(res.data))
@@ -1140,6 +1101,14 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
       .finally(() => setLoadingData(false))
   }, [])
 
+  // Carrega repositório para autocomplete do supervisor
+  useEffect(() => {
+    api.get('/base-gente/recentes')
+      .then(r => setColaboradoresRepo(r.data))
+      .catch(console.error)
+  }, [])
+
+  // Colaboradores visíveis de acordo com a role
   const dataFiltrada = useMemo(() => {
     if (isSupervisor) {
       return allData.filter(d =>
@@ -1158,40 +1127,69 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     ).slice(0, 25)
   }, [dataFiltrada, busca])
 
+  // Autocomplete — filtra por nome
+  const supsFiltradosNome = useMemo(() => {
+    const t = nomeSupPesquisa.trim().toLowerCase()
+    if (t.length < 2) return []
+    return colaboradoresRepo
+      .filter(c => String(c.nome || '').toLowerCase().includes(t))
+      .slice(0, 8)
+  }, [nomeSupPesquisa, colaboradoresRepo])
+
+  // Autocomplete — filtra por chapa
+  const supsFiltradosMat = useMemo(() => {
+    const t = matSupPesquisa.trim()
+    if (!t) return []
+    return colaboradoresRepo
+      .filter(c => String(c.chapa || '').includes(t))
+      .slice(0, 8)
+  }, [matSupPesquisa, colaboradoresRepo])
+
+  // Seleciona supervisor do dropdown de autocomplete
+  function selecionarNovoSupervisor(item: any) {
+    setNovoSupSelecionado(item)
+    setNomeSupPesquisa(item.nome)
+    setMatSupPesquisa(item.chapa)
+    setNovoSupervisor(item.nome)
+    setNovaChapaSupervisor(item.chapa)
+    setShowSupNome(false)
+    setShowSupMat(false)
+  }
+
+  // Seleciona colaborador da lista principal e reseta o supervisor
   function handleSelectColab(colab: any) {
     setSelected(colab)
     setNovaArea(colab.area ?? '')
     setNovaBase(colab.base ?? '')
     setNovaRegional(colab.regional ?? '')
+    // Limpa campos do supervisor ao trocar de colaborador
     setNovoSupervisor('')
     setNovaChapaSupervisor('')
+    setNovoSupSelecionado(null)
+    setNomeSupPesquisa('')
+    setMatSupPesquisa('')
   }
 
   async function handleSave() {
     if (!selected || isSaving) return
     setIsSaving(true)
     try {
-      let res: any
-      if (modoAcao === 'soltar') {
-        res = await api.patch(`/taxa-contato/${selected.id}/soltar`)
-      } else {
-        const payload: any = {
-          supervisorName:  novoSupervisor.toUpperCase(),
-          chapaSupervisor: novaChapaSupervisor,
-          supervisorEmail: '',
-        }
-        if (isGerenteOuCoordenador) {
-          if (novaArea)     payload.area     = novaArea
-          if (novaBase)     payload.base     = novaBase
-          if (novaRegional) payload.regional = novaRegional
-        }
-        res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
+      const payload: any = {
+        supervisorName:  novoSupervisor.toUpperCase(),
+        chapaSupervisor: novaChapaSupervisor,
+        supervisorEmail: novoSupSelecionado?.email ?? '',
       }
+      if (isGerenteOuCoordenador) {
+        if (novaArea)     payload.area     = novaArea
+        if (novaBase)     payload.base     = novaBase
+        if (novaRegional) payload.regional = novaRegional
+      }
+      const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
       setTimeout(() => onSaved(res.data ?? {
         ...selected,
-        supervisor:      modoAcao === 'soltar' ? null : novoSupervisor,
-        chapaSupervisor: modoAcao === 'soltar' ? null : novaChapaSupervisor,
+        supervisor:      novoSupervisor,
+        chapaSupervisor: novaChapaSupervisor,
         regional:        novaRegional || selected.regional,
       }), 1000)
     } catch (e: any) {
@@ -1201,22 +1199,25 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     }
   }
 
-  const canSave = selected && (modoAcao === 'soltar' || novoSupervisor.trim().length > 0)
+  // Só habilita salvar depois de selecionar colaborador E supervisor da lista
+  const canSave = selected !== null && novoSupSelecionado !== null
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center">
               <Unlink2 size={15} className="text-orange-600" />
             </div>
             <div>
-              <p className="text-[15px] font-bold text-[#1a2535]">Desassociar / Transferir</p>
+              <p className="text-[15px] font-bold text-[#1a2535]">Transferir Colaborador</p>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 {isSupervisor
-                  ? 'Transfira ou libere colaboradores da sua equipe'
-                  : 'Transfira entre regionais ou libere o vínculo de supervisão'}
+                  ? 'Transfira colaboradores da sua equipe para outro supervisor'
+                  : 'Transfira colaboradores para um novo supervisor'}
               </p>
             </div>
           </div>
@@ -1225,15 +1226,23 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
           </button>
         </div>
 
+        {/* Body */}
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
+
+          {/* Busca de colaborador */}
           <div>
             <label className={labelCls}>
               {isSupervisor ? 'Colaboradores da sua equipe' : 'Buscar colaborador associado — toda a base'}
             </label>
             <div className="relative mb-2">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input className="w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 pl-9 pr-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all"
-                placeholder="Nome, matrícula ou supervisor atual..." value={busca} onChange={e => setBusca(e.target.value)} autoFocus />
+              <input
+                className="w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 pl-9 pr-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all"
+                placeholder="Nome, matrícula ou supervisor atual..."
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                autoFocus
+              />
             </div>
             <div className="border border-[#e3e8ef] rounded-xl overflow-hidden max-h-44 overflow-y-auto">
               {loadingData ? (
@@ -1245,9 +1254,14 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                   {isSupervisor ? 'Você não possui colaboradores associados' : 'Nenhum colaborador com supervisor encontrado'}
                 </div>
               ) : filteredColabs.map(c => (
-                <button key={c.id} onClick={() => handleSelectColab(c)}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0',
-                    selected?.id === c.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-slate-50')}>
+                <button
+                  key={c.id}
+                  onClick={() => handleSelectColab(c)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0',
+                    selected?.id === c.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-slate-50'
+                  )}
+                >
                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-slate-500">
                     {c.nome?.charAt(0)}
                   </div>
@@ -1265,8 +1279,11 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
             </div>
           </div>
 
+          {/* Painel de transferência — só aparece quando um colaborador é selecionado */}
           {selected && (
             <div className="space-y-4 animate-fadeIn">
+
+              {/* Banner do colaborador selecionado */}
               <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
                 <Unlink2 size={15} className="text-orange-600 shrink-0" />
                 <div className="min-w-0">
@@ -1279,89 +1296,171 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                 </div>
               </div>
 
+              {/* Autocomplete do novo supervisor */}
               <div>
-                <label className={labelCls}>O que deseja fazer?</label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <button onClick={() => setModoAcao('transferir')}
-                    className={cn('flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12px] font-bold transition-all',
-                      modoAcao === 'transferir' ? 'bg-[#094780] text-white border-[#094780]' : 'bg-white text-slate-600 border-[#e3e8ef] hover:border-[#094780]')}>
-                    <UserCheck size={13} /> Transferir supervisão
-                  </button>
-                  <button onClick={() => setModoAcao('soltar')}
-                    className={cn('flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[12px] font-bold transition-all',
-                      modoAcao === 'soltar' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-slate-600 border-[#e3e8ef] hover:border-red-400')}>
-                    <Unlink2 size={13} /> Liberar sem supervisor
-                  </button>
+                <label className={labelCls}>
+                  Novo supervisor <span className="text-red-400">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+
+                  {/* Campo Nome */}
+                  <div style={{ position: 'relative' }}>
+                    <label className={labelCls}>Nome</label>
+                    <input
+                      type="text"
+                      value={nomeSupPesquisa}
+                      placeholder="Buscar supervisor..."
+                      className={cn(
+                        inputSelCls,
+                        novoSupSelecionado
+                          ? 'border-emerald-500 bg-emerald-50/30'
+                          : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
+                      )}
+                      onChange={e => {
+                        setNomeSupPesquisa(e.target.value.replace(/[0-9]/g, ''))
+                        setNovoSupSelecionado(null)
+                        setNovoSupervisor(e.target.value)
+                        setNovaChapaSupervisor('')
+                        setMatSupPesquisa('')
+                        setShowSupNome(true)
+                      }}
+                      onFocus={() => setShowSupNome(true)}
+                      onBlur={() => setTimeout(() => setShowSupNome(false), 200)}
+                    />
+                    {novoSupSelecionado && (
+                      <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />
+                    )}
+                    {showSupNome && supsFiltradosNome.length > 0 && (
+                      <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                        {supsFiltradosNome.map((c, i) => (
+                          <div
+                            key={i}
+                            className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                            onMouseDown={() => selecionarNovoSupervisor(c)}
+                          >
+                            <p className="font-bold text-slate-700 uppercase">{c.nome}</p>
+                            <p className="text-slate-400">Chapa: {c.chapa}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo Matrícula */}
+                  <div style={{ position: 'relative' }}>
+                    <label className={labelCls}>Matrícula</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={matSupPesquisa}
+                      placeholder="Buscar chapa..."
+                      className={cn(
+                        inputSelCls,
+                        novoSupSelecionado
+                          ? 'border-emerald-500 bg-emerald-50/30'
+                          : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
+                      )}
+                      onChange={e => {
+                        setMatSupPesquisa(e.target.value.replace(/[^0-9]/g, ''))
+                        setNovoSupSelecionado(null)
+                        setNovoSupervisor('')
+                        setNovaChapaSupervisor(e.target.value)
+                        setNomeSupPesquisa('')
+                        setShowSupMat(true)
+                      }}
+                      onFocus={() => setShowSupMat(true)}
+                      onBlur={() => setTimeout(() => setShowSupMat(false), 200)}
+                    />
+                    {showSupMat && supsFiltradosMat.length > 0 && (
+                      <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                        {supsFiltradosMat.map((c, i) => (
+                          <div
+                            key={i}
+                            className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                            onMouseDown={() => selecionarNovoSupervisor(c)}
+                          >
+                            <p className="font-bold text-slate-700">{c.chapa}</p>
+                            <p className="text-slate-400 uppercase">{c.nome}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Aviso quando ainda não selecionou da lista */}
+                  {!novoSupSelecionado && (nomeSupPesquisa || matSupPesquisa) && (
+                    <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                      <AlertCircle size={11} /> Selecione um supervisor da lista
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {modoAcao === 'transferir' && (
+              {/* Campos extras para gerente/coordenador */}
+              {isGerenteOuCoordenador && (
                 <div className="space-y-3">
+                  <div>
+                    <label className={labelCls}>Regional de destino</label>
+                    <input
+                      className={inputCls}
+                      placeholder="Ex: METRO, NORTE, SUL..."
+                      value={novaRegional}
+                      onChange={e => setNovaRegional(e.target.value.toUpperCase())}
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Regional atual: <strong>{selected.regional || '—'}</strong>
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Novo supervisor <span className="text-red-400">*</span></label>
-                      <input className={inputCls} placeholder="Nome do novo supervisor..."
-                        value={novoSupervisor} onChange={e => setNovoSupervisor(e.target.value.toUpperCase())} />
+                      <label className={labelCls}>Nova área</label>
+                      <input
+                        className={inputCls}
+                        placeholder="Ex: Comercial..."
+                        value={novaArea}
+                        onChange={e => setNovaArea(e.target.value)}
+                      />
                     </div>
                     <div>
-                      <label className={labelCls}>Chapa do novo supervisor</label>
-                      <input className={inputCls} placeholder="Matrícula..."
-                        inputMode="numeric"
-                        value={novaChapaSupervisor}
-                        onChange={e => setNovaChapaSupervisor(e.target.value.replace(/[^0-9]/g, ''))} />
+                      <label className={labelCls}>Nova base</label>
+                      <input
+                        className={inputCls}
+                        placeholder="Ex: Teresina..."
+                        value={novaBase}
+                        onChange={e => setNovaBase(e.target.value)}
+                      />
                     </div>
                   </div>
-                  {isGerenteOuCoordenador && (
-                    <>
-                      <div>
-                        <label className={labelCls}>Regional de destino</label>
-                        <input className={inputCls} placeholder="Ex: METRO, NORTE, SUL..."
-                          value={novaRegional} onChange={e => setNovaRegional(e.target.value.toUpperCase())} />
-                        <p className="text-[10px] text-slate-400 mt-1">Regional atual: <strong>{selected.regional || '—'}</strong></p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className={labelCls}>Nova área</label>
-                          <input className={inputCls} placeholder="Ex: Comercial..." value={novaArea} onChange={e => setNovaArea(e.target.value)} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>Nova base</label>
-                          <input className={inputCls} placeholder="Ex: Teresina..." value={novaBase} onChange={e => setNovaBase(e.target.value)} />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {modoAcao === 'soltar' && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                  <AlertCircle size={14} className="text-red-500 shrink-0" />
-                  <p className="text-[12px] text-red-700 font-medium">
-                    O supervisor e a chapa do supervisor serão <strong>apagados</strong>. O colaborador ficará sem supervisão atribuída.
-                  </p>
                 </div>
               )}
             </div>
           )}
         </div>
 
+        {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all"
+          >
             Cancelar
           </button>
-          <button onClick={handleSave} disabled={!canSave || isSaving || success}
-            className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
+          <button
+            onClick={handleSave}
+            disabled={!canSave || isSaving || success}
+            className={cn(
+              'flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
               canSave && !success
-                ? modoAcao === 'soltar' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#094780] text-white hover:bg-[#0a5494]'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
+                ? 'bg-[#094780] text-white hover:bg-[#0a5494]'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            )}
+          >
             {success
               ? <><CheckCircle size={14} /> Concluído!</>
               : isSaving
                 ? <Loader2 size={14} className="animate-spin" />
-                : modoAcao === 'soltar'
-                  ? <><Unlink2 size={14} /> Liberar colaborador</>
-                  : <><UserCheck size={14} /> Confirmar transferência</>}
+                : <><UserCheck size={14} /> Confirmar transferência</>
+            }
           </button>
         </div>
       </div>
@@ -1379,30 +1478,51 @@ export default function TaxaContatoPage() {
   const canManageAssociation = isSupervisor || isGerenteOuCoordenador
   const canEditStatus = isAdmin || isGerenteOuCoordenador || isSupervisor
 
-  const [data,    setData   ] = useState<any[]>([])
+  const [data,     setData   ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [busca,          setBusca         ] = useState('')
-  const [campoBusca,     setCampoBusca    ] = useState('todos')
-  const [filtroArea,     setFiltroArea    ] = useState('')
-  const [filtroStatus,   setFiltroStatus  ] = useState('')
-  const [filtroBase,     setFiltroBase    ] = useState('')
-  const [filtroFuncao,   setFiltroFuncao  ] = useState('')
-  const [filtroUf,       setFiltroUf      ] = useState<string[]>([])
+  const [busca,           setBusca         ] = useState('')
+  const [campoBusca,      setCampoBusca    ] = useState('todos')
+  const [filtroArea,      setFiltroArea    ] = useState('')
+  const [filtroStatus,    setFiltroStatus  ] = useState('')
+  const [filtroBase,      setFiltroBase    ] = useState('')
+  const [filtroFuncao,    setFiltroFuncao  ] = useState('')
+  const [filtroUf,        setFiltroUf      ] = useState<string[]>([])
   const [filtroRegional, setFiltroRegional] = useState<string[]>([])
-  const [filtroMes,      setFiltroMes     ] = useState(getMesPadrao)
+  const [filtroMes,      setFiltroMes     ] = useState('')
+  const [mesesOptions,   setMesesOptions  ] = useState<{value: string, label: string}[]>([])
 
   const [sortField,   setSortField  ] = useState<SortField>('nome')
   const [sortDir,     setSortDir    ] = useState<SortDir>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 12
 
-  const [deleteTarget,    setDeleteTarget   ] = useState<any>(null)
-  const [isDeleting,      setIsDeleting     ] = useState(false)
-  const [editTarget,      setEditTarget     ] = useState<any>(null)
-  const [showNovaFuncao,  setShowNovaFuncao ] = useState(false)
-  const [showAssociar,    setShowAssociar   ] = useState(false)
+  const [deleteTarget,     setDeleteTarget   ] = useState<any>(null)
+  const [isDeleting,       setIsDeleting     ] = useState(false)
+  const [editTarget,       setEditTarget     ] = useState<any>(null)
+  const [showNovaFuncao,   setShowNovaFuncao ] = useState(false)
+  const [showAssociar,     setShowAssociar   ] = useState(false)
   const [showDesassociar, setShowDesassociar] = useState(false)
+
+  useEffect(() => {
+    async function loadCompetencias() {
+      try {
+        const res = await api.get('/taxa-contato/competencias')
+        const opts = res.data || []
+        setMesesOptions(opts)
+        if (opts.length > 0) {
+          setFiltroMes(opts[0].value)
+        }
+      } catch (err) {
+        console.error("Erro ao carregar meses do banco:", err)
+      }
+    }
+    loadCompetencias()
+  }, [])
+
+  useEffect(() => {
+    if (filtroMes) fetchData(filtroMes)
+  }, [filtroMes])
 
   const dynamicOptions = useMemo((): DynamicOptions => {
     const areas = new Set<string>(); const situacoes = new Set<string>()
@@ -1412,10 +1532,10 @@ export default function TaxaContatoPage() {
     const ufToRegionais: Record<string, Set<string>> = {}
 
     data.forEach(item => {
-      if (item.local)       locais.add(item.local)
-      if (item.area)        areas.add(item.area)
+      if (item.local)        locais.add(item.local)
+      if (item.area)         areas.add(item.area)
       if (item.codsituacao) situacoes.add(item.codsituacao.toUpperCase())
-      if (item.base)        bases.add(item.base)
+      if (item.base)         bases.add(item.base)
       if (item.funcao)      funcoes.add(item.funcao)
       if (item.filial)      ufs.add(item.filial)
       if (item.regional)    regionais.add(item.regional)
@@ -1425,13 +1545,13 @@ export default function TaxaContatoPage() {
       }
     })
     return {
-      locais:       Array.from(locais).sort(),
-      areas:        Array.from(areas).sort(),
-      situacoes:    Array.from(situacoes).sort(),
-      bases:        Array.from(bases).sort(),
-      funcoes:      Array.from(funcoes).sort(),
-      ufs:          Array.from(ufs).sort(),
-      regionais:    Array.from(regionais).sort(),
+      locais:        Array.from(locais).sort(),
+      areas:         Array.from(areas).sort(),
+      situacoes:     Array.from(situacoes).sort(),
+      bases:         Array.from(bases).sort(),
+      funcoes:       Array.from(funcoes).sort(),
+      ufs:           Array.from(ufs).sort(),
+      regionais:     Array.from(regionais).sort(),
       ufToRegionais,
     }
   }, [data])
@@ -1470,8 +1590,6 @@ export default function TaxaContatoPage() {
 
   const filtrosAtivos = [busca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf.length > 0, filtroRegional.length > 0].filter(Boolean).length
 
-  useEffect(() => { fetchData(filtroMes) }, [filtroMes]) // eslint-disable-line react-hooks/exhaustive-deps
-
   async function fetchData(competencia?: string) {
     setLoading(true)
     try {
@@ -1481,11 +1599,9 @@ export default function TaxaContatoPage() {
     finally { setLoading(false) }
   }
 
-  // ── Exportação ────────────────────────────────────────────────────────────
   async function handleExport() {
     try {
       const XLSX = await import('xlsx')
-
       const exportData = filtered.map((s: any) => ({
         'Nome':              s.nome              ?? '',
         'Matrícula':         s.chapa             ?? '',
@@ -1509,31 +1625,12 @@ export default function TaxaContatoPage() {
             })()
           : '',
       }))
-
       const ws = XLSX.utils.json_to_sheet(exportData)
-      ws['!cols'] = [
-        { wch: 36 }, { wch: 12 }, { wch: 26 }, { wch: 22 },
-        { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 18 },
-        { wch: 32 }, { wch: 14 }, { wch: 32 }, { wch: 12 }, { wch: 12 },
-      ]
-
-      const headerRange = XLSX.utils.decode_range(ws['!ref'] ?? 'A1')
-      for (let C = headerRange.s.c; C <= headerRange.e.c; C++) {
-        const cellAddr = XLSX.utils.encode_cell({ r: 0, c: C })
-        if (!ws[cellAddr]) continue
-        ws[cellAddr].s = {
-          font:      { bold: true, color: { rgb: 'FFFFFF' } },
-          fill:      { fgColor: { rgb: '094780' } },
-          alignment: { horizontal: 'center' },
-        }
-      }
-
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Taxa de Contato')
       XLSX.writeFile(wb, `taxa-contato-${filtroMes.replace('/', '-')}.xlsx`)
     } catch (err) {
       console.error('Erro ao exportar:', err)
-      alert('Erro ao gerar o arquivo Excel.')
     }
   }
 
@@ -1570,7 +1667,6 @@ export default function TaxaContatoPage() {
     setShowDesassociar(false)
   }
 
-  // ── Helper para formatar data da coluna ──────────────────────────────────
   function formatarData(raw: string | null | undefined): string | null {
     if (!raw) return null
     const s = String(raw).trim()
@@ -1608,7 +1704,6 @@ export default function TaxaContatoPage() {
     }).sort((a, b) => {
       let diff: number
       if (sortField === 'data') {
-        // Compara lexicograficamente — formato "YYYY-01-MM 00:00:00.000" ordena corretamente
         diff = (a.data ?? '').localeCompare(b.data ?? '')
       } else {
         diff = (a[sortField] || '').localeCompare(b[sortField] || '', 'pt-BR')
@@ -1617,10 +1712,10 @@ export default function TaxaContatoPage() {
     })
   }, [data, busca, campoBusca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf, filtroRegional, sortField, sortDir])
 
-  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const mesLabel   = MESES_OPTIONS.find(m => m.value === filtroMes)?.label ?? filtroMes
-  const userFullName = `${userData?.nome ?? ''} ${userData?.sobrenome ?? ''}`.trim()
+  const mesLabel   = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
+  const userFullName = userData?.nomeCompleto || userData?.name || '';
   const userChapa    = userData?.chapa ?? ''
   const userRegional = userData?.regional ?? ''
 
@@ -1675,7 +1770,7 @@ export default function TaxaContatoPage() {
           <div>
             <h2 style={{ fontFamily: 'Syne', fontWeight: 800, fontSize: '26px', color: '#0d1e33' }}>Taxa de Contato</h2>
             <p className="text-[11px] text-[#8896ab] font-bold uppercase mt-1">
-              {mesLabel} · {filtered.length} registro(s) encontrado(s)
+              {mesLabel || 'Carregando...'} · {filtered.length} registro(s) encontrado(s)
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -1687,7 +1782,8 @@ export default function TaxaContatoPage() {
                 className="gp-select-date"
                 style={{ minWidth: 180 }}
               >
-                {MESES_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                {mesesOptions.length === 0 && <option value="">Nenhuma competência...</option>}
+                {mesesOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#094780]" />
             </div>
@@ -1700,7 +1796,7 @@ export default function TaxaContatoPage() {
             {canManageAssociation && (
               <>
                 <button onClick={() => setShowDesassociar(true)} className="btn-orange">
-                  <Unlink2 size={13} /> Desassociar
+                  <Unlink2 size={13} /> Transferir
                 </button>
                 <button onClick={() => setShowAssociar(true)} className="btn-emerald">
                   <Link2 size={13} /> Associar
@@ -1715,7 +1811,6 @@ export default function TaxaContatoPage() {
           </div>
         </div>
 
-        {/* ── Filtros ── */}
         <div className="filter-wrap">
           <div className="filter-header">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -1749,7 +1844,6 @@ export default function TaxaContatoPage() {
                   </div>
                 </div>
               </div>
-
               <div className="flex gap-2 flex-1" style={{ minWidth: 0 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <FilterSelect label="Situação" value={filtroStatus} onChange={(v: string) => { setFiltroStatus(v); setCurrentPage(1) }} options={dynamicOptions.situacoes} />
@@ -1765,7 +1859,6 @@ export default function TaxaContatoPage() {
                 </div>
               </div>
             </div>
-
             <div className="flex flex-wrap gap-x-10 gap-y-3">
               <ChipFilter
                 label="Filial (UF)"
@@ -1786,14 +1879,13 @@ export default function TaxaContatoPage() {
           </div>
         </div>
 
-        {/* ── Tabela ── */}
         <div className="main-card">
           {loading ? (
-            <div className="py-20 text-center animate-pulse text-slate-400 font-bold">Carregando base de dados...</div>
+            <div className="py-20 text-center animate-pulse text-slate-400 font-bold">Carregando dados de {mesLabel}...</div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center">
               <AlertCircle size={32} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-[14px] font-semibold text-slate-400">Nenhum registro encontrado</p>
+              <p className="text-[14px] font-semibold text-slate-400">Nenhum registro encontrado em {mesLabel}</p>
             </div>
           ) : (
             <>
@@ -1801,28 +1893,19 @@ export default function TaxaContatoPage() {
                 <table className="gp-table">
                   <thead>
                     <tr>
-                      {/* ── Colaborador ── */}
                       <th className="sortable" onClick={() => handleSort('nome')}>
                         Colaborador {sortField === 'nome' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
                       <th>Função / Área</th>
                       <th>Base / Local</th>
-
-                      {/* ── Supervisor — nome + matrícula juntos ── */}
                       <th className="sortable" onClick={() => handleSort('supervisor')}>
                         Supervisor {sortField === 'supervisor' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
-
-                      {/* ── E-mail do supervisor ── */}
                       <th>E-mail Supervisor</th>
-
                       <th>Filial / Regional</th>
-
-                      {/* ── Data — ordenável ── */}
                       <th className="sortable" onClick={() => handleSort('data')}>
                         Data {sortField === 'data' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
-
                       <th>Situação</th>
                       {isAdmin && <th style={{ width: 52 }} />}
                     </tr>
@@ -1830,29 +1913,22 @@ export default function TaxaContatoPage() {
                   <tbody>
                     {paginated.map((s: any) => (
                       <tr key={s.id} className="gp-row">
-                        {/* ── Colaborador ── */}
                         <td>
                           <div className="font-bold text-[#1a2535] uppercase">{s.nome}</div>
                           <div className="text-[10px] text-slate-400 font-bold">MATRÍCULA: {s.chapa}</div>
                         </td>
-
-                        {/* ── Função / Área ── */}
                         <td>
                           <div className="flex items-center gap-1.5 text-slate-700 font-bold">
                             <Briefcase size={12} className="text-slate-400" /> {s.funcao || 'N/I'}
                           </div>
                           <div className="text-[10px] text-[#8896ab] font-bold mt-0.5 uppercase">{s.area}</div>
                         </td>
-
-                        {/* ── Base / Local ── */}
                         <td>
                           <div className="font-semibold text-slate-700">
                             {s.base || <span className="text-slate-300 italic font-normal text-xs">—</span>}
                           </div>
                           <div className="text-[10px] text-slate-400 font-medium mt-0.5">{s.local || ''}</div>
                         </td>
-
-                        {/* ── Supervisor — nome + matrícula (mesmo padrão do colaborador) ── */}
                         <td>
                           <div className="font-bold text-[#1a2535]">
                             {s.supervisor || <span className="text-slate-400 font-semibold italic text-[11px]">NÃO ASSUMIDO</span>}
@@ -1862,8 +1938,6 @@ export default function TaxaContatoPage() {
                             : null
                           }
                         </td>
-
-                        {/* ── E-mail do supervisor ── */}
                         <td>
                           {s.email
                             ? (
@@ -1875,22 +1949,16 @@ export default function TaxaContatoPage() {
                             : <span className="text-slate-300 italic text-xs">—</span>
                           }
                         </td>
-
-                        {/* ── Filial / Regional ── */}
                         <td>
                           <div className="font-bold text-slate-700">{s.filial}</div>
                           <div className="text-[10px] text-slate-400 font-bold">{s.regional}</div>
                         </td>
-
-                        {/* ── Data ── */}
                         <td>
                           {formatarData(s.data)
                             ? <div className="text-[12px] font-semibold text-slate-600">{formatarData(s.data)}</div>
                             : <span className="text-slate-300 italic text-xs">—</span>
                           }
                         </td>
-
-                        {/* ── Situação ── */}
                         <td>
                           <StatusSelector
                             row={s}
@@ -1898,7 +1966,6 @@ export default function TaxaContatoPage() {
                             canEdit={canEditStatus}
                           />
                         </td>
-
                         {isAdmin && <td><ActionMenu row={s} onEdit={setEditTarget} onDelete={setDeleteTarget} /></td>}
                       </tr>
                     ))}
@@ -1919,11 +1986,9 @@ export default function TaxaContatoPage() {
         </div>
       </div>
 
-      {/* ── Modais ── */}
       {isAdmin && deleteTarget && (
         <DeleteModal row={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} isDeleting={isDeleting} />
       )}
-
       {isAdmin && editTarget && (
         <EditModal
           row={editTarget}
@@ -1932,16 +1997,15 @@ export default function TaxaContatoPage() {
           dynamicOptions={dynamicOptions}
         />
       )}
-
       {isAdmin && showNovaFuncao && (
         <NovaFuncaoModal
           onClose={() => setShowNovaFuncao(false)}
           onSaved={() => { setShowNovaFuncao(false); fetchData(filtroMes) }}
         />
       )}
-
       {canManageAssociation && showAssociar && (
         <AssociarModal
+          userUf={userData?.uf ?? ''}
           userRole={userData?.role}
           userName={userFullName}
           userChapa={userChapa}
@@ -1951,7 +2015,6 @@ export default function TaxaContatoPage() {
           onSaved={handleAssociacaoSaved}
         />
       )}
-
       {canManageAssociation && showDesassociar && (
         <DesassociarModal
           userRole={userData?.role}

@@ -449,12 +449,12 @@ export default function ListagemMedidasPage() {
           case 'supervisor':    return m.nomeSupervisor?.toLowerCase().includes(t)
           case 'matSupervisor': return m.supervisor?.toLowerCase().includes(t)
           default: return (
-            m.colaborador?.toLowerCase().includes(t)    ||
-            m.matricula?.toLowerCase().includes(t)      ||
-            m.nomeSupervisor?.toLowerCase().includes(t) ||
-            m.supervisor?.toLowerCase().includes(t)     ||
-            m.id?.toLowerCase().includes(t)
-          )
+  m.colaborador?.toLowerCase().includes(t)    ||
+  m.matricula?.toLowerCase().includes(t)      ||
+  m.nomeSupervisor?.toLowerCase().includes(t) ||
+  m.supervisor?.toLowerCase().includes(t)     ||
+  String(m.id || '').toLowerCase().includes(t)
+)
         }
       })()
       return (

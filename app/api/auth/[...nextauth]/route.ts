@@ -42,7 +42,8 @@ const handler = NextAuth({
 
         return {
           id: data.user.id,
-          name: data.user.nome,
+          name: data.user.nomeCompleto,
+          nomeCompleto: data.user.nomeCompleto,
           email: data.user.email,
           role: data.user.role,
           uf: data.user.uf,
@@ -67,7 +68,8 @@ const handler = NextAuth({
     token.uf = (user as any).uf;
     token.regional = (user as any).regional;
     // Garante que a chapa vinda do authorize seja salva no token JWT
-    token.chapa = (user as any).chapa; 
+    token.chapa = (user as any).chapa;
+    token.nomeCompleto = (user as any).nomeCompleto;
   }
   return token;
 },
@@ -79,7 +81,9 @@ async session({ session, token }) {
     (session.user as any).regional = token.regional;
     (session.user as any).access_token = token.accessToken;
     // Garante que a chapa do token seja exposta na sessão do frontend e enviada no cabeçalho
-    (session.user as any).chapa = token.chapa; 
+    (session.user as any).chapa = token.chapa;
+    (session.user as any).nomeCompleto = token.nomeCompleto;
+    session.user.name = token.nomeCompleto as string;
   }
   return session;
 },
