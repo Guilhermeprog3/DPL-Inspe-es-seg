@@ -40,7 +40,7 @@ const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string;
   MÉDIA:              { color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b', label: 'Requer atenção e acompanhamento' },
   GRAVE:              { color: '#ef4444', bg: '#fef2f2', border: '#ef4444', label: 'Impacto significativo na segurança' },
   GRAVÍSSIMA:         { color: '#a855f7', bg: '#faf5ff', border: '#a855f7', label: 'Risco crítico — ação imediata' },
-  'TOLERÂNCIA ZERO': { color: '#000000', bg: '#f1f5f9', border: '#000000', label: 'Violação de norma absoluta' },
+  'TOLERÂNCIA ZERO':  { color: '#000000', bg: '#f1f5f9', border: '#000000', label: 'Violação de norma absoluta' },
 }
 
 const TABS = [
@@ -147,6 +147,7 @@ export default function EditarMedidaPage() {
     }).catch(console.error)
   }, [session])
 
+  // ── Filtros de busca — comparação sempre em string ──────────────────────────
   const colabsFiltradosNome = useMemo(() => {
     const t = nomeColabInput.trim().toLowerCase()
     if (t.length < 2) return []
@@ -175,19 +176,23 @@ export default function EditarMedidaPage() {
     searchQuery ? CLASSIFICACOES_DATA.filter(i => i.toLowerCase().includes(searchQuery.toLowerCase())) : CLASSIFICACOES_DATA
   , [searchQuery])
 
+  // ── Helpers de seleção ──────────────────────────────────────────────────────
+  // A chave da correção: sempre normalizar chapa para string antes de comparar
   function selecionarColab(item: any) {
-    setColabSelecionado(item)
-    setNomeColabInput(item.nome)
-    setMatColabInput(item.chapa)
+    const normalizado = { ...item, chapa: String(item.chapa ?? '') }
+    setColabSelecionado(normalizado)
+    setNomeColabInput(normalizado.nome)
+    setMatColabInput(normalizado.chapa)
     setShowColabDropdown(false)
     setShowMatriculaDropdown(false)
     setHasChanges(true)
   }
 
   function selecionarSupervisor(item: any) {
-    setSupSelecionado(item)
-    setNomeSupInput(item.nome)
-    setMatSupInput(item.chapa)
+    const normalizado = { ...item, chapa: String(item.chapa ?? '') }
+    setSupSelecionado(normalizado)
+    setNomeSupInput(normalizado.nome)
+    setMatSupInput(normalizado.chapa)
     setShowSupDropdown(false)
     setShowMatSupDropdown(false)
     setHasChanges(true)
@@ -233,9 +238,12 @@ export default function EditarMedidaPage() {
         const res = await api.get(`/medidas/${medidaId}`)
         const d   = res.data
 
+        const chapaColab = String(d.matricula ?? '')
+        const chapaSup   = String(d.supervisor ?? '')
+
         setNomeColabInput(d.colaborador ?? '')
-        setMatColabInput(d.matricula ?? '')
-        setMatSupInput(d.supervisor ?? '')
+        setMatColabInput(chapaColab)
+        setMatSupInput(chapaSup)
         setNomeSupInput(d.nomeSupervisor ?? '')
         setDataMedida(d.data ? d.data.slice(0, 10) : '')
         setTipoCategoria((d.tipo as TipoCategoria) ?? '')
@@ -256,12 +264,14 @@ export default function EditarMedidaPage() {
         }
 
         if (d.classificacao) setClassificacaoSelecionada(true)
-        if (d.colaborador) setColabSelecionado({ nome: d.colaborador, chapa: d.matricula })
-        if (d.nomeSupervisor) setSupSelecionado({ nome: d.nomeSupervisor, chapa: d.supervisor })
+
+        // Popula os objetos selecionados com chapa sempre como string
+        if (d.colaborador) setColabSelecionado({ nome: d.colaborador, chapa: chapaColab })
+        if (d.nomeSupervisor) setSupSelecionado({ nome: d.nomeSupervisor, chapa: chapaSup })
 
         if (d.anexos && Array.isArray(d.anexos)) {
           setAnexos(d.anexos.map((a: any) => ({
-            id:   a.id,
+            id:   String(a.id),
             nome: a.nome,
             url:  a.url,
             tipo: a.tipo || 'application/octet-stream',
@@ -270,8 +280,8 @@ export default function EditarMedidaPage() {
 
         setOriginal({
           colaborador:     d.colaborador    ?? '',
-          matricula:       d.matricula      ?? '',
-          supervisor:      d.supervisor     ?? '',
+          matricula:       chapaColab,
+          supervisor:      chapaSup,
           nomeSupervisor:  d.nomeSupervisor ?? '',
           data:            d.data ? d.data.slice(0, 10) : '',
           tipo:            d.tipo           ?? '',
@@ -318,7 +328,6 @@ export default function EditarMedidaPage() {
     setIsSaving(true)
 
     const fd = new FormData()
-    
     fd.append('colaborador',    nomeColabInput)
     fd.append('matricula',      matColabInput)
     fd.append('supervisor',     matSupInput)
@@ -331,7 +340,7 @@ export default function EditarMedidaPage() {
     fd.append('classificacao',  classificacao)
     fd.append('origem',         origem)
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
-    if (inspecoes.length > 0) fd.append('numerosInspecao', JSON.stringify(inspecoes))
+    if (inspecoes.length > 0) fd.append('numerosInspecao', inspecoes.join(','))
     anexos.forEach(a => { if (a.file) fd.append('files', a.file) })
 
     try {
@@ -370,17 +379,27 @@ export default function EditarMedidaPage() {
   const tabOrder: TabKey[] = ['identificacao', 'classificacao', 'gravidade', 'ocorrencia', 'anexos']
   const allValid           = tabOrder.every(k => tabValid[k])
 
+  // ── Helpers de estilo ───────────────────────────────────────────────────────
+  // Verifica se o item está "confirmado" — chapa e nome batem com o selecionado
+  const colabConfirmado = !!colabSelecionado &&
+    String(colabSelecionado.chapa) === matColabInput &&
+    colabSelecionado.nome === nomeColabInput
+
+  const supConfirmado = !!supSelecionado &&
+    String(supSelecionado.chapa) === matSupInput &&
+    supSelecionado.nome === nomeSupInput
+
   const inputCls = (isSelected?: boolean) => cn(
     'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13.5px] outline-none transition-all',
     isSelected
-      ? 'border-emerald-200 bg-emerald-50/30'
+      ? 'border-emerald-500 bg-emerald-50/30'
       : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
   )
 
   const inputClsWithError = (isSelected: boolean, hasError: boolean) => cn(
     'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13.5px] outline-none transition-all',
     isSelected
-      ? 'border-emerald-200 bg-emerald-50/30'
+      ? 'border-emerald-500 bg-emerald-50/30'
       : hasError
         ? 'border-red-400 bg-red-50/40 focus:border-red-500'
         : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
@@ -434,16 +453,13 @@ export default function EditarMedidaPage() {
 
           <div className="px-7 flex overflow-x-auto">
             {TABS.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+              <button key={t.key} onClick={() => setTab(t.key)}
                 className={cn(
                   'flex items-center gap-2 px-5 py-4 text-[13.5px] border-b-2 whitespace-nowrap transition-all',
                   tab === t.key
                     ? 'text-[#094780] border-[#094780] font-semibold'
                     : 'text-[#9ca3af] border-transparent hover:text-slate-600'
-                )}
-              >
+                )}>
                 {t.label}
                 {tabValid[t.key] && t.key !== 'gravidade' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -465,90 +481,160 @@ export default function EditarMedidaPage() {
                 {/* MATRÍCULAS */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
+
+                  {/* Matrícula colaborador */}
                   <div className="relative">
                     <input
-                      type="text" inputMode="numeric" value={matColabInput} placeholder="Mat. Colaborador"
+                      type="text"
+                      inputMode="numeric"
+                      value={matColabInput}
+                      placeholder="Mat. Colaborador"
                       className={inputClsWithError(
-                        !!colabSelecionado && colabSelecionado.chapa === matColabInput,
+                        colabConfirmado,
                         touched['matColab'] === true && !colabSelecionado
                       )}
-                      onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); setMatColabInput(val); setColabSelecionado(null); setShowMatriculaDropdown(true); setHasChanges(true) }}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        setMatColabInput(val)
+                        setColabSelecionado(null)
+                        setShowMatriculaDropdown(true)
+                        setHasChanges(true)
+                      }}
                       onFocus={() => setShowMatriculaDropdown(true)}
-                      onBlur={() => { touch('matColab'); setTimeout(() => setShowMatriculaDropdown(false), 200) }}
+                      onBlur={() => {
+                        touch('matColab')
+                        setTimeout(() => setShowMatriculaDropdown(false), 200)
+                      }}
                     />
                     <AbsoluteDropdown open={showMatriculaDropdown && colabsFiltradosMat.length > 0}>
                       {colabsFiltradosMat.map((c, i) => (
-                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors" onMouseDown={() => selecionarColab(c)}>
-                          <p className="font-bold text-slate-700">{c.chapa}</p><p className="text-slate-400">{c.nome}</p>
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
+                          onMouseDown={() => selecionarColab(c)}>
+                          <p className="font-bold text-slate-700">{c.chapa}</p>
+                          <p className="text-slate-400">{c.nome}</p>
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['matColab'] && !colabSelecionado && matColabInput && <FieldError message="Selecione um colaborador da lista" />}
+                    {touched['matColab'] && !colabSelecionado && matColabInput && (
+                      <FieldError message="Selecione um colaborador da lista" />
+                    )}
                   </div>
+
+                  {/* Matrícula supervisor */}
                   <div className="relative">
                     <input
-                      type="text" inputMode="numeric" value={matSupInput} placeholder="Mat. Supervisor"
+                      type="text"
+                      inputMode="numeric"
+                      value={matSupInput}
+                      placeholder="Mat. Supervisor"
                       className={inputClsWithError(
-                        !!supSelecionado && supSelecionado.chapa === matSupInput,
+                        supConfirmado,
                         touched['matSup'] === true && !supSelecionado
                       )}
-                      onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); setMatSupInput(val); setSupSelecionado(null); setShowMatSupDropdown(true); setHasChanges(true) }}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9]/g, '')
+                        setMatSupInput(val)
+                        setSupSelecionado(null)
+                        setShowMatSupDropdown(true)
+                        setHasChanges(true)
+                      }}
                       onFocus={() => setShowMatSupDropdown(true)}
-                      onBlur={() => { touch('matSup'); setTimeout(() => setShowMatSupDropdown(false), 200) }}
+                      onBlur={() => {
+                        touch('matSup')
+                        setTimeout(() => setShowMatSupDropdown(false), 200)
+                      }}
                     />
                     <AbsoluteDropdown open={showMatSupDropdown && supsFiltradosMat.length > 0}>
                       {supsFiltradosMat.map((c, i) => (
-                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors" onMouseDown={() => selecionarSupervisor(c)}>
-                          <p className="font-bold text-slate-700">{c.chapa}</p><p className="text-slate-400">{c.nome}</p>
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
+                          onMouseDown={() => selecionarSupervisor(c)}>
+                          <p className="font-bold text-slate-700">{c.chapa}</p>
+                          <p className="text-slate-400">{c.nome}</p>
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['matSup'] && !supSelecionado && matSupInput && <FieldError message="Selecione um supervisor da lista" />}
+                    {touched['matSup'] && !supSelecionado && matSupInput && (
+                      <FieldError message="Selecione um supervisor da lista" />
+                    )}
                   </div>
                 </div>
 
                 {/* NOMES */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
+
+                  {/* Nome colaborador */}
                   <div className="relative">
                     <input
-                      type="text" value={nomeColabInput} placeholder="Pesquisar nome..."
+                      type="text"
+                      value={nomeColabInput}
+                      placeholder="Pesquisar nome..."
                       className={inputClsWithError(
-                        !!colabSelecionado && colabSelecionado.nome === nomeColabInput,
+                        colabConfirmado,
                         touched['nomeColab'] === true && !colabSelecionado
                       )}
-                      onChange={e => { const val = e.target.value.replace(/[0-9]/g, ''); setNomeColabInput(val); setColabSelecionado(null); setShowColabDropdown(true); setHasChanges(true) }}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[0-9]/g, '')
+                        setNomeColabInput(val)
+                        setColabSelecionado(null)
+                        setShowColabDropdown(true)
+                        setHasChanges(true)
+                      }}
                       onFocus={() => setShowColabDropdown(true)}
-                      onBlur={() => { touch('nomeColab'); setTimeout(() => setShowColabDropdown(false), 200) }}
+                      onBlur={() => {
+                        touch('nomeColab')
+                        setTimeout(() => setShowColabDropdown(false), 200)
+                      }}
                     />
                     <AbsoluteDropdown open={showColabDropdown && colabsFiltradosNome.length > 0}>
                       {colabsFiltradosNome.map((c, i) => (
-                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors" onMouseDown={() => selecionarColab(c)}>
-                          <p className="font-bold text-slate-700">{c.nome}</p><p className="text-slate-400">Chapa: {c.chapa}</p>
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
+                          onMouseDown={() => selecionarColab(c)}>
+                          <p className="font-bold text-slate-700">{c.nome}</p>
+                          <p className="text-slate-400">Chapa: {c.chapa}</p>
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['nomeColab'] && !colabSelecionado && nomeColabInput && <FieldError message="Selecione um colaborador da lista" />}
+                    {touched['nomeColab'] && !colabSelecionado && nomeColabInput && (
+                      <FieldError message="Selecione um colaborador da lista" />
+                    )}
                   </div>
+
+                  {/* Nome supervisor */}
                   <div className="relative">
                     <input
-                      type="text" value={nomeSupInput} placeholder="Nome do supervisor"
+                      type="text"
+                      value={nomeSupInput}
+                      placeholder="Nome do supervisor"
                       className={inputClsWithError(
-                        !!supSelecionado && supSelecionado.nome === nomeSupInput,
+                        supConfirmado,
                         touched['nomeSup'] === true && !supSelecionado
                       )}
-                      onChange={e => { const val = e.target.value.replace(/[0-9]/g, ''); setNomeSupInput(val); setSupSelecionado(null); setShowSupDropdown(true); setHasChanges(true) }}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[0-9]/g, '')
+                        setNomeSupInput(val)
+                        setSupSelecionado(null)
+                        setShowSupDropdown(true)
+                        setHasChanges(true)
+                      }}
                       onFocus={() => setShowSupDropdown(true)}
-                      onBlur={() => { touch('nomeSup'); setTimeout(() => setShowSupDropdown(false), 200) }}
+                      onBlur={() => {
+                        touch('nomeSup')
+                        setTimeout(() => setShowSupDropdown(false), 200)
+                      }}
                     />
                     <AbsoluteDropdown open={showSupDropdown && supsFiltradosNome.length > 0}>
                       {supsFiltradosNome.map((c, i) => (
-                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors" onMouseDown={() => selecionarSupervisor(c)}>
-                          <p className="font-bold text-slate-700">{c.nome}</p><p className="text-slate-400">Chapa: {c.chapa}</p>
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
+                          onMouseDown={() => selecionarSupervisor(c)}>
+                          <p className="font-bold text-slate-700">{c.nome}</p>
+                          <p className="text-slate-400">Chapa: {c.chapa}</p>
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['nomeSup'] && !supSelecionado && nomeSupInput && <FieldError message="Selecione um supervisor da lista" />}
+                    {touched['nomeSup'] && !supSelecionado && nomeSupInput && (
+                      <FieldError message="Selecione um supervisor da lista" />
+                    )}
                   </div>
                 </div>
 
@@ -556,7 +642,8 @@ export default function EditarMedidaPage() {
                 <div className="grid grid-cols-[180px_auto] gap-4 items-center px-6 py-4">
                   <span className={labelCls}>Data *</span>
                   <input
-                    type="date" value={dataMedida}
+                    type="date"
+                    value={dataMedida}
                     onChange={e => { setDataMedida(e.target.value); setHasChanges(true) }}
                     className={cn(inputCls(), 'w-[200px]')}
                   />
@@ -598,7 +685,9 @@ export default function EditarMedidaPage() {
                 {tipoMedida === 'SUSPENSÃO' && (
                   <div className="p-6 border-t bg-slate-50/30 flex items-center gap-4">
                     <span className="text-xs font-bold text-slate-500 uppercase">Dias *</span>
-                    <input type="number" value={diasSuspensao} onChange={e => { setDiasSuspensao(e.target.value); setHasChanges(true) }} className={cn(inputCls(), 'max-w-[120px]')} />
+                    <input type="number" value={diasSuspensao}
+                      onChange={e => { setDiasSuspensao(e.target.value); setHasChanges(true) }}
+                      className={cn(inputCls(), 'max-w-[120px]')} />
                   </div>
                 )}
               </div>
@@ -614,7 +703,8 @@ export default function EditarMedidaPage() {
                 </div>
                 <div className="p-4 space-y-2">
                   {Object.entries(GRAVIDADE_CFG).map(([g, cfg]) => (
-                    <div key={g} onClick={() => { setGravidade(gravidade === g ? '' : (g as Gravidade)); setHasChanges(true) }}
+                    <div key={g}
+                      onClick={() => { setGravidade(gravidade === g ? '' : (g as Gravidade)); setHasChanges(true) }}
                       className={cn('p-4 rounded-xl border-2 cursor-pointer flex items-center gap-4 transition-all group',
                         gravidade === g ? 'shadow-sm' : 'border-transparent bg-slate-50/60 hover:bg-slate-100/60')}
                       style={gravidade === g ? { borderColor: cfg.border, backgroundColor: cfg.bg } : {}}>
@@ -629,7 +719,8 @@ export default function EditarMedidaPage() {
                 </div>
                 {gravidade && (
                   <div className="px-6 pb-4">
-                    <button onClick={() => { setGravidade(''); setHasChanges(true) }} className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2">
+                    <button onClick={() => { setGravidade(''); setHasChanges(true) }}
+                      className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2">
                       Limpar seleção
                     </button>
                   </div>
@@ -645,7 +736,6 @@ export default function EditarMedidaPage() {
                 <div className={cn(secTitle, 'rounded-t-xl')}>Detalhes da Ocorrência</div>
                 <div className="p-6 space-y-6 overflow-visible">
 
-                  {/* CLASSIFICAÇÃO */}
                   <div>
                     <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Desvio *</label>
                     <div className="relative">
@@ -655,14 +745,20 @@ export default function EditarMedidaPage() {
                         className={cn(
                           'w-full bg-[#f8fafc] border rounded-lg h-11 pl-10 pr-10 text-[13.5px] outline-none transition-all',
                           classificacaoSelecionada
-                            ? 'border-emerald-200 bg-emerald-50/30'
+                            ? 'border-emerald-500 bg-emerald-50/30'
                             : touched['classificacao'] && !classificacaoSelecionada
                               ? 'border-red-400 bg-red-50/40 focus:border-red-500'
                               : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
                         )}
                         placeholder="Busque e selecione um motivo..."
                         value={searchQuery}
-                        onChange={e => { setSearchQuery(e.target.value); setClassificacaoSelecionada(false); setClassificacao(''); setShowClassifDropdown(true); setHasChanges(true) }}
+                        onChange={e => {
+                          setSearchQuery(e.target.value)
+                          setClassificacaoSelecionada(false)
+                          setClassificacao('')
+                          setShowClassifDropdown(true)
+                          setHasChanges(true)
+                        }}
                         onFocus={() => setShowClassifDropdown(true)}
                         onBlur={() => {
                           touch('classificacao')
@@ -672,13 +768,23 @@ export default function EditarMedidaPage() {
                           }, 200)
                         }}
                       />
-                      {classificacaoSelecionada && <CheckCircle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none" />}
-                      {touched['classificacao'] && !classificacaoSelecionada && searchQuery && <AlertCircle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-red-400 pointer-events-none" />}
+                      {classificacaoSelecionada && (
+                        <CheckCircle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none" />
+                      )}
+                      {touched['classificacao'] && !classificacaoSelecionada && searchQuery && (
+                        <AlertCircle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-red-400 pointer-events-none" />
+                      )}
                       <AbsoluteDropdown open={showClassifDropdown}>
                         {filteredClassificacoes.length > 0
                           ? filteredClassificacoes.map((item, i) => (
                               <button key={i} type="button"
-                                onMouseDown={() => { setClassificacao(item); setSearchQuery(item); setClassificacaoSelecionada(true); setShowClassifDropdown(false); setHasChanges(true) }}
+                                onMouseDown={() => {
+                                  setClassificacao(item)
+                                  setSearchQuery(item)
+                                  setClassificacaoSelecionada(true)
+                                  setShowClassifDropdown(false)
+                                  setHasChanges(true)
+                                }}
                                 className={cn('w-full text-left px-4 py-3 text-[12.5px] border-b border-slate-50 last:border-0 transition-colors',
                                   classificacao === item ? 'bg-blue-50 text-[#094780] font-semibold' : 'text-slate-600 hover:bg-slate-50')}>
                                 {item}
@@ -688,18 +794,23 @@ export default function EditarMedidaPage() {
                         }
                       </AbsoluteDropdown>
                     </div>
-                    {touched['classificacao'] && !classificacaoSelecionada && <FieldError message="Selecione uma classificação da lista" />}
+                    {touched['classificacao'] && !classificacaoSelecionada && (
+                      <FieldError message="Selecione uma classificação da lista" />
+                    )}
                   </div>
 
-                  {/* DESCRIÇÃO */}
                   <div className="space-y-1.5">
                     <label className="text-[12px] font-bold text-slate-500 uppercase block">
                       Descrição * <span className="font-normal normal-case text-slate-400">(mín. 10 caracteres)</span>
                     </label>
                     <textarea
-                      value={ocorrencia} onChange={e => { setOcorrencia(e.target.value); setHasChanges(true) }} rows={6}
+                      value={ocorrencia}
+                      onChange={e => { setOcorrencia(e.target.value); setHasChanges(true) }}
+                      rows={6}
                       className={cn('w-full bg-[#f8fafc] border rounded-lg px-3 py-3 text-[13.5px] outline-none transition-all resize-none',
-                        ocorrencia.length > 0 && ocorrencia.trim().length < 10 ? 'border-red-300 focus:border-red-400' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
+                        ocorrencia.length > 0 && ocorrencia.trim().length < 10
+                          ? 'border-red-300 focus:border-red-400'
+                          : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
                       placeholder="Detalhes..."
                     />
                     <div className="flex items-center justify-between">
@@ -720,7 +831,6 @@ export default function EditarMedidaPage() {
           {tab === 'anexos' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6 space-y-4">
 
-              {/* CARD: Anexos */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={secTitle}>Anexos</div>
                 <div className="p-6 border-b border-[#e3e8ef]">
@@ -730,8 +840,7 @@ export default function EditarMedidaPage() {
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
                     onDragLeave={() => setIsDragging(false)}
-                    onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}
-                  >
+                    onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}>
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
                       <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border transition-all',
                         isDragging ? 'bg-blue-100 border-blue-300 text-[#094780]' : 'bg-white border-slate-200 text-slate-400')}>
@@ -741,7 +850,8 @@ export default function EditarMedidaPage() {
                       <p className="text-[11px] text-slate-400">Imagens e PDFs aceitos</p>
                     </div>
                   </div>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e => handleFilesAdd(e.target.files)} />
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden"
+                    onChange={e => handleFilesAdd(e.target.files)} />
                 </div>
 
                 {anexos.length > 0 && (
@@ -750,7 +860,8 @@ export default function EditarMedidaPage() {
                       <div key={a.id} className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-slate-200 transition-all">
                         <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
                           {(a.url || a.preview) && a.tipo.startsWith('image/') ? (
-                            <img src={a.preview || `${process.env.NEXT_PUBLIC_API_URL}/medidas/anexo/${a.id}`} className="w-full h-full object-cover" alt={a.nome} />
+                            <img src={a.preview || `${process.env.NEXT_PUBLIC_API_URL}/medidas/anexo/${a.id}`}
+                              className="w-full h-full object-cover" alt={a.nome} />
                           ) : renderIcon(a.tipo)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -759,7 +870,9 @@ export default function EditarMedidaPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {a.url && (
-                            <a href={`${process.env.NEXT_PUBLIC_API_URL}/medidas/anexo/${a.id}`} target="_blank" rel="noopener noreferrer" className="p-2 text-slate-400 hover:text-[#094780] transition-colors">
+                            <a href={`${process.env.NEXT_PUBLIC_API_URL}/medidas/anexo/${a.id}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="p-2 text-slate-400 hover:text-[#094780] transition-colors">
                               <Upload size={14} className="rotate-180" />
                             </a>
                           )}
@@ -773,13 +886,13 @@ export default function EditarMedidaPage() {
                 )}
               </div>
 
-              {/* CARD: Origem */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={secTitle}>Origem *</div>
                 <div className="px-6 py-5">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ORIGENS.map(op => (
-                      <button key={op} type="button" onClick={() => { setOrigem(origem === op ? '' : op); setHasChanges(true) }}
+                      <button key={op} type="button"
+                        onClick={() => { setOrigem(origem === op ? '' : op); setHasChanges(true) }}
                         className={cn('py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative',
                           origem === op ? 'bg-[#094780] border-[#094780] text-white shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-[#094780]/30 hover:bg-blue-50/30')}>
                         {op}
@@ -790,7 +903,6 @@ export default function EditarMedidaPage() {
                 </div>
               </div>
 
-              {/* ─── CARD: Múltiplas Inspeções CLICK ─── */}
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
                 <div className={secTitle}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
@@ -799,7 +911,6 @@ export default function EditarMedidaPage() {
                     <p className="text-[11px] text-slate-400 mt-0.5 mb-4">
                       Adicione ou remova inspeções vinculadas a esta medida
                     </p>
-
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -812,17 +923,12 @@ export default function EditarMedidaPage() {
                           className={cn(inputCls(), 'pl-8')}
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={adicionarInspecao}
+                      <button type="button" onClick={adicionarInspecao}
                         disabled={!novaInspecao.trim() || inspecoes.includes(novaInspecao.trim())}
-                        className={cn(
-                          'px-4 py-2 rounded-lg text-xs font-bold transition-all border shrink-0',
+                        className={cn('px-4 py-2 rounded-lg text-xs font-bold transition-all border shrink-0',
                           novaInspecao.trim() && !inspecoes.includes(novaInspecao.trim())
                             ? 'bg-[#094780] text-white border-[#094780] hover:bg-[#0a5494]'
-                            : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                        )}
-                      >
+                            : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')}>
                         + Adicionar
                       </button>
                     </div>
@@ -833,7 +939,8 @@ export default function EditarMedidaPage() {
                           <div key={idx} className="scale-in flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
                             <Link2 size={13} className="text-[#094780] shrink-0" />
                             <span className="text-[12px] font-bold text-[#094780] flex-1">CLICK #{insp}</span>
-                            <button type="button" onClick={() => removerInspecao(idx)} className="text-slate-300 hover:text-red-400 transition-colors">
+                            <button type="button" onClick={() => removerInspecao(idx)}
+                              className="text-slate-300 hover:text-red-400 transition-colors">
                               <X size={14} />
                             </button>
                           </div>
@@ -852,19 +959,20 @@ export default function EditarMedidaPage() {
 
         {/* ─── BARRA INFERIOR ─── */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e3e8ef] px-7 py-4 flex items-center justify-between z-50">
-          <button onClick={() => setDeleteModal(true)} className="flex items-center gap-2 text-red-500 font-bold text-sm hover:text-red-600 transition-colors">
+          <button onClick={() => setDeleteModal(true)}
+            className="flex items-center gap-2 text-red-500 font-bold text-sm hover:text-red-600 transition-colors">
             <Trash2 size={16} /> Excluir
           </button>
           <div className="flex gap-3">
-            <button onClick={() => router.back()} className="px-4 py-2 border border-[#e3e8ef] rounded-lg text-sm font-bold hover:bg-slate-50 transition-all">
+            <button onClick={() => router.back()}
+              className="px-4 py-2 border border-[#e3e8ef] rounded-lg text-sm font-bold hover:bg-slate-50 transition-all">
               Cancelar
             </button>
             <button
               disabled={!hasChanges || !allValid || isSaving}
               onClick={handleSave}
               className={cn('px-6 py-2 rounded-lg text-white font-bold text-sm transition-all',
-                hasChanges && allValid ? 'bg-[#094780] shadow-lg shadow-blue-900/20 hover:bg-[#0a5494]' : 'bg-gray-200 cursor-not-allowed')}
-            >
+                hasChanges && allValid ? 'bg-[#094780] shadow-lg shadow-blue-900/20 hover:bg-[#0a5494]' : 'bg-gray-200 cursor-not-allowed')}>
               {isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Salvar Alterações'}
             </button>
           </div>
@@ -879,7 +987,8 @@ export default function EditarMedidaPage() {
               </div>
               <h3 className="font-bold text-xl mb-2">Atualizado!</h3>
               <p className="text-slate-500 text-sm mb-8">As alterações foram salvas.</p>
-              <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#094780] text-white rounded-2xl font-bold hover:bg-[#0a5494] transition-colors">
+              <button onClick={() => router.push('/medida-administrativa/lista')}
+                className="w-full py-4 bg-[#094780] text-white rounded-2xl font-bold hover:bg-[#0a5494] transition-colors">
                 Voltar
               </button>
             </div>
@@ -896,8 +1005,10 @@ export default function EditarMedidaPage() {
               <h3 className="font-bold text-lg">Excluir Medida?</h3>
               <p className="text-slate-500 text-sm mb-6">Esta ação não pode ser desfeita.</p>
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal(false)} className="flex-1 py-2 border rounded-xl font-bold">Não</button>
-                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+                <button onClick={() => setDeleteModal(false)}
+                  className="flex-1 py-2 border rounded-xl font-bold">Não</button>
+                <button onClick={handleDelete} disabled={isDeleting}
+                  className="flex-1 py-2 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
                   {isDeleting ? <Loader2 size={14} className="animate-spin" /> : 'Sim, excluir'}
                 </button>
               </div>

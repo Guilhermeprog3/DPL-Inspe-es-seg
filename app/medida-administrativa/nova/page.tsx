@@ -227,9 +227,7 @@ export default function NovaMedidaPage() {
     fd.append('origem',         origem)
     fd.append('data', new Date(dataMedida).toISOString())
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
-    // ── Múltiplas inspeções ──
-    if (inspecoes.length > 0) fd.append('numerosInspecao', JSON.stringify(inspecoes))
-    // ────────────────────────
+    if (inspecoes.length > 0) fd.append('numerosInspecao', inspecoes.join(','))
     anexos.forEach(a => fd.append('files', a.file))
     try {
       await api.post('/medidas', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
