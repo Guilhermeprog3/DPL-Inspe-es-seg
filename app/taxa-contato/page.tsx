@@ -7,7 +7,7 @@ import {
   ChevronLeft, RefreshCw, Calendar,
   ChevronDown, MoreVertical, Edit2, Trash2, Plus, Loader2,
   CheckCircle, ChevronRight, X, Pencil, Save, Ban, Mail, Briefcase,
-  Link2, Unlink2, Tag,
+  Link2, Unlink2, Tag, ToggleLeft, ToggleRight, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -33,6 +33,12 @@ const UF_LABELS: Record<string, string> = { PI: 'Piauí', MA: 'Maranhão' }
 
 type SortField = 'supervisor' | 'nome' | 'data'
 type SortDir   = 'asc' | 'desc'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface FuncaoItem {
+  nomeFuncao: string
+  taxaDeContato: boolean
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
@@ -726,27 +732,51 @@ function EditModal({
   )
 }
 
-function NovaFuncaoModal({ onClose, onSaved }: {
-  onClose: () => void
-  onSaved: () => void
-}) {
+// ─── GerenciarFuncoesModal ─────────────────────────────────────────────────────
+// Modal completo para admin: lista todas as funções, permite criar novas
+// e ativar/desativar participação na Taxa de Contato.
+function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
+  const [funcoes, setFuncoes] = useState<FuncaoItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+  const [filtroAtiva, setFiltroAtiva] = useState<'todos' | 'ativas' | 'inativas'>('todos')
+
+  // Criação de nova função
   const [nomeFuncao, setNomeFuncao] = useState('')
-  const [isSaving,   setIsSaving  ] = useState(false)
-  const [success,    setSuccess   ] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Toggles em andamento (evita double-click)
+  const [toggling, setToggling] = useState<Set<string>>(new Set())
+
+  async function loadFuncoes() {
+    setLoading(true)
+    try {
+      const res = await api.get('/taxa-contato/funcoes')
+      setFuncoes(res.data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100)
+    loadFuncoes()
+    setTimeout(() => inputRef.current?.focus(), 150)
   }, [])
 
-  async function handleSave() {
+  async function handleCriar() {
     const nome = nomeFuncao.trim().toUpperCase()
-    if (!nome || isSaving) return
+    if (!nome || nome.length < 3 || isSaving) return
     setIsSaving(true)
     try {
-      await api.post('/taxa-contato/funcoes', { nome })
-      setSuccess(true)
-      setTimeout(() => { setSuccess(false); onSaved() }, 1200)
+      const res = await api.post('/taxa-contato/funcoes', { nome })
+      setFuncoes(prev => [...prev, res.data].sort((a, b) => a.nomeFuncao.localeCompare(b.nomeFuncao)))
+      setNomeFuncao('')
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 1500)
     } catch (e: any) {
       alert(e.response?.data?.message || 'Erro ao cadastrar função.')
     } finally {
@@ -754,80 +784,231 @@ function NovaFuncaoModal({ onClose, onSaved }: {
     }
   }
 
+  async function handleToggle(nomeFuncao: string, atual: boolean) {
+    if (toggling.has(nomeFuncao)) return
+    setToggling(prev => new Set(prev).add(nomeFuncao))
+    try {
+      const res = await api.patch(
+        `/taxa-contato/funcoes/${encodeURIComponent(nomeFuncao)}/toggle`,
+        { taxaDeContato: !atual },
+      )
+      setFuncoes(prev =>
+        prev.map(f => f.nomeFuncao === nomeFuncao ? { ...f, taxaDeContato: res.data.taxaDeContato } : f)
+      )
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao alterar função.')
+    } finally {
+      setToggling(prev => { const s = new Set(prev); s.delete(nomeFuncao); return s })
+    }
+  }
+
+  const funcoesFiltradas = useMemo(() => {
+    const t = busca.toLowerCase().trim()
+    return funcoes.filter(f => {
+      if (t && !f.nomeFuncao.toLowerCase().includes(t)) return false
+      if (filtroAtiva === 'ativas'   && !f.taxaDeContato) return false
+      if (filtroAtiva === 'inativas' &&  f.taxaDeContato) return false
+      return true
+    })
+  }, [funcoes, busca, filtroAtiva])
+
+  const totalAtivas   = funcoes.filter(f =>  f.taxaDeContato).length
+  const totalInativas = funcoes.filter(f => !f.taxaDeContato).length
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-[#e3e8ef] animate-scaleIn">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
+      <div className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center">
-              <Tag size={15} className="text-violet-600" />
+            <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center">
+              <ShieldCheck size={18} className="text-violet-600" />
             </div>
             <div>
-              <p className="text-[15px] font-bold text-[#1a2535]">Nova Função</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Cadastrar nova função na base</p>
+              <p className="text-[15px] font-bold text-[#1a2535]">Gerenciar Funções</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {funcoes.length} funções · <span className="text-emerald-600 font-bold">{totalAtivas} na taxa</span> · <span className="text-slate-400">{totalInativas} fora</span>
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
             <X size={16} />
           </button>
         </div>
-        <div className="px-6 py-5">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
-            Nome da função
-          </label>
-          <input
-            ref={inputRef}
-            type="text"
-            value={nomeFuncao}
-            onChange={e => setNomeFuncao(e.target.value.toUpperCase())}
-            onKeyDown={e => e.key === 'Enter' && handleSave()}
-            placeholder="Ex: ANALISTA DE CAMPO..."
-            className="w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-11 px-3 text-[13px] font-semibold outline-none focus:border-[#094780] focus:bg-white transition-all tracking-wide"
-          />
+
+        {/* Nova função */}
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Cadastrar nova função</p>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={nomeFuncao}
+              onChange={e => setNomeFuncao(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === 'Enter' && handleCriar()}
+              placeholder="Ex: ANALISTA DE CAMPO..."
+              className="flex-1 bg-white border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] font-semibold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all tracking-wide"
+            />
+            <button
+              onClick={handleCriar}
+              disabled={nomeFuncao.trim().length < 3 || isSaving || saveSuccess}
+              className={cn(
+                'h-10 px-4 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-2 whitespace-nowrap',
+                nomeFuncao.trim().length >= 3 && !saveSuccess
+                  ? 'bg-violet-600 text-white hover:bg-violet-700'
+                  : saveSuccess
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              )}
+            >
+              {saveSuccess
+                ? <><CheckCircle size={14} /> Cadastrada!</>
+                : isSaving
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <><Plus size={14} /> Cadastrar</>
+              }
+            </button>
+          </div>
           {nomeFuncao.trim().length > 0 && nomeFuncao.trim().length < 3 && (
             <p className="mt-1.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
               <AlertCircle size={11} /> Digite pelo menos 3 caracteres
             </p>
           )}
         </div>
-        <div className="px-6 pb-5 flex gap-2">
-          <button onClick={onClose} disabled={isSaving}
-            className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">
-            Cancelar
-          </button>
+
+        {/* Filtros da lista */}
+        <div className="px-6 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[160px]">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Filtrar funções..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="w-full h-8 pl-8 pr-3 text-[12px] bg-[#f8fafc] border border-[#e3e8ef] rounded-lg outline-none focus:border-[#094780] transition-all"
+            />
+          </div>
+          <div className="flex gap-1">
+            {(['todos', 'ativas', 'inativas'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFiltroAtiva(f)}
+                className={cn(
+                  'px-3 h-8 rounded-lg text-[11.5px] font-bold transition-all border',
+                  filtroAtiva === f
+                    ? f === 'ativas'
+                      ? 'bg-emerald-500 text-white border-emerald-500'
+                      : f === 'inativas'
+                        ? 'bg-slate-500 text-white border-slate-500'
+                        : 'bg-[#094780] text-white border-[#094780]'
+                    : 'bg-white text-slate-500 border-[#e3e8ef] hover:bg-slate-50'
+                )}
+              >
+                {f === 'todos' ? 'Todas' : f === 'ativas' ? `Na taxa (${totalAtivas})` : `Fora (${totalInativas})`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Lista de funções */}
+        <div className="overflow-y-auto flex-1">
+          {loading ? (
+            <div className="py-16 text-center text-slate-400 flex items-center justify-center gap-2">
+              <Loader2 size={16} className="animate-spin" /> Carregando funções...
+            </div>
+          ) : funcoesFiltradas.length === 0 ? (
+            <div className="py-16 text-center text-slate-400">
+              <Tag size={28} className="mx-auto mb-2 text-slate-200" />
+              <p className="text-[13px] font-medium">Nenhuma função encontrada</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {funcoesFiltradas.map((f) => {
+                const isToggling = toggling.has(f.nomeFuncao)
+                return (
+                  <div
+                    key={f.nomeFuncao}
+                    className={cn(
+                      'flex items-center justify-between px-6 py-3.5 transition-colors group',
+                      f.taxaDeContato ? 'hover:bg-emerald-50/40' : 'hover:bg-slate-50'
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Indicador colorido */}
+                      <span
+                        className={cn(
+                          'w-2 h-2 rounded-full shrink-0 transition-colors',
+                          f.taxaDeContato ? 'bg-emerald-400' : 'bg-slate-300'
+                        )}
+                      />
+                      <span className="text-[13px] font-semibold text-[#1a2535] truncate">
+                        {f.nomeFuncao}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {/* Badge de status */}
+                      <span className={cn(
+                        'text-[10px] font-bold px-2 py-0.5 rounded-full border hidden sm:inline-flex items-center gap-1',
+                        f.taxaDeContato
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                          : 'bg-slate-50 text-slate-400 border-slate-200'
+                      )}>
+                        {f.taxaDeContato ? <><CheckCircle size={9} /> Na taxa</> : 'Fora da taxa'}
+                      </span>
+
+                      {/* Toggle switch */}
+                      <button
+                        onClick={() => handleToggle(f.nomeFuncao, f.taxaDeContato)}
+                        disabled={isToggling}
+                        title={f.taxaDeContato ? 'Remover da taxa de contato' : 'Incluir na taxa de contato'}
+                        className={cn(
+                          'relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none',
+                          f.taxaDeContato ? 'bg-emerald-500' : 'bg-slate-200',
+                          isToggling && 'opacity-50 cursor-wait'
+                        )}
+                      >
+                        <span className={cn(
+                          'inline-block w-4 h-4 bg-white rounded-full shadow transition-transform',
+                          f.taxaDeContato ? 'translate-x-6' : 'translate-x-1'
+                        )} />
+                        {isToggling && (
+                          <Loader2 size={10} className="absolute right-1 top-1 text-white animate-spin" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-100">
           <button
-            onClick={handleSave}
-            disabled={nomeFuncao.trim().length < 3 || isSaving || success}
-            className={cn(
-              'flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
-              nomeFuncao.trim().length >= 3 && !success
-                ? 'bg-violet-600 text-white hover:bg-violet-700'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            )}
+            onClick={onClose}
+            className="w-full py-2.5 bg-[#094780] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0a5494] transition-all"
           >
-            {success
-              ? <><CheckCircle size={14} /> Cadastrada!</>
-              : isSaving
-                ? <Loader2 size={14} className="animate-spin" />
-                : <><Plus size={14} /> Cadastrar função</>
-            }
+            Fechar
           </button>
         </div>
       </div>
     </div>
   )
 }
+
 function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional, userUf, onClose, onSaved }: {
   userRole: string
   userName: string
   userChapa: string
   userEmail: string
   userRegional: string
-  userUf: string // Adicionado para resolver o erro de tipagem
+  userUf: string
   onClose: () => void
   onSaved: (updated: any) => void
 }) {
-  const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
 
   const [allData, setAllData] = useState<any[]>([])
@@ -835,7 +1016,6 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
   const [busca, setBusca] = useState('')
   const [selected, setSelected] = useState<any>(null)
 
-  // Estados para os campos editáveis
   const [novoSupervisor, setNovoSupervisor] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
   const [novaArea, setNovaArea] = useState('')
@@ -877,8 +1057,8 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
             supervisorName: userName.toUpperCase(),
             chapaSupervisor: userChapa,
             supervisorEmail: userEmail,
-            regional: userRegional, 
-            filial: userUf,         
+            regional: userRegional,
+            filial: userUf,
           }
         : {
             supervisorName: novoSupervisor.toUpperCase(),
@@ -904,7 +1084,6 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
-        
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
@@ -929,45 +1108,40 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                 <input className={inputCls + " pl-9"} placeholder="Nome ou matrícula..." value={busca} onChange={e => setBusca(e.target.value)} />
               </div>
               <div className="border border-slate-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
-
-{filteredColabs.map(c => {
-  const jaEhDaEquipe = c.chapaSupervisor === userChapa;
-  
-  return (
-    <button 
-      key={c.id} 
-      // Se já for da equipe, o clique não faz nada
-      onClick={() => !jaEhDaEquipe && handleSelectColab(c)} 
-      disabled={jaEhDaEquipe}
-      className={cn(
-        "w-full px-4 py-3 text-left border-b last:border-0 flex items-center justify-between transition-all",
-        jaEhDaEquipe 
-          ? "bg-slate-50 cursor-not-allowed opacity-70" // Estilo visual de bloqueado
-          : "hover:bg-slate-50 cursor-pointer"
-      )}
-    >
-      <div className="flex flex-col">
-        <span className="text-[13px] font-bold uppercase">{c.nome}</span>
-        <span className="text-[10px] text-slate-400">Mat. {c.chapa} • {c.funcao}</span>
-      </div>
-      
-      {/* Indicadores Visuais */}
-      {jaEhDaEquipe ? (
-        <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-          <UserCheck size={10} /> Sua Equipe
-        </span>
-      ) : c.supervisor ? (
-        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
-          Outro Supervisor
-        </span>
-      ) : (
-        <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-          Disponível
-        </span>
-      )}
-    </button>
-  );
-})}
+                {filteredColabs.map(c => {
+                  const jaEhDaEquipe = c.chapaSupervisor === userChapa
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => !jaEhDaEquipe && handleSelectColab(c)}
+                      disabled={jaEhDaEquipe}
+                      className={cn(
+                        "w-full px-4 py-3 text-left border-b last:border-0 flex items-center justify-between transition-all",
+                        jaEhDaEquipe
+                          ? "bg-slate-50 cursor-not-allowed opacity-70"
+                          : "hover:bg-slate-50 cursor-pointer"
+                      )}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-bold uppercase">{c.nome}</span>
+                        <span className="text-[10px] text-slate-400">Mat. {c.chapa} • {c.funcao}</span>
+                      </div>
+                      {jaEhDaEquipe ? (
+                        <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                          <UserCheck size={10} /> Sua Equipe
+                        </span>
+                      ) : c.supervisor ? (
+                        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                          Outro Supervisor
+                        </span>
+                      ) : (
+                        <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
+                          Disponível
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           ) : (
@@ -977,37 +1151,33 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                 <p className="text-[13px] font-bold text-emerald-900 uppercase">{selected.nome}</p>
                 <button onClick={() => setSelected(null)} className="text-[10px] text-emerald-600 underline mt-1">Trocar colaborador</button>
               </div>
-
               <div className="space-y-3">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Conferência de Supervisor</p>
-                
                 {isSupervisor ? (
-                  <div className="grid grid-cols-1 gap-2">
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-2">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase">Supervisor</span>
-                         <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Automático</span>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Supervisor</span>
+                      <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Automático</span>
+                    </div>
+                    <p className="text-[12px] font-bold text-slate-700">{userName}</p>
+                    <div className="grid grid-cols-2 gap-4 mt-2 pt-2 border-t border-slate-200">
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">Matrícula</span>
+                        <span className="text-[11px] font-semibold text-slate-600">{userChapa}</span>
                       </div>
-                      <p className="text-[12px] font-bold text-slate-700">{userName}</p>
-                      <div className="grid grid-cols-2 gap-4 mt-2 pt-2 border-t border-slate-200">
-                        <div>
-                          <span className="text-[9px] text-slate-400 block">Matrícula</span>
-                          <span className="text-[11px] font-semibold text-slate-600">{userChapa}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] text-slate-400 block">E-mail</span>
-                          <span className="text-[11px] font-semibold text-slate-600 truncate block">{userEmail}</span>
-                        </div>
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">E-mail</span>
+                        <span className="text-[11px] font-semibold text-slate-600 truncate block">{userEmail}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        <div>
-                          <span className="text-[9px] text-slate-400 block">Regional</span>
-                          <span className="text-[11px] font-semibold text-slate-600">{userRegional}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] text-slate-400 block">UF</span>
-                          <span className="text-[11px] font-semibold text-slate-600">{userUf}</span>
-                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">Regional</span>
+                        <span className="text-[11px] font-semibold text-slate-600">{userRegional}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-slate-400 block">UF</span>
+                        <span className="text-[11px] font-semibold text-slate-600">{userUf}</span>
                       </div>
                     </div>
                   </div>
@@ -1024,7 +1194,6 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                   </div>
                 )}
               </div>
-
               <div className="pt-2 space-y-3">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ajuste de Lotação</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -1052,9 +1221,7 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
     </div>
   )
 }
-// ─── DesassociarModal ─────────────────────────────────────────────────────────
-// Transfere colaboradores para um novo supervisor com autocomplete (base-gente).
-// A opção "liberar sem supervisor" foi removida — o único modo é transferência.
+
 function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   userRole: string
   userName: string
@@ -1065,20 +1232,17 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
 
-  // ── Lista de colaboradores da base ────────────────────────────────────────
   const [allData,      setAllData    ] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [busca,        setBusca      ] = useState('')
   const [selected,     setSelected   ] = useState<any>(null)
 
-  // ── Campos do novo supervisor ─────────────────────────────────────────────
   const [novoSupervisor,      setNovoSupervisor     ] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
   const [novaArea,            setNovaArea           ] = useState('')
   const [novaBase,            setNovaBase           ] = useState('')
   const [novaRegional,        setNovaRegional       ] = useState('')
 
-  // ── Autocomplete do novo supervisor (base-gente) ──────────────────────────
   const [colaboradoresRepo,  setColaboradoresRepo ] = useState<any[]>([])
   const [novoSupSelecionado, setNovoSupSelecionado] = useState<any>(null)
   const [nomeSupPesquisa,    setNomeSupPesquisa   ] = useState('')
@@ -1089,33 +1253,17 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
 
-  const inputCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
+  const inputCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-9 px-3 text-[13px] outline-none transition-all'
-  const labelCls = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
+  const labelCls    = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
-  // Carrega lista geral de colaboradores associados
   useEffect(() => {
-    api.get('/taxa-contato/todos')
-      .then(res => setAllData(res.data))
-      .catch(() => setAllData([]))
-      .finally(() => setLoadingData(false))
+    api.get('/taxa-contato/todos').then(res => setAllData(res.data)).catch(() => setAllData([])).finally(() => setLoadingData(false))
+    api.get('/base-gente/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
   }, [])
 
-  // Carrega repositório para autocomplete do supervisor
-  useEffect(() => {
-    api.get('/base-gente/recentes')
-      .then(r => setColaboradoresRepo(r.data))
-      .catch(console.error)
-  }, [])
-
-  // Colaboradores visíveis de acordo com a role
   const dataFiltrada = useMemo(() => {
-    if (isSupervisor) {
-      return allData.filter(d =>
-        d.chapaSupervisor === userChapa ||
-        d.supervisor?.toUpperCase() === userName.toUpperCase()
-      )
-    }
+    if (isSupervisor) return allData.filter(d => d.chapaSupervisor === userChapa || d.supervisor?.toUpperCase() === userName.toUpperCase())
     return allData.filter(d => !!d.supervisor)
   }, [allData, isSupervisor, userName, userChapa])
 
@@ -1127,25 +1275,18 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     ).slice(0, 25)
   }, [dataFiltrada, busca])
 
-  // Autocomplete — filtra por nome
   const supsFiltradosNome = useMemo(() => {
     const t = nomeSupPesquisa.trim().toLowerCase()
     if (t.length < 2) return []
-    return colaboradoresRepo
-      .filter(c => String(c.nome || '').toLowerCase().includes(t))
-      .slice(0, 8)
+    return colaboradoresRepo.filter(c => String(c.nome || '').toLowerCase().includes(t)).slice(0, 8)
   }, [nomeSupPesquisa, colaboradoresRepo])
 
-  // Autocomplete — filtra por chapa
   const supsFiltradosMat = useMemo(() => {
     const t = matSupPesquisa.trim()
     if (!t) return []
-    return colaboradoresRepo
-      .filter(c => String(c.chapa || '').includes(t))
-      .slice(0, 8)
+    return colaboradoresRepo.filter(c => String(c.chapa || '').includes(t)).slice(0, 8)
   }, [matSupPesquisa, colaboradoresRepo])
 
-  // Seleciona supervisor do dropdown de autocomplete
   function selecionarNovoSupervisor(item: any) {
     setNovoSupSelecionado(item)
     setNomeSupPesquisa(item.nome)
@@ -1156,13 +1297,11 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     setShowSupMat(false)
   }
 
-  // Seleciona colaborador da lista principal e reseta o supervisor
   function handleSelectColab(colab: any) {
     setSelected(colab)
     setNovaArea(colab.area ?? '')
     setNovaBase(colab.base ?? '')
     setNovaRegional(colab.regional ?? '')
-    // Limpa campos do supervisor ao trocar de colaborador
     setNovoSupervisor('')
     setNovaChapaSupervisor('')
     setNovoSupSelecionado(null)
@@ -1186,12 +1325,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
       }
       const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
-      setTimeout(() => onSaved(res.data ?? {
-        ...selected,
-        supervisor:      novoSupervisor,
-        chapaSupervisor: novaChapaSupervisor,
-        regional:        novaRegional || selected.regional,
-      }), 1000)
+      setTimeout(() => onSaved(res.data ?? { ...selected, supervisor: novoSupervisor, chapaSupervisor: novaChapaSupervisor, regional: novaRegional || selected.regional }), 1000)
     } catch (e: any) {
       alert(e.response?.data?.message || 'Erro ao processar.')
     } finally {
@@ -1199,14 +1333,11 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     }
   }
 
-  // Só habilita salvar depois de selecionar colaborador E supervisor da lista
   const canSave = selected !== null && novoSupSelecionado !== null
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center">
@@ -1215,9 +1346,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
             <div>
               <p className="text-[15px] font-bold text-[#1a2535]">Transferir Colaborador</p>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                {isSupervisor
-                  ? 'Transfira colaboradores da sua equipe para outro supervisor'
-                  : 'Transfira colaboradores para um novo supervisor'}
+                {isSupervisor ? 'Transfira colaboradores da sua equipe para outro supervisor' : 'Transfira colaboradores para um novo supervisor'}
               </p>
             </div>
           </div>
@@ -1226,10 +1355,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
           </button>
         </div>
 
-        {/* Body */}
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
-
-          {/* Busca de colaborador */}
           <div>
             <label className={labelCls}>
               {isSupervisor ? 'Colaboradores da sua equipe' : 'Buscar colaborador associado — toda a base'}
@@ -1254,14 +1380,8 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                   {isSupervisor ? 'Você não possui colaboradores associados' : 'Nenhum colaborador com supervisor encontrado'}
                 </div>
               ) : filteredColabs.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => handleSelectColab(c)}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0',
-                    selected?.id === c.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-slate-50'
-                  )}
-                >
+                <button key={c.id} onClick={() => handleSelectColab(c)}
+                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0', selected?.id === c.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-slate-50')}>
                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-slate-500">
                     {c.nome?.charAt(0)}
                   </div>
@@ -1279,11 +1399,8 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
             </div>
           </div>
 
-          {/* Painel de transferência — só aparece quando um colaborador é selecionado */}
           {selected && (
             <div className="space-y-4 animate-fadeIn">
-
-              {/* Banner do colaborador selecionado */}
               <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
                 <Unlink2 size={15} className="text-orange-600 shrink-0" />
                 <div className="min-w-0">
@@ -1296,48 +1413,22 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                 </div>
               </div>
 
-              {/* Autocomplete do novo supervisor */}
               <div>
-                <label className={labelCls}>
-                  Novo supervisor <span className="text-red-400">*</span>
-                </label>
+                <label className={labelCls}>Novo supervisor <span className="text-red-400">*</span></label>
                 <div className="grid grid-cols-2 gap-3">
-
-                  {/* Campo Nome */}
                   <div style={{ position: 'relative' }}>
                     <label className={labelCls}>Nome</label>
-                    <input
-                      type="text"
-                      value={nomeSupPesquisa}
-                      placeholder="Buscar supervisor..."
-                      className={cn(
-                        inputSelCls,
-                        novoSupSelecionado
-                          ? 'border-emerald-500 bg-emerald-50/30'
-                          : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
-                      )}
-                      onChange={e => {
-                        setNomeSupPesquisa(e.target.value.replace(/[0-9]/g, ''))
-                        setNovoSupSelecionado(null)
-                        setNovoSupervisor(e.target.value)
-                        setNovaChapaSupervisor('')
-                        setMatSupPesquisa('')
-                        setShowSupNome(true)
-                      }}
+                    <input type="text" value={nomeSupPesquisa} placeholder="Buscar supervisor..."
+                      className={cn(inputSelCls, novoSupSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
+                      onChange={e => { setNomeSupPesquisa(e.target.value.replace(/[0-9]/g, '')); setNovoSupSelecionado(null); setNovoSupervisor(e.target.value); setNovaChapaSupervisor(''); setMatSupPesquisa(''); setShowSupNome(true) }}
                       onFocus={() => setShowSupNome(true)}
                       onBlur={() => setTimeout(() => setShowSupNome(false), 200)}
                     />
-                    {novoSupSelecionado && (
-                      <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />
-                    )}
+                    {novoSupSelecionado && <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />}
                     {showSupNome && supsFiltradosNome.length > 0 && (
                       <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                         {supsFiltradosNome.map((c, i) => (
-                          <div
-                            key={i}
-                            className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
-                            onMouseDown={() => selecionarNovoSupervisor(c)}
-                          >
+                          <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarNovoSupervisor(c)}>
                             <p className="font-bold text-slate-700 uppercase">{c.nome}</p>
                             <p className="text-slate-400">Chapa: {c.chapa}</p>
                           </div>
@@ -1345,40 +1436,18 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                       </div>
                     )}
                   </div>
-
-                  {/* Campo Matrícula */}
                   <div style={{ position: 'relative' }}>
                     <label className={labelCls}>Matrícula</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={matSupPesquisa}
-                      placeholder="Buscar chapa..."
-                      className={cn(
-                        inputSelCls,
-                        novoSupSelecionado
-                          ? 'border-emerald-500 bg-emerald-50/30'
-                          : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
-                      )}
-                      onChange={e => {
-                        setMatSupPesquisa(e.target.value.replace(/[^0-9]/g, ''))
-                        setNovoSupSelecionado(null)
-                        setNovoSupervisor('')
-                        setNovaChapaSupervisor(e.target.value)
-                        setNomeSupPesquisa('')
-                        setShowSupMat(true)
-                      }}
+                    <input type="text" inputMode="numeric" value={matSupPesquisa} placeholder="Buscar chapa..."
+                      className={cn(inputSelCls, novoSupSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
+                      onChange={e => { setMatSupPesquisa(e.target.value.replace(/[^0-9]/g, '')); setNovoSupSelecionado(null); setNovoSupervisor(''); setNovaChapaSupervisor(e.target.value); setNomeSupPesquisa(''); setShowSupMat(true) }}
                       onFocus={() => setShowSupMat(true)}
                       onBlur={() => setTimeout(() => setShowSupMat(false), 200)}
                     />
                     {showSupMat && supsFiltradosMat.length > 0 && (
                       <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                         {supsFiltradosMat.map((c, i) => (
-                          <div
-                            key={i}
-                            className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
-                            onMouseDown={() => selecionarNovoSupervisor(c)}
-                          >
+                          <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarNovoSupervisor(c)}>
                             <p className="font-bold text-slate-700">{c.chapa}</p>
                             <p className="text-slate-400 uppercase">{c.nome}</p>
                           </div>
@@ -1386,8 +1455,6 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                       </div>
                     )}
                   </div>
-
-                  {/* Aviso quando ainda não selecionou da lista */}
                   {!novoSupSelecionado && (nomeSupPesquisa || matSupPesquisa) && (
                     <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
                       <AlertCircle size={11} /> Selecione um supervisor da lista
@@ -1396,39 +1463,21 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                 </div>
               </div>
 
-              {/* Campos extras para gerente/coordenador */}
               {isGerenteOuCoordenador && (
                 <div className="space-y-3">
                   <div>
                     <label className={labelCls}>Regional de destino</label>
-                    <input
-                      className={inputCls}
-                      placeholder="Ex: METRO, NORTE, SUL..."
-                      value={novaRegional}
-                      onChange={e => setNovaRegional(e.target.value.toUpperCase())}
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Regional atual: <strong>{selected.regional || '—'}</strong>
-                    </p>
+                    <input className={inputCls} placeholder="Ex: METRO, NORTE, SUL..." value={novaRegional} onChange={e => setNovaRegional(e.target.value.toUpperCase())} />
+                    <p className="text-[10px] text-slate-400 mt-1">Regional atual: <strong>{selected.regional || '—'}</strong></p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Nova área</label>
-                      <input
-                        className={inputCls}
-                        placeholder="Ex: Comercial..."
-                        value={novaArea}
-                        onChange={e => setNovaArea(e.target.value)}
-                      />
+                      <input className={inputCls} placeholder="Ex: Comercial..." value={novaArea} onChange={e => setNovaArea(e.target.value)} />
                     </div>
                     <div>
                       <label className={labelCls}>Nova base</label>
-                      <input
-                        className={inputCls}
-                        placeholder="Ex: Teresina..."
-                        value={novaBase}
-                        onChange={e => setNovaBase(e.target.value)}
-                      />
+                      <input className={inputCls} placeholder="Ex: Teresina..." value={novaBase} onChange={e => setNovaBase(e.target.value)} />
                     </div>
                   </div>
                 </div>
@@ -1437,30 +1486,12 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!canSave || isSaving || success}
-            className={cn(
-              'flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
-              canSave && !success
-                ? 'bg-[#094780] text-white hover:bg-[#0a5494]'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            )}
-          >
-            {success
-              ? <><CheckCircle size={14} /> Concluído!</>
-              : isSaving
-                ? <Loader2 size={14} className="animate-spin" />
-                : <><UserCheck size={14} /> Confirmar transferência</>
-            }
+          <button onClick={onClose} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all">Cancelar</button>
+          <button onClick={handleSave} disabled={!canSave || isSaving || success}
+            className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
+              canSave && !success ? 'bg-[#094780] text-white hover:bg-[#0a5494]' : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
+            {success ? <><CheckCircle size={14} /> Concluído!</> : isSaving ? <Loader2 size={14} className="animate-spin" /> : <><UserCheck size={14} /> Confirmar transferência</>}
           </button>
         </div>
       </div>
@@ -1497,12 +1528,12 @@ export default function TaxaContatoPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 12
 
-  const [deleteTarget,     setDeleteTarget   ] = useState<any>(null)
-  const [isDeleting,       setIsDeleting     ] = useState(false)
-  const [editTarget,       setEditTarget     ] = useState<any>(null)
-  const [showNovaFuncao,   setShowNovaFuncao ] = useState(false)
-  const [showAssociar,     setShowAssociar   ] = useState(false)
-  const [showDesassociar, setShowDesassociar] = useState(false)
+  const [deleteTarget,         setDeleteTarget        ] = useState<any>(null)
+  const [isDeleting,           setIsDeleting          ] = useState(false)
+  const [editTarget,           setEditTarget          ] = useState<any>(null)
+  const [showGerenciarFuncoes, setShowGerenciarFuncoes] = useState(false)  // ← substituiu showNovaFuncao
+  const [showAssociar,         setShowAssociar        ] = useState(false)
+  const [showDesassociar,      setShowDesassociar     ] = useState(false)
 
   useEffect(() => {
     async function loadCompetencias() {
@@ -1510,9 +1541,7 @@ export default function TaxaContatoPage() {
         const res = await api.get('/taxa-contato/competencias')
         const opts = res.data || []
         setMesesOptions(opts)
-        if (opts.length > 0) {
-          setFiltroMes(opts[0].value)
-        }
+        if (opts.length > 0) setFiltroMes(opts[0].value)
       } catch (err) {
         console.error("Erro ao carregar meses do banco:", err)
       }
@@ -1715,7 +1744,7 @@ export default function TaxaContatoPage() {
   const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const mesLabel   = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
-  const userFullName = userData?.nomeCompleto || userData?.name || '';
+  const userFullName = userData?.nomeCompleto || userData?.name || ''
   const userChapa    = userData?.chapa ?? ''
   const userRegional = userData?.regional ?? ''
 
@@ -1803,9 +1832,10 @@ export default function TaxaContatoPage() {
                 </button>
               </>
             )}
+            {/* Botão "Funções" — visível somente para admin */}
             {isAdmin && (
-              <button onClick={() => setShowNovaFuncao(true)} className="btn-violet">
-                <Tag size={14} /> Nova Função
+              <button onClick={() => setShowGerenciarFuncoes(true)} className="btn-violet">
+                <Tag size={14} /> Funções
               </button>
             )}
           </div>
@@ -1997,11 +2027,9 @@ export default function TaxaContatoPage() {
           dynamicOptions={dynamicOptions}
         />
       )}
-      {isAdmin && showNovaFuncao && (
-        <NovaFuncaoModal
-          onClose={() => setShowNovaFuncao(false)}
-          onSaved={() => { setShowNovaFuncao(false); fetchData(filtroMes) }}
-        />
+      {/* Modal de gerenciamento de funções — somente admin */}
+      {isAdmin && showGerenciarFuncoes && (
+        <GerenciarFuncoesModal onClose={() => setShowGerenciarFuncoes(false)} />
       )}
       {canManageAssociation && showAssociar && (
         <AssociarModal
