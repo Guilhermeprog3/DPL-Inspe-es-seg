@@ -35,11 +35,11 @@ const ALL_MODULOS = [
   {
   id: 4,
   icon: <Users size={26} color="#fff" strokeWidth={1.8} />,
-  title: 'Taxa de Contato',
-  subtitle: 'Gerencie taxa de contato',
-  route: '/taxa-contato',
-roles: [ 'admin', 'coordenador', 'gerente', 'supervisor'],
-},
+  title: 'Gestão de Funcionários',
+  subtitle: 'Gerencie funcionários, taxa de contato e metas de checklist.',
+  route: '/gestao-funcionarios',
+  roles: ['admin', 'coordenador', 'gerente', 'supervisor'],
+}
 ]
 
 export default function ModulosPage() {
