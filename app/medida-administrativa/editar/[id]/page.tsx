@@ -45,10 +45,10 @@ const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string;
 }
 
 const TABS = [
-  { key: 'identificacao', label: 'Identificação',    icon: User },
-  { key: 'classificacao', label: 'Classificação',    icon: Tag },
-  { key: 'gravidade',     label: 'Gravidade',        icon: AlertTriangle },
-  { key: 'ocorrencia',    label: 'Ocorrência',       icon: FileText },
+  { key: 'identificacao', label: 'Identificação',     icon: User },
+  { key: 'classificacao', label: 'Classificação',     icon: Tag },
+  { key: 'gravidade',     label: 'Gravidade',         icon: AlertTriangle },
+  { key: 'ocorrencia',    label: 'Ocorrência',        icon: FileText },
   { key: 'anexos',        label: 'Anexos & Vínculo', icon: Paperclip },
 ] as const
 
@@ -138,9 +138,9 @@ export default function EditarMedidaPage() {
   }
 
   const [colaboradoresRepo, setColaboradoresRepo] = useState<any[]>([])
-  const [searchQuery,       setSearchQuery       ] = useState('')
-  const [anexos,            setAnexos            ] = useState<Anexo[]>([])
-  const [isDragging,        setIsDragging        ] = useState(false)
+  const [searchQuery,       setSearchQuery    ] = useState('')
+  const [anexos,            setAnexos           ] = useState<Anexo[]>([])
+  const [isDragging,        setIsDragging       ] = useState(false)
 
   useEffect(() => {
     if (!session) return
@@ -183,6 +183,34 @@ export default function EditarMedidaPage() {
     setColabSelecionado(normalizado)
     setNomeColabInput(normalizado.nome)
     setMatColabInput(normalizado.chapa)
+
+    // --- LÓGICA DE PREENCHIMENTO AUTOMÁTICO DE LOCALIZAÇÃO ---
+    const mapaUf: Record<string, UF> = {
+      'PIAUÍ': 'PI',
+      'PIAUI': 'PI',
+      'MARANHÃO': 'MA',
+      'MARANHAO': 'MA'
+    };
+
+    const ufBanco = item.uf?.trim().toUpperCase() || '';
+    const ufSigla = mapaUf[ufBanco];
+
+    if (ufSigla && REGIONAIS_POR_UF[ufSigla]) {
+      setUf(ufSigla);
+      const regionalBanco = item.regional?.trim().toUpperCase() || '';
+      const regionalValida = REGIONAIS_POR_UF[ufSigla].find(
+        r => r.toUpperCase() === regionalBanco
+      );
+      if (regionalValida) {
+        setRegional(regionalValida);
+      } else {
+        setRegional('');
+      }
+    } else {
+      setUf('');
+      setRegional('');
+    }
+
     setShowColabDropdown(false)
     setShowMatriculaDropdown(false)
     setHasChanges(true)
@@ -333,19 +361,19 @@ export default function EditarMedidaPage() {
     setIsSaving(true)
 
     const fd = new FormData()
-    fd.append('colaborador',    nomeColabInput)
-    fd.append('matricula',      matColabInput)
-    fd.append('supervisor',     matSupInput)
+    fd.append('colaborador',     nomeColabInput)
+    fd.append('matricula',       matColabInput)
+    fd.append('supervisor',      matSupInput)
     fd.append('nomeSupervisor', nomeSupInput)
     fd.append('data',           new Date(dataMedida).toISOString())
     fd.append('uf',             uf)
     fd.append('regional',       regional)
     fd.append('tipo',           tipoCategoria)
-    fd.append('medida',         tipoMedida)
-    fd.append('ocorrencia',     ocorrencia)
-    fd.append('gravidade',      gravidade)
-    fd.append('classificacao',  classificacao)
-    fd.append('origem',         origem)
+    fd.append('medida',          tipoMedida)
+    fd.append('ocorrencia',      ocorrencia)
+    fd.append('gravidade',       gravidade)
+    fd.append('classificacao',   classificacao)
+    fd.append('origem',          origem)
     if (diasSuspensao) fd.append('diasSuspensao', diasSuspensao)
     if (inspecoes.length > 0) fd.append('numerosInspecao', inspecoes.join(','))
     anexos.forEach(a => { if (a.file) fd.append('files', a.file) })
@@ -619,7 +647,7 @@ export default function EditarMedidaPage() {
                       {supsFiltradosNome.map((c, i) => (
                         <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0 transition-colors"
                           onMouseDown={() => selecionarSupervisor(c)}>
-                          <p className="font-bold text-slate-700">{c.nome}</p>
+                          <p className="font-bold text-slate-700">{c.chapa}</p>
                           <p className="text-slate-400">Chapa: {c.chapa}</p>
                         </div>
                       ))}
@@ -627,7 +655,7 @@ export default function EditarMedidaPage() {
                   </div>
                 </div>
 
-                {/* ─── EDIÇÃO UF E REGIONAL ─── */}
+                {/* EDIÇÃO UF E REGIONAL */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]">
                   <span className={cn(labelCls, 'mt-2')}>Localização *</span>
                   <div className="w-full">
@@ -911,7 +939,7 @@ export default function EditarMedidaPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ORIGENS.map(op => (
                       <button key={op} type="button"
-                        onClick={() => { setOrigem(origem === op ? '' : op); setHasChanges(true) }}
+                        onClick={() => { setOrigem(op); setHasChanges(true) }}
                         className={cn('py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative',
                           origem === op ? 'bg-[#094780] border-[#094780] text-white shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-[#094780]/30 hover:bg-blue-50/30')}>
                         {op}

@@ -25,10 +25,11 @@ const navItems = [
 ]
 
 const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string }> = {
-  LEVE:       { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-  MÉDIA:      { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
-  GRAVE:      { color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-  GRAVÍSSIMA: { color: '#a855f7', bg: '#faf5ff', border: '#e9d5ff' },
+  LEVE:             { color: '#10b981', bg: '#f0fdf4', border: '#10b981' },
+  MÉDIA:            { color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b' },
+  GRAVE:            { color: '#ef4444', bg: '#fef2f2', border: '#ef4444' },
+  GRAVÍSSIMA:       { color: '#a855f7', bg: '#faf5ff', border: '#a855f7' },
+  'TOLERÂNCIA ZERO': { color: '#000000', bg: '#f1f5f9', border: '#000000' },
 }
 
 const TIPO_CFG: Record<string, { color: string; bg: string }> = {
@@ -44,61 +45,23 @@ const MEDIDA_CFG: Record<string, { color: string; bg: string; border: string }> 
   'TREINAMENTO':         { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
 }
 
-const ORIGENS_CFG: Record<string, { color: string; bg: string; border: string }> = {
-  'ESS':              { color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
-  'CLICK':            { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  'NMC':              { color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-  'MULTA DE TRÂNSITO':{ color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-  'GESTÃO DE GENTE':  { color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
-}
-
 const TABS = [
-  { key: 'identificacao', label: 'Identificação',    icon: User },
-  { key: 'classificacao', label: 'Classificação',    icon: Tag },
-  { key: 'gravidade',     label: 'Gravidade',        icon: AlertTriangle },
-  { key: 'ocorrencia',    label: 'Ocorrência',       icon: FileText },
+  { key: 'identificacao', label: 'Identificação',     icon: User },
+  { key: 'classificacao', label: 'Classificação',     icon: Tag },
+  { key: 'gravidade',     label: 'Gravidade',         icon: AlertTriangle },
+  { key: 'ocorrencia',    label: 'Ocorrência',        icon: FileText },
   { key: 'anexos',        label: 'Anexos & Vínculo', icon: Paperclip },
 ] as const
 
 type TabKey = typeof TABS[number]['key']
 
-// ─── Correção bug de data ─────────────────────────────────────────────────────
-/**
- * Formata "YYYY-MM-DDT..." para "DD de mês de YYYY" sem conversão de timezone.
- * new Date(isoString) interpreta como UTC e converte para local (UTC-3),
- * fazendo o dia recuar. Ao extrair só a parte da data e usar Date.UTC,
- * garantimos que o dia exibido é exatamente o que está salvo no banco.
- */
 function formatDateLong(raw: string | null | undefined): string {
   if (!raw) return '—'
   const [y, m, d] = raw.split('T')[0].split('-').map(Number)
   if (!y || !m || !d) return '—'
-  // Cria a data em UTC para evitar deslocamento de fuso
   return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('pt-BR', {
     day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC',
   })
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-function isImage(tipo?: string, nome?: string) {
-  if (tipo?.startsWith('image/')) return true
-  if (nome) return /\.(jpg|jpeg|png|webp|gif)$/i.test(nome)
-  return false
-}
-function isPdf(tipo?: string, nome?: string) {
-  if (tipo === 'application/pdf') return true
-  if (nome) return /\.pdf$/i.test(nome)
-  return false
-}
-function FileIcon({ tipo, nome, size = 20 }: { tipo?: string; nome?: string; size?: number }) {
-  if (isImage(tipo, nome)) return <FileImage size={size} className="text-blue-400" />
-  if (isPdf(tipo, nome))   return <File      size={size} className="text-red-400"  />
-  return                           <File      size={size} className="text-slate-400" />
 }
 
 export default function DetalharMedidaPage() {
@@ -108,10 +71,10 @@ export default function DetalharMedidaPage() {
   const medidaId = params?.id as string
 
   const [loadState,   setLoadState  ] = useState<LoadState>('loading')
-  const [tab,         setTab        ] = useState<TabKey>('identificacao')
+  const [tab,         setTab         ] = useState<TabKey>('identificacao')
   const [deleteModal, setDeleteModal] = useState(false)
   const [isDeleting,  setIsDeleting ] = useState(false)
-  const [data,        setData       ] = useState<Record<string, any>>({})
+  const [data,        setData       ] = useState<any>({})
 
   useEffect(() => {
     if (!medidaId || !session) return
@@ -129,12 +92,14 @@ export default function DetalharMedidaPage() {
   async function handleDelete() {
     if (isDeleting) return
     setIsDeleting(true)
-    try { await api.delete(`/medidas/${medidaId}`); router.push('/medida-administrativa/lista') }
-    catch (e: any) { alert(e.response?.data?.message || 'Erro ao excluir.'); setIsDeleting(false) }
+    try { 
+      await api.delete(`/medidas/${medidaId}`)
+      router.push('/medida-administrativa/lista') 
+    } catch (e: any) { 
+      alert(e.response?.data?.message || 'Erro ao excluir.')
+      setIsDeleting(false) 
+    }
   }
-
-  const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-4 sm:px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
-  const fieldRowCls     = cn('grid gap-4 items-start px-4 sm:px-6 py-4 border-b border-[#e3e8ef] last:border-b-0')
 
   if (loadState === 'loading') return (
     <DashboardLayout title="Detalhar Medida" navItems={navItems}>
@@ -144,92 +109,79 @@ export default function DetalharMedidaPage() {
     </DashboardLayout>
   )
 
-  if (loadState === 'error') return (
-    <DashboardLayout title="Detalhar Medida" navItems={navItems}>
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4 text-center px-6">
-        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center"><AlertCircle size={24} className="text-red-500" /></div>
-        <div><p className="text-[15px] font-semibold text-[#111827] mb-1">Medida não encontrada</p><p className="text-[13px] text-[#9ca3af]">Não foi possível carregar os dados desta medida.</p></div>
-        <button onClick={() => router.back()} className="px-5 py-2 rounded-lg bg-[#094780] text-white text-[13px] font-semibold hover:opacity-90 transition-all">← Voltar</button>
-      </div>
-    </DashboardLayout>
-  )
-
-  const medCfg    = MEDIDA_CFG[data.medida]  ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
-  const tipCfg    = TIPO_CFG[data.tipo]      ?? { color: '#4b5563', bg: '#f8fafc' }
-  const origemCfg = ORIGENS_CFG[data.origem] ?? null
-
-  // ── Correção aplicada aqui ─────────────────────────────────────────────────
-  const dataFormatada = formatDateLong(data.data)
-  // ──────────────────────────────────────────────────────────────────────────
+  const medCfg = MEDIDA_CFG[data.medida] ?? { color: '#4b5563', bg: '#f8fafc', border: '#e3e8ef' }
+  const tipCfg = TIPO_CFG[data.tipo] ?? { color: '#4b5563', bg: '#f8fafc' }
+  const gravCfg = GRAVIDADE_CFG[data.gravidade] ?? null
 
   const anexos: AnexoRemoto[] = Array.isArray(data.anexos) ? data.anexos : []
+  const numerosInspecao: string[] = typeof data.numerosInspecao === 'string' 
+    ? data.numerosInspecao.split(',').filter(Boolean)
+    : (Array.isArray(data.numerosInspecao) ? data.numerosInspecao : [])
 
-  const numerosInspecao: string[] = Array.isArray(data.numerosInspecao) && data.numerosInspecao.length > 0
-    ? data.numerosInspecao
-    : data.numeroInspecao
-      ? [data.numeroInspecao]
-      : []
+  const sectionTitleCls = 'text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]'
+  const fieldRowCls     = 'grid gap-4 items-start px-6 py-4 border-b border-[#e3e8ef] last:border-b-0'
 
   return (
     <DashboardLayout title="Detalhar Medida" navItems={navItems}>
       <style>{`
-        @keyframes fadeUp  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
-        @keyframes zoomIn  { from{opacity:0;transform:scale(0.95)}     to{opacity:1;transform:scale(1)} }
-        @keyframes scaleIn { from{opacity:0;transform:scale(0.96)}     to{opacity:1;transform:scale(1)} }
-        .fade-up   { animation: fadeUp  0.2s ease forwards }
-        .modal-in  { animation: zoomIn  0.25s cubic-bezier(.22,.68,0,1.2) forwards }
-        .scale-in  { animation: scaleIn 0.15s ease forwards }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+        .fade-up { animation: fadeUp 0.2s ease forwards }
       `}</style>
 
       <div className="w-full flex flex-col bg-[#f4f6f9] min-h-[calc(100vh-60px)]">
-
-        {/* ── Breadcrumb + Tabs ── */}
-        <div className="bg-white" style={{ borderBottom: '1px solid #e3e8ef', boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.05)' }}>
-          <div className="px-4 sm:px-7 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #f0f2f5' }}>
+        
+        {/* Breadcrumb + Tabs */}
+        <div className="bg-white border-b border-[#e3e8ef] shadow-sm">
+          <div className="px-7 py-3 flex items-center justify-between border-b border-[#f0f2f5]">
             <div className="flex items-center gap-2 text-[13px] text-[#9ca3af]">
-              <button onClick={() => router.push('/medida-administrativa/lista')} className="hover:text-[#094780] transition-colors">Medidas</button>
-              <span className="text-[11px]">›</span>
-              <span className="text-[#094780] font-semibold">Detalhar Medida</span>
+              <button onClick={() => router.push('/medida-administrativa/lista')} className="hover:text-[#3d6cf0]">Medidas</button>
+              <span>›</span>
+              <span className="text-[#3d6cf0] font-semibold">Detalhar Medida</span>
             </div>
-            <span className="text-[11px] font-mono text-[#9ca3af] bg-[#f4f6f9] border border-[#e3e8ef] px-2.5 py-1 rounded-md hidden sm:block">
-              ID #{medidaId.slice(-6).toUpperCase()}
-            </span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ID #{medidaId.slice(-6).toUpperCase()}</span>
           </div>
 
-          <div className="px-4 sm:px-7 flex overflow-x-auto">
+          <div className="px-7 flex overflow-x-auto">
             {TABS.map(t => (
               <button key={t.key} onClick={() => setTab(t.key)}
-                className={cn('px-4 sm:px-5 py-[14px] text-[13px] border-b-[2.5px] whitespace-nowrap transition-all -mb-px',
-                  tab === t.key ? 'text-[#094780] border-[#094780] font-semibold' : 'text-[#9ca3af] border-transparent hover:text-[#4b5563]')}>
+                className={cn('flex items-center gap-2 px-5 py-4 text-[13.5px] border-b-2 whitespace-nowrap transition-all',
+                  tab === t.key ? 'text-[#3d6cf0] border-[#3d6cf0] font-semibold' : 'text-[#9ca3af] border-transparent hover:text-slate-600')}>
+                <t.icon size={16} />
                 {t.label}
-                {t.key === 'anexos' && anexos.length > 0 && (
-                  <span className="ml-1.5 text-[10px] font-bold bg-[#094780] text-white rounded-full px-1.5 py-0.5 align-middle">{anexos.length}</span>
-                )}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 w-full">
-
+        <div className="flex-1 overflow-y-auto pb-28">
+          
           {/* IDENTIFICAÇÃO */}
           {tab === 'identificacao' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Dados do colaborador</div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Hash size={13} /> Matrículas</span>
-                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.matricula ?? '—'}</p></div>
-                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.supervisor ?? '—'}</p></div>
+            <div className="fade-up mx-4 sm:mx-8 mt-6 space-y-6">
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Dados do Colaborador e Supervisor</div>
+                
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827] mt-1">Matrículas</span>
+                  <div><p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Colaborador</p><p className="text-[14px] font-semibold text-slate-700">{data.matricula || '—'}</p></div>
+                  <div><p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Supervisor</p><p className="text-[14px] font-semibold text-slate-700">{data.supervisor || '—'}</p></div>
                 </div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><User size={13} /> Nomes</span>
-                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Colaborador</p><p className="text-[14px] font-semibold text-[#111827]">{data.colaborador ?? '—'}</p></div>
-                  <div><p className="text-[10.5px] text-[#9ca3af] mb-0.5">Supervisor</p><p className="text-[14px] font-semibold text-[#111827]">{data.nomeSupervisor ?? '—'}</p></div>
+
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827] mt-1">Nomes</span>
+                  <div><p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Colaborador</p><p className="text-[14px] font-semibold text-slate-700">{data.colaborador || '—'}</p></div>
+                  <div><p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Supervisor</p><p className="text-[14px] font-semibold text-slate-700">{data.nomeSupervisor || '—'}</p></div>
                 </div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Calendar size={13} /> Data</span>
-                  <span className="text-[14px] font-semibold text-[#111827]">{dataFormatada}</span>
+
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827] mt-1">Localização</span>
+                  <div><p className="text-[10px] font-bold text-slate-400 uppercase mb-1">UF</p><p className="text-[14px] font-semibold text-slate-700">{data.uf || '—'}</p></div>
+                  <div><p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Regional</p><p className="text-[14px] font-semibold text-slate-700">{data.regional || '—'}</p></div>
+                </div>
+
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827]">Data da Medida</span>
+                  <p className="text-[14px] font-semibold text-slate-700">{formatDateLong(data.data)}</p>
                 </div>
               </div>
             </div>
@@ -237,21 +189,21 @@ export default function DetalharMedidaPage() {
 
           {/* CLASSIFICAÇÃO */}
           {tab === 'classificacao' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Categoria e tipo</div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Shield size={13} /> Categoria</span>
-                  <span className="text-[12px] font-black uppercase px-3 py-1 rounded-md max-w-max" style={{ color: tipCfg.color, background: tipCfg.bg }}>{data.tipo ?? '—'}</span>
+            <div className="fade-up mx-4 sm:mx-8 mt-6">
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Categoria e Tipo</div>
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827]">Categoria</span>
+                  <span className="text-[11px] font-black uppercase px-3 py-1 rounded-md max-w-max" style={{ color: tipCfg.color, background: tipCfg.bg }}>{data.tipo || '—'}</span>
                 </div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5"><Tag size={13} /> Tipo de Medida</span>
-                  <span className="text-[12px] font-bold px-3 py-1 rounded-md border max-w-max" style={{ color: medCfg.color, background: medCfg.bg, borderColor: medCfg.border }}>{data.medida ?? '—'}</span>
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827]">Tipo de Medida</span>
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-md border max-w-max" style={{ color: medCfg.color, background: medCfg.bg, borderColor: medCfg.border }}>{data.medida || '—'}</span>
                 </div>
                 {data.diasSuspensao && (
-                  <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                    <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide">Dias de Suspensão</span>
-                    <span className="text-[14px] font-semibold text-[#111827]">{data.diasSuspensao} dias</span>
+                  <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr]')}>
+                    <span className="text-[13.5px] font-medium text-[#111827]">Dias de Suspensão</span>
+                    <p className="text-[14px] font-semibold text-slate-700">{data.diasSuspensao} dias</p>
                   </div>
                 )}
               </div>
@@ -260,27 +212,18 @@ export default function DetalharMedidaPage() {
 
           {/* GRAVIDADE */}
           {tab === 'gravidade' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>
-                  Nível de gravidade
-                  {!data.gravidade && <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-slate-400">(não informado)</span>}
-                </div>
-                <div className="p-6 flex flex-col gap-3">
-                  {Object.entries(GRAVIDADE_CFG).map(([key, cfg]) => {
-                    const active = data.gravidade === key
-                    return (
-                      <div key={key} className={cn('flex items-center justify-between px-4 py-3.5 rounded-xl border-[1.5px] transition-all',
-                        active ? '' : 'border-[#e3e8ef] opacity-40')}
-                        style={active ? { background: cfg.bg, borderColor: cfg.border } : {}}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full" style={{ background: cfg.color }} />
-                          <span className={cn('text-[13.5px] font-semibold', active ? 'text-[#111827]' : 'text-[#9ca3af]')}>{key}</span>
-                        </div>
-                        {active && <CheckCircle2 size={16} style={{ color: cfg.color }} />}
-                      </div>
-                    )
-                  })}
+            <div className="fade-up mx-4 sm:mx-8 mt-6">
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Nível de Gravidade</div>
+                <div className="p-6">
+                  {gravCfg ? (
+                    <div className="p-4 rounded-xl border-2 flex items-center gap-4 max-w-md" style={{ borderColor: gravCfg.border, backgroundColor: gravCfg.bg }}>
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: gravCfg.color }} />
+                      <p className="text-sm font-bold text-slate-700">{data.gravidade}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">Não informada</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -288,16 +231,18 @@ export default function DetalharMedidaPage() {
 
           {/* OCORRÊNCIA */}
           {tab === 'ocorrencia' && (
-            <div className="fade-up space-y-4">
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden">
-                <div className={sectionTitleCls}>Detalhes da ocorrência</div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide">Classificação</span>
-                  <span className="text-[13.5px] font-semibold text-[#111827] leading-snug">{data.classificacao ?? '—'}</span>
-                </div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr] items-start')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide pt-0.5">Descrição</span>
-                  <p className="text-[13.5px] text-[#374151] leading-relaxed whitespace-pre-wrap">{data.ocorrencia ?? '—'}</p>
+            <div className="fade-up mx-4 sm:mx-8 mt-6">
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Detalhes da Ocorrência</div>
+                <div className="p-6 space-y-6">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Desvio / Classificação</label>
+                    <p className="text-[14px] font-semibold text-slate-700">{data.classificacao || '—'}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Descrição Completa</label>
+                    <p className="text-[13.5px] text-slate-600 leading-relaxed whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-100">{data.ocorrencia || '—'}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -305,120 +250,79 @@ export default function DetalharMedidaPage() {
 
           {/* ANEXOS & VÍNCULO */}
           {tab === 'anexos' && (
-            <div className="fade-up space-y-4">
-
-              {/* Anexos */}
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={sectionTitleCls}>
-                  Anexos
-                  {anexos.length > 0 && <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-slate-400">— {anexos.length} arquivo(s)</span>}
-                </div>
-                {anexos.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-3"><Paperclip size={20} className="text-slate-300" /></div>
-                    <p className="text-[13px] font-semibold text-slate-400">Nenhum anexo</p>
-                  </div>
-                ) : (
-                  <div className="p-6 space-y-2">
-                    {anexos.map((anexo, i) => (
-                      <a key={anexo.id} href={anexo.url} target="_blank" rel="noopener noreferrer"
-                        className="scale-in flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl group hover:border-[#094780]/30 hover:bg-blue-50/30 transition-all"
-                        style={{ animationDelay: `${i * 40}ms` }}>
-                        {isImage(anexo.tipo, anexo.nome) ? (
-                          <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 bg-slate-100">
-                            <img src={anexo.url} alt={anexo.nome} className="w-full h-full object-cover" />
+            <div className="fade-up mx-4 sm:mx-8 mt-6 space-y-6">
+              <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-hidden">
+                <div className={sectionTitleCls}>Anexos e Documentos</div>
+                <div className="p-6">
+                  {anexos.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {anexos.map((file) => (
+                        <a key={file.id} href={file.url} target="_blank" rel="noreferrer" 
+                          className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-[#3d6cf0] hover:bg-blue-50 transition-all group">
+                          <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                            {file.tipo?.includes('image') ? <FileImage size={20} className="text-blue-500" /> : <File size={20} className="text-slate-400" />}
                           </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0">
-                            <FileIcon tipo={anexo.tipo} nome={anexo.nome} size={20} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-slate-700 truncate group-hover:text-[#3d6cf0]">{file.nome}</p>
+                            <p className="text-[11px] text-slate-400 uppercase font-bold">{file.tipo?.split('/')[1] || 'Arquivo'}</p>
                           </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-700 truncate group-hover:text-[#094780] transition-colors">{anexo.nome}</p>
-                          {anexo.tamanho !== undefined && <p className="text-[11px] text-slate-400">{formatBytes(anexo.tamanho)}</p>}
-                        </div>
-                        <div className="flex-shrink-0 text-slate-300 group-hover:text-[#094780] transition-colors"><Link2 size={14} /></div>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Origem */}
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={sectionTitleCls}>Origem</div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5">
-                    <MapPin size={13} /> Sistema de origem
-                  </span>
-                  {data.origem && origemCfg ? (
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[12px] font-bold max-w-max"
-                      style={{ color: origemCfg.color, background: origemCfg.bg, borderColor: origemCfg.border }}>
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: origemCfg.color }} />
-                      {data.origem}
-                    </span>
-                  ) : (
-                    <span className="text-[13.5px] text-[#9ca3af] italic">Não informado</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Vínculo externo — Múltiplas inspeções */}
-              <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-                <div className={sectionTitleCls}>
-                  Vínculo externo
-                  {numerosInspecao.length > 0 && (
-                    <span className="ml-2 text-[10px] font-normal normal-case tracking-normal text-slate-400">
-                      — {numerosInspecao.length} inspeção(ões)
-                    </span>
-                  )}
-                </div>
-                <div className={cn(fieldRowCls, 'grid-cols-1 sm:grid-cols-[200px_1fr]')}>
-                  <span className="text-[12px] font-semibold text-[#9ca3af] uppercase tracking-wide flex items-center gap-1.5">
-                    <Link2 size={13} /> Inspeções CLICK
-                  </span>
-                  {numerosInspecao.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {numerosInspecao.map((num, i) => (
-                        <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] font-bold text-[#094780]">
-                          <Link2 size={11} />
-                          {num}
-                        </span>
+                        </a>
                       ))}
                     </div>
                   ) : (
-                    <span className="text-[13.5px] text-[#9ca3af] italic">Nenhuma inspeção vinculada</span>
+                    <p className="text-sm text-slate-400 italic">Nenhum anexo vinculado.</p>
                   )}
+                </div>
+                
+                <div className={sectionTitleCls}>Origem e Vínculos</div>
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827]">Origem</span>
+                  <span className="text-[11px] font-black uppercase px-3 py-1 bg-slate-100 rounded-md max-w-max">{data.origem || '—'}</span>
+                </div>
+                <div className={cn(fieldRowCls, 'grid-cols-[180px_1fr]')}>
+                  <span className="text-[13.5px] font-medium text-[#111827]">Inspeções CLICK</span>
+                  <div className="flex flex-wrap gap-2">
+                    {numerosInspecao.length > 0 ? (
+                      numerosInspecao.map((n, i) => (
+                        <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg text-[12px] font-bold text-[#3d6cf0]">
+                          <Link2 size={12} /> #{n}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-400 italic">Nenhuma inspeção vinculada.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Bottom Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-[#e3e8ef] px-4 sm:px-7 py-3.5 flex items-center justify-between gap-3">
-          <button onClick={() => setDeleteModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#fecaca] text-[12.5px] font-medium text-red-500 hover:bg-red-50 transition-all">
-            <Trash2 size={13} /> <span className="hidden sm:inline">Excluir</span>
+        {/* Barra Inferior de Ações */}
+        <div className="fixed bottom-0 right-0 bg-white border-t border-[#e3e8ef] px-8 py-4 flex items-center justify-between z-40 transition-all"
+          style={{ left: 0 }}>
+          <button onClick={() => setDeleteModal(true)} className="flex items-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-xl transition-all font-bold text-xs">
+            <Trash2 size={16} /> EXCLUIR
           </button>
-          <div className="flex items-center gap-2">
-            <button onClick={() => router.push('/medida-administrativa/lista')} className="px-3 sm:px-4 py-2 rounded-lg border border-[#e3e8ef] text-[13px] font-medium text-[#4b5563] hover:text-[#111827] transition-all">← Voltar</button>
-            <button onClick={() => router.push(`/medida-administrativa/editar/${medidaId}`)} className="flex items-center gap-2 px-4 sm:px-5 py-2 rounded-lg bg-[#094780] text-white text-[13px] font-semibold hover:bg-[#0a5494] transition-all">
-              <Edit2 size={14} /> Editar Medida
+          <div className="flex gap-3">
+            <button onClick={() => router.push('/medida-administrativa/lista')} className="px-6 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:border-slate-300">VOLTAR</button>
+            <button onClick={() => router.push(`/medida-administrativa/editar/${medidaId}`)} className="px-8 py-2 bg-[#3d6cf0] hover:bg-[#2f5cd9] rounded-xl text-xs font-black text-white transition-all flex items-center gap-2">
+              <Edit2 size={16} /> EDITAR MEDIDA
             </button>
           </div>
         </div>
 
+        {/* Modal de Exclusão */}
         {deleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
-            <div className="modal-in bg-white rounded-2xl w-full max-w-xs p-8 text-center shadow-2xl border border-[#e3e8ef]">
-              <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={24} className="text-red-500" /></div>
-              <h3 className="text-[16px] font-bold text-[#111827] mb-2">Excluir medida?</h3>
-              <p className="text-[13px] text-[#9ca3af] mb-6">Esta ação não pode ser desfeita.</p>
-              <div className="flex gap-2">
-                <button onClick={() => setDeleteModal(false)} disabled={isDeleting} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-lg text-[13px] font-medium">Cancelar</button>
-                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 bg-red-500 text-white rounded-lg text-[13px] font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2">
-                  {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                  {isDeleting ? 'Excluindo...' : 'Excluir'}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+            <div className="bg-white p-8 rounded-3xl text-center shadow-2xl max-w-sm w-full">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32} className="text-red-500" /></div>
+              <h3 className="font-black text-lg text-slate-800 mb-2">Excluir Registro?</h3>
+              <p className="text-slate-500 text-sm mb-8">Esta ação não pode ser desfeita. A medida e seus anexos serão removidos permanentemente.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteModal(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold text-xs hover:bg-slate-200">CANCELAR</button>
+                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-3 bg-red-500 text-white rounded-2xl font-black text-xs hover:bg-red-600 flex items-center justify-center">
+                  {isDeleting ? <Loader2 className="animate-spin" size={16} /> : 'SIM, EXCLUIR'}
                 </button>
               </div>
             </div>

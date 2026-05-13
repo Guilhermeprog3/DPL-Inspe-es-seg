@@ -173,7 +173,6 @@ export default function NovaMedidaPage() {
       : CLASSIFICACOES
   , [searchQuery])
 
-  // SELEÇÃO COM PREENCHIMENTO AUTOMÁTICO DE LOCALIZAÇÃO
   function selecionarColab(item:any) {
   setColabSelecionado(item);
   setNomeColabPesquisa(item.nome || '');
