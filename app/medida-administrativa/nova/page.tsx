@@ -174,29 +174,46 @@ export default function NovaMedidaPage() {
   , [searchQuery])
 
   // SELEÇÃO COM PREENCHIMENTO AUTOMÁTICO DE LOCALIZAÇÃO
-  function selecionarColab(item: any) {
-    setColabSelecionado(item)
-    setNomeColabPesquisa(item.nome)
-    setMatColabPesquisa(item.chapa)
-    
-    const ufLimpa = item.uf?.trim().toUpperCase() as UF;
+  function selecionarColab(item:any) {
+  setColabSelecionado(item);
+  setNomeColabPesquisa(item.nome || '');
+  setMatColabPesquisa(item.chapa || '');
 
-    if (ufLimpa && REGIONAIS_POR_UF[ufLimpa]) {
-      setUf(ufLimpa)
-      const regionalLimpa = item.regional?.trim().toUpperCase() || '';
-      if (REGIONAIS_POR_UF[ufLimpa].includes(regionalLimpa)) {
-          setRegional(regionalLimpa);
-      } else {
-          setRegional('');
-      }
+  const mapaUf: Record<string, UF> = {
+    'PIAUÍ': 'PI',
+    'PIAUI': 'PI',
+    'MARANHÃO': 'MA',
+    'MARANHAO': 'MA'
+  };
+
+  const ufBanco = item.uf?.trim().toUpperCase() || '';
+  const ufSigla = mapaUf[ufBanco];
+
+  if (ufSigla && REGIONAIS_POR_UF[ufSigla]) {
+    setUf(ufSigla);
+
+    // 3. Tratamento da Regional
+    const regionalBanco = item.regional?.trim().toUpperCase() || '';
+    
+    // Verifica se a regional do banco existe na lista daquela UF sigla
+    const regionalValida = REGIONAIS_POR_UF[ufSigla].find(
+      r => r.toUpperCase() === regionalBanco
+    );
+
+    if (regionalValida) {
+      setRegional(regionalValida);
     } else {
-      setUf('');
       setRegional('');
     }
-
-    setShowColabDropdown(false)
-    setShowMatriculaDropdown(false)
+  } else {
+    // Caso venha algo como "POSTLINE" (visto na imagem image_1ef7f3.png), limpa os campos
+    setUf('');
+    setRegional('');
   }
+
+  setShowColabDropdown(false);
+  setShowMatriculaDropdown(false);
+}
 
   function selecionarSupervisor(item: any) {
     setSupSelecionado(item)
