@@ -33,7 +33,7 @@ type ChecklistField = { key: string; label: string; short: string; icon: string 
 
 const FIELDS_MA: ChecklistField[] = [
   { key: 'metaDds',             label: 'Diálogo de Segurança',  short: 'DDS',      icon: '📋' },
-  { key: 'acaoComunidade',      label: 'Ação Comunidade',       short: 'Comuni.',  icon: '🤝' },
+  { key: 'acaoComunidade',      label: 'Ação Comunidade',        short: 'Comuni.',  icon: '🤝' },
   { key: 'inspecEpcFerramenta', label: 'Insp. EPC/Ferramenta',  short: 'EPC/Fer.', icon: '🔧' },
   { key: 'inspecEpi',           label: 'Insp. EPI',             short: 'EPI',      icon: '🦺' },
   { key: 'inspecEdificacao',    label: 'Insp. Edificação',      short: 'Edific.',  icon: '🏗️' },
@@ -50,7 +50,7 @@ const FIELDS_PI: ChecklistField[] = [
 
 const ALL_CHECKLIST_FIELDS: ChecklistField[] = [
   { key: 'metaDds',             label: 'Meta DDS',              short: 'DDS',      icon: '📋' },
-  { key: 'acaoComunidade',      label: 'Ação Comunidade',       short: 'Comuni.',  icon: '🤝' },
+  { key: 'acaoComunidade',      label: 'Ação Comunidade',        short: 'Comuni.',  icon: '🤝' },
   { key: 'blitzCampo',          label: 'Blitz Campo',           short: 'Blitz',    icon: '🔦' },
   { key: 'inspecEpcFerramenta', label: 'Insp. EPC/Ferramenta',  short: 'EPC/Fer.', icon: '🔧' },
   { key: 'inspecEpi',           label: 'Insp. EPI',             short: 'EPI',      icon: '🦺' },
@@ -82,11 +82,13 @@ function fieldBelongsToUf(fieldKey: string, uf: string | null | undefined): bool
   return fields.some(f => f.key === fieldKey)
 }
 
+// CORREÇÃO DA DATA: O banco retorna "YYYY-MM-DD HH:mm:ss"
 function formatarDataBR(dataStr: string | null | undefined): string {
   if (!dataStr) return '—'
   try {
-    const [ano, dia, mes] = dataStr.split(' ')[0].split('-')
-    if (ano && dia && mes) return `${dia}/${mes}/${ano}`
+    const dataApenas = dataStr.split(' ')[0] // Pega "2026-04-01"
+    const [ano, mes, dia] = dataApenas.split('-')
+    if (ano && mes && dia) return `${dia}/${mes}/${ano}`
     return dataStr
   } catch {
     return dataStr
@@ -630,14 +632,14 @@ export default function MetaChecklistPage() {
       const exportData = filtered.map((s: any) => {
         const ufFields = getFieldsForUf(s.filial)
         const row: Record<string, any> = {
-          'Nome':        s.nome    ?? '',
+          'Nome':         s.nome    ?? '',
           'Matrícula':    s.matricula ?? '',
           'Status':       s.status  || 'Ativo',
           'Função':       s.funcao  ?? '',
-          'Área':         s.area    ?? '',
-          'Regional':     s.regional ?? '',
+          'Área':          s.area    ?? '',
+          'Regional':      s.regional ?? '',
           'Filial (UF)': s.filial ?? '',
-          'Data':         formatarDataBR(s.data),
+          'Data':          formatarDataBR(s.data),
         }
         ufFields.forEach(f => {
           row[f.label] = s[f.key] ?? ''
