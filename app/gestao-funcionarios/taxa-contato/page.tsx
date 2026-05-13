@@ -4,9 +4,10 @@ import {
   Search, SlidersHorizontal, Download, LayoutDashboard,
   UserCheck, AlertCircle,
   ChevronLeft, RefreshCw, Calendar,
-  ChevronDown, MoreVertical, Edit2, Trash2, Plus, Loader2,
+  ChevronDown, MoreVertical, Edit2,
   CheckCircle, ChevronRight, X, Pencil, Save, Ban, Mail, Briefcase,
-  Link2, Unlink2, Tag, ToggleLeft, ToggleRight, ShieldCheck,
+  Link2, Unlink2, Tag, Loader2,
+  ShieldCheck, Plus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -14,32 +15,59 @@ import { useSession } from 'next-auth/react'
 import api from '@/lib/api'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
+// CORRIGIDO: Rotas atualizadas para o módulo gestao-funcionarios
 const navItems = [
-  { section: 'Taxa de Contato' },
-  { label: 'Dashboard', href: '/taxa-contato', icon: LayoutDashboard },
+  { section: 'Gestão de Funcionários' },
+  { label: 'Taxa de Contato', href: '/gestao-funcionarios/taxa-contato', icon: LayoutDashboard },
+  { label: 'Meta Checklist', href: '/gestao-funcionarios/meta-checklist', icon: CheckCircle },
 ]
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  'ATIVO':     { label: 'Ativo',     color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-  'FÉRIAS':    { label: 'Férias',    color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
-  'AFASTADO':  { label: 'Afastado',  color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-  'DESLIGADO': { label: 'Desligado', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
-  'PENDENTE':  { label: 'Pendente',  color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'ATIVO':                          { label: 'Ativo',                         color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+  'FÉRIAS':                         { label: 'Férias',                        color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'FERIAS':                         { label: 'Ferias',                        color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'AFASTADO':                       { label: 'Afastado',                      color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'DESLIGADO':                      { label: 'Desligado',                     color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'PENDENTE':                       { label: 'Pendente',                      color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'ADM':                            { label: 'ADM',                           color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'ADMISSÃO PROX.MÊS':              { label: 'Admissão Próx. Mês',            color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'AF.AC.TRABALHO':                 { label: 'Af. Ac. Trabalho',              color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'AF.PREVIDÊNCIA':                 { label: 'Af. Previdência',               color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'AFASTAMENTO MEDICO':             { label: 'Afastamento Médico',            color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'APOS. POR INCAPACIDADE PERMANENTE': { label: 'Apos. Incapacidade Perm.',    color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'ATESTADO':                       { label: 'Atestado',                      color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'AVISO PRÉVIO':                   { label: 'Aviso Prévio',                  color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'BASE':                           { label: 'Base',                          color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'CONTRATO DE TRABALHO SUSPENSO':  { label: 'Contrato Suspenso',             color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'DEMITIDO':                       { label: 'Demitido',                      color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'FISCAL':                         { label: 'Fiscal',                        color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'INSS':                           { label: 'INSS',                          color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'LICENÇA S/VENC':                 { label: 'Licença s/ Venc.',              color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'PRISÃO / CÁRCERE':               { label: 'Prisão / Cárcere',              color: '#1e293b', bg: '#f1f5f9', border: '#cbd5e1' },
+  'PROMOVIDO':                      { label: 'Promovido',                     color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+  'SUPERVISOR':                     { label: 'Supervisor',                    color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'TRANSFERIDO':                    { label: 'Transferido',                   color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
 }
 
-const STATUS_OPTIONS = ['ATIVO', 'FÉRIAS', 'AFASTADO', 'DESLIGADO', 'PENDENTE']
+const STATUS_OPTIONS = [
+  'ATIVO', 'FÉRIAS', 'FERIAS', 'AFASTADO', 'DESLIGADO', 'PENDENTE',
+  'ADM', 'ADMISSÃO PROX.MÊS', 'AF.AC.TRABALHO', 'AF.PREVIDÊNCIA', 
+  'AFASTAMENTO MEDICO', 'APOS. POR INCAPACIDADE PERMANENTE', 'ATESTADO', 
+  'AVISO PRÉVIO', 'BASE', 'CONTRATO DE TRABALHO SUSPENSO', 'DEMITIDO', 
+  'FISCAL', 'INSS', 'LICENÇA S/VENC', 'PRISÃO / CÁRCERE', 'PROMOVIDO', 
+  'SUPERVISOR', 'TRANSFERIDO'
+]
+
 const UF_LABELS: Record<string, string> = { PI: 'Piauí', MA: 'Maranhão' }
 
 type SortField = 'supervisor' | 'nome' | 'data'
 type SortDir   = 'asc' | 'desc'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface FuncaoItem {
   nomeFuncao: string
   taxaDeContato: boolean
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const key = (status || 'PENDENTE').toUpperCase()
   const cfg = STATUS_CFG[key] ?? { label: status, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' }
@@ -81,7 +109,7 @@ function StatusSelector({ row, onStatusChange, canEdit }: {
     if (!btnRef.current) return
     const rect = btnRef.current.getBoundingClientRect()
     const spaceBelow = window.innerHeight - rect.bottom
-    const top = spaceBelow > 180 ? rect.bottom + 4 : rect.top - 180
+    const top = spaceBelow > 180 ? rect.bottom + 4 : rect.top - 210
     setDropdownPos({ top, left: rect.left })
     setOpen(o => !o)
   }
@@ -122,7 +150,7 @@ function StatusSelector({ row, onStatusChange, canEdit }: {
       {open && (
         <div
           ref={dropRef}
-          className="bg-white border border-slate-200 rounded-xl shadow-xl w-36 py-1 animate-fadeIn"
+          className="bg-white border border-slate-200 rounded-xl shadow-xl w-48 py-1 animate-fadeIn max-h-[200px] overflow-y-auto"
           style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
         >
           {STATUS_OPTIONS.map(s => {
@@ -133,12 +161,12 @@ function StatusSelector({ row, onStatusChange, canEdit }: {
                 key={s}
                 onClick={() => handleSelect(s)}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-2 text-[11.5px] font-bold transition-colors',
+                  'w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold transition-colors border-b border-slate-50 last:border-0',
                   isActive ? 'bg-slate-50' : 'hover:bg-slate-50'
                 )}
               >
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-                <span style={{ color: c.color }}>{c.label}</span>
+                <span style={{ color: c.color }} className="truncate">{c.label}</span>
                 {isActive && <CheckCircle size={10} className="ml-auto text-slate-400" />}
               </button>
             )
@@ -185,59 +213,63 @@ function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
   )
 }
 
-function ActionMenu({ row, onEdit, onDelete }: { row: any; onEdit: (row: any) => void; onDelete: (row: any) => void }) {
+// CORRIGIDO: Removida opção de excluir, apenas editar
+function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!open) return
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const handler = (e: MouseEvent) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  // CORRIGIDO: Calcula posição fixa para garantir que o menu fique sempre acima da tabela
+  function handleOpen() {
+    if (!btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const menuHeight = 52 // altura aproximada com só 1 item
+    const spaceBelow = window.innerHeight - rect.bottom
+    const top = spaceBelow > menuHeight + 8 ? rect.bottom + 4 : rect.top - menuHeight - 4
+    const left = rect.right - 160 // 160 = largura do menu
+    setMenuPos({ top, left })
+    setOpen(o => !o)
+  }
+
   return (
-    <div ref={ref} className="relative flex justify-end">
-      <button onClick={() => setOpen(o => !o)}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all">
+    <>
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all"
+      >
         <MoreVertical size={15} />
       </button>
+
+      {/* CORRIGIDO: menu em position:fixed com z-index altíssimo, fora do fluxo da tabela */}
       {open && (
-        <div className="absolute right-0 top-9 z-50 bg-white border border-slate-200 rounded-xl shadow-xl w-40 py-1 animate-fadeIn">
-          <button onClick={() => { setOpen(false); onEdit(row) }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+        <div
+          ref={menuRef}
+          className="bg-white border border-slate-200 rounded-xl shadow-xl w-40 py-1 animate-fadeIn"
+          style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 99999 }}
+        >
+          <button
+            onClick={() => { setOpen(false); onEdit(row) }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
             <Edit2 size={14} className="text-[#094780]" /> Editar
-          </button>
-          <div className="mx-3 my-1 border-t border-slate-100" />
-          <button onClick={() => { setOpen(false); onDelete(row) }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-red-500 hover:bg-red-50 transition-colors">
-            <Trash2 size={14} /> Excluir
           </button>
         </div>
       )}
-    </div>
-  )
-}
-
-function DeleteModal({ row, onConfirm, onCancel, isDeleting }: { row: any; onConfirm: () => void; onCancel: () => void; isDeleting: boolean }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
-      <div className="bg-white rounded-2xl w-full max-w-xs p-8 text-center shadow-2xl border border-[#e3e8ef] animate-scaleIn">
-        <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={24} className="text-red-500" /></div>
-        <h3 className="text-[16px] font-bold text-[#111827] mb-1">Excluir registro?</h3>
-        <p className="text-[13px] font-medium text-[#4b5563] mb-1">{row?.nome}</p>
-        <p className="text-[12px] text-[#9ca3af] mb-6">Esta ação não pode ser desfeita.</p>
-        <div className="flex gap-2">
-          <button onClick={onCancel} disabled={isDeleting}
-            className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-lg text-[13px] font-medium hover:bg-slate-50 transition-all">
-            Cancelar
-          </button>
-          <button onClick={onConfirm} disabled={isDeleting}
-            className="flex-1 py-2.5 bg-red-500 text-white rounded-lg text-[13px] font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2">
-            {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-            {isDeleting ? 'Excluindo...' : 'Excluir'}
-          </button>
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -252,6 +284,7 @@ interface DynamicOptions {
   ufToRegionais: Record<string, Set<string>>
 }
 
+// CORRIGIDO: Adicionado campo email do colaborador no modal de edição
 function EditModal({
   row,
   onClose,
@@ -280,6 +313,7 @@ function EditModal({
     supervisor:      row?.supervisor      ?? '',
     chapaSupervisor: row?.chapaSupervisor ?? '',
     email:           row?.email           ?? '',
+    emailColaborador: row?.emailColaborador ?? '', // NOVO: email do colaborador
   }
   const [form, setForm] = useState(INITIAL_FORM)
 
@@ -314,7 +348,7 @@ function EditModal({
     setColabSelecionado(item)
     setNomeColabPesquisa(item.nome)
     setMatColabPesquisa(item.chapa)
-    setForm(f => ({ ...f, nome: item.nome, chapa: item.chapa }))
+    setForm(f => ({ ...f, nome: item.nome, chapa: item.chapa, emailColaborador: item.email ?? '' }))
     setShowColabNome(false)
     setShowColabMat(false)
   }
@@ -366,6 +400,7 @@ function EditModal({
 
   const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13px] outline-none transition-all'
+  const inputCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
   const labelCls   = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
   const viewCls    = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
 
@@ -403,6 +438,7 @@ function EditModal({
           </div>
         </div>
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
+          {/* Seção Colaborador */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">
               Colaborador {editMode && <span className="text-red-400">*</span>}
@@ -422,7 +458,7 @@ function EditModal({
                     onChange={e => {
                       setNomeColabPesquisa(e.target.value.replace(/[0-9]/g, ''))
                       setColabSelecionado(null)
-                      setForm(f => ({ ...f, nome: '', chapa: '' }))
+                      setForm(f => ({ ...f, nome: '', chapa: '', emailColaborador: '' }))
                       setShowColabNome(true)
                     }}
                     onFocus={() => setShowColabNome(true)}
@@ -456,7 +492,7 @@ function EditModal({
                     onChange={e => {
                       setMatColabPesquisa(e.target.value.replace(/[^0-9]/g, ''))
                       setColabSelecionado(null)
-                      setForm(f => ({ ...f, nome: '', chapa: '' }))
+                      setForm(f => ({ ...f, nome: '', chapa: '', emailColaborador: '' }))
                       setShowColabMat(true)
                     }}
                     onFocus={() => setShowColabMat(true)}
@@ -472,6 +508,17 @@ function EditModal({
                       ))}
                     </div>
                   )}
+                </div>
+                {/* NOVO: E-mail do colaborador editável */}
+                <div className="col-span-2">
+                  <label className={labelCls}>E-mail do colaborador</label>
+                  <input
+                    type="email"
+                    value={form.emailColaborador}
+                    placeholder="email@empresa.com"
+                    className={inputCls}
+                    onChange={e => handleChange('emailColaborador', e.target.value)}
+                  />
                 </div>
                 {!colabSelecionado && (nomeColabPesquisa || matColabPesquisa) && (
                   <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
@@ -489,10 +536,17 @@ function EditModal({
                   <label className={labelCls}>Matrícula</label>
                   <ViewValue value={form.chapa} />
                 </div>
+                {/* NOVO: E-mail do colaborador visível */}
+                <div className="col-span-2">
+                  <label className={labelCls}>E-mail do colaborador</label>
+                  <ViewValue value={form.emailColaborador} />
+                </div>
               </div>
             )}
           </div>
           <div className="border-t border-slate-50" />
+
+          {/* Seção Supervisor */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Supervisor (opcional)</p>
             {editMode ? (
@@ -561,6 +615,17 @@ function EditModal({
                     </div>
                   )}
                 </div>
+                {/* E-mail supervisor editável */}
+                <div className="col-span-2">
+                  <label className={labelCls}>E-mail do supervisor</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    placeholder="email@empresa.com"
+                    className={inputCls}
+                    onChange={e => handleChange('email', e.target.value)}
+                  />
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -580,6 +645,8 @@ function EditModal({
             )}
           </div>
           <div className="border-t border-slate-50" />
+
+          {/* Seção Lotação */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Lotação</p>
             {editMode ? (
@@ -732,21 +799,17 @@ function EditModal({
 }
 
 // ─── GerenciarFuncoesModal ─────────────────────────────────────────────────────
-// Modal completo para admin: lista todas as funções, permite criar novas
-// e ativar/desativar participação na Taxa de Contato.
 function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
   const [funcoes, setFuncoes] = useState<FuncaoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [filtroAtiva, setFiltroAtiva] = useState<'todos' | 'ativas' | 'inativas'>('todos')
 
-  // Criação de nova função
   const [nomeFuncao, setNomeFuncao] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Toggles em andamento (evita double-click)
   const [toggling, setToggling] = useState<Set<string>>(new Set())
 
   async function loadFuncoes() {
@@ -817,8 +880,6 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-200 flex items-center justify-center">
@@ -836,7 +897,6 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* Nova função */}
         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Cadastrar nova função</p>
           <div className="flex gap-2">
@@ -876,7 +936,6 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* Filtros da lista */}
         <div className="px-6 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[160px]">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -910,7 +969,6 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Lista de funções */}
         <div className="overflow-y-auto flex-1">
           {loading ? (
             <div className="py-16 text-center text-slate-400 flex items-center justify-center gap-2">
@@ -934,30 +992,16 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
                     )}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      {/* Indicador colorido */}
-                      <span
-                        className={cn(
-                          'w-2 h-2 rounded-full shrink-0 transition-colors',
-                          f.taxaDeContato ? 'bg-emerald-400' : 'bg-slate-300'
-                        )}
-                      />
-                      <span className="text-[13px] font-semibold text-[#1a2535] truncate">
-                        {f.nomeFuncao}
-                      </span>
+                      <span className={cn('w-2 h-2 rounded-full shrink-0 transition-colors', f.taxaDeContato ? 'bg-emerald-400' : 'bg-slate-300')} />
+                      <span className="text-[13px] font-semibold text-[#1a2535] truncate">{f.nomeFuncao}</span>
                     </div>
-
                     <div className="flex items-center gap-3 shrink-0 ml-4">
-                      {/* Badge de status */}
                       <span className={cn(
                         'text-[10px] font-bold px-2 py-0.5 rounded-full border hidden sm:inline-flex items-center gap-1',
-                        f.taxaDeContato
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                          : 'bg-slate-50 text-slate-400 border-slate-200'
+                        f.taxaDeContato ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-400 border-slate-200'
                       )}>
                         {f.taxaDeContato ? <><CheckCircle size={9} /> Na taxa</> : 'Fora da taxa'}
                       </span>
-
-                      {/* Toggle switch */}
                       <button
                         onClick={() => handleToggle(f.nomeFuncao, f.taxaDeContato)}
                         disabled={isToggling}
@@ -968,13 +1012,8 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
                           isToggling && 'opacity-50 cursor-wait'
                         )}
                       >
-                        <span className={cn(
-                          'inline-block w-4 h-4 bg-white rounded-full shadow transition-transform',
-                          f.taxaDeContato ? 'translate-x-6' : 'translate-x-1'
-                        )} />
-                        {isToggling && (
-                          <Loader2 size={10} className="absolute right-1 top-1 text-white animate-spin" />
-                        )}
+                        <span className={cn('inline-block w-4 h-4 bg-white rounded-full shadow transition-transform', f.taxaDeContato ? 'translate-x-6' : 'translate-x-1')} />
+                        {isToggling && <Loader2 size={10} className="absolute right-1 top-1 text-white animate-spin" />}
                       </button>
                     </div>
                   </div>
@@ -984,12 +1023,8 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100">
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 bg-[#094780] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0a5494] transition-all"
-          >
+          <button onClick={onClose} className="w-full py-2.5 bg-[#094780] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0a5494] transition-all">
             Fechar
           </button>
         </div>
@@ -1116,9 +1151,7 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                       disabled={jaEhDaEquipe}
                       className={cn(
                         "w-full px-4 py-3 text-left border-b last:border-0 flex items-center justify-between transition-all",
-                        jaEhDaEquipe
-                          ? "bg-slate-50 cursor-not-allowed opacity-70"
-                          : "hover:bg-slate-50 cursor-pointer"
+                        jaEhDaEquipe ? "bg-slate-50 cursor-not-allowed opacity-70" : "hover:bg-slate-50 cursor-pointer"
                       )}
                     >
                       <div className="flex flex-col">
@@ -1130,13 +1163,9 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                           <UserCheck size={10} /> Sua Equipe
                         </span>
                       ) : c.supervisor ? (
-                        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
-                          Outro Supervisor
-                        </span>
+                        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Outro Supervisor</span>
                       ) : (
-                        <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-                          Disponível
-                        </span>
+                        <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">Disponível</span>
                       )}
                     </button>
                   )
@@ -1212,7 +1241,8 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
 
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[13px] font-medium">Cancelar</button>
-          <button onClick={handleSave} disabled={!canSave || isSaving} className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all', canSave ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-200 text-slate-400')}>
+          <button onClick={handleSave} disabled={!canSave || isSaving}
+            className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all', canSave ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-200 text-slate-400')}>
             {isSaving ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Confirmar Associação'}
           </button>
         </div>
@@ -1234,7 +1264,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   const [allData,      setAllData    ] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [busca,        setBusca      ] = useState('')
-  const [selected,     setSelected   ] = useState<any>(null)
+  const [selected,      setSelected   ] = useState<any>(null)
 
   const [novoSupervisor,      setNovoSupervisor     ] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
@@ -1508,31 +1538,29 @@ export default function TaxaContatoPage() {
   const canManageAssociation = isSupervisor || isGerenteOuCoordenador
   const canEditStatus = isAdmin || isGerenteOuCoordenador || isSupervisor
 
-  const [data,     setData   ] = useState<any[]>([])
+  const [data,      setData   ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [busca,           setBusca         ] = useState('')
-  const [campoBusca,      setCampoBusca    ] = useState('todos')
-  const [filtroArea,      setFiltroArea    ] = useState('')
-  const [filtroStatus,    setFiltroStatus  ] = useState('')
-  const [filtroBase,      setFiltroBase    ] = useState('')
-  const [filtroFuncao,    setFiltroFuncao  ] = useState('')
-  const [filtroUf,        setFiltroUf      ] = useState<string[]>([])
-  const [filtroRegional, setFiltroRegional] = useState<string[]>([])
-  const [filtroMes,      setFiltroMes     ] = useState('')
-  const [mesesOptions,   setMesesOptions  ] = useState<{value: string, label: string}[]>([])
+  const [busca,            setBusca          ] = useState('')
+  const [campoBusca,       setCampoBusca     ] = useState('todos')
+  const [filtroArea,       setFiltroArea     ] = useState('')
+  const [filtroStatus,     setFiltroStatus   ] = useState('')
+  const [filtroBase,       setFiltroBase     ] = useState('')
+  const [filtroFuncao,     setFiltroFuncao   ] = useState('')
+  const [filtroUf,         setFiltroUf       ] = useState<string[]>([])
+  const [filtroRegional,   setFiltroRegional ] = useState<string[]>([])
+  const [filtroMes,        setFiltroMes      ] = useState('')
+  const [mesesOptions,     setMesesOptions   ] = useState<{value: string, label: string}[]>([])
 
   const [sortField,   setSortField  ] = useState<SortField>('nome')
   const [sortDir,     setSortDir    ] = useState<SortDir>('asc')
   const [currentPage, setCurrentPage] = useState(1)
-  const PAGE_SIZE = 12
+  const [pageSize,    setPageSize   ] = useState(10)
 
-  const [deleteTarget,         setDeleteTarget        ] = useState<any>(null)
-  const [isDeleting,           setIsDeleting          ] = useState(false)
-  const [editTarget,           setEditTarget          ] = useState<any>(null)
-  const [showGerenciarFuncoes, setShowGerenciarFuncoes] = useState(false)  // ← substituiu showNovaFuncao
-  const [showAssociar,         setShowAssociar        ] = useState(false)
-  const [showDesassociar,      setShowDesassociar     ] = useState(false)
+  const [editTarget,            setEditTarget           ] = useState<any>(null)
+  const [showGerenciarFuncoes,  setShowGerenciarFuncoes ] = useState(false) 
+  const [showAssociar,          setShowAssociar         ] = useState(false)
+  const [showDesassociar,       setShowDesassociar      ] = useState(false)
 
   useEffect(() => {
     async function loadCompetencias() {
@@ -1560,10 +1588,10 @@ export default function TaxaContatoPage() {
     const ufToRegionais: Record<string, Set<string>> = {}
 
     data.forEach(item => {
-      if (item.local)        locais.add(item.local)
-      if (item.area)         areas.add(item.area)
+      if (item.local)       locais.add(item.local)
+      if (item.area)        areas.add(item.area)
       if (item.codsituacao) situacoes.add(item.codsituacao.toUpperCase())
-      if (item.base)         bases.add(item.base)
+      if (item.base)        bases.add(item.base)
       if (item.funcao)      funcoes.add(item.funcao)
       if (item.filial)      ufs.add(item.filial)
       if (item.regional)    regionais.add(item.regional)
@@ -1574,12 +1602,12 @@ export default function TaxaContatoPage() {
     })
     return {
       locais:        Array.from(locais).sort(),
-      areas:         Array.from(areas).sort(),
-      situacoes:     Array.from(situacoes).sort(),
-      bases:         Array.from(bases).sort(),
-      funcoes:       Array.from(funcoes).sort(),
-      ufs:           Array.from(ufs).sort(),
-      regionais:     Array.from(regionais).sort(),
+      areas:          Array.from(areas).sort(),
+      situacoes:      Array.from(situacoes).sort(),
+      bases:          Array.from(bases).sort(),
+      funcoes:        Array.from(funcoes).sort(),
+      ufs:            Array.from(ufs).sort(),
+      regionais:      Array.from(regionais).sort(),
       ufToRegionais,
     }
   }, [data])
@@ -1614,7 +1642,7 @@ export default function TaxaContatoPage() {
     })
     const novasRegionais = filtroRegional.filter(r => regionaisDasUfsSelecionadas.has(r))
     if (novasRegionais.length !== filtroRegional.length) setFiltroRegional(novasRegionais)
-  }, [filtroUf]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filtroUf])
 
   const filtrosAtivos = [busca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf.length > 0, filtroRegional.length > 0].filter(Boolean).length
 
@@ -1631,18 +1659,18 @@ export default function TaxaContatoPage() {
     try {
       const XLSX = await import('xlsx')
       const exportData = filtered.map((s: any) => ({
-        'Nome':              s.nome              ?? '',
-        'Matrícula':         s.chapa             ?? '',
-        'Função':            s.funcao            ?? '',
-        'Área':              s.area              ?? '',
-        'Base':              s.base              ?? '',
-        'Local':             s.local             ?? '',
-        'Filial (UF)':       s.filial            ?? '',
-        'Regional':          s.regional          ?? '',
-        'Supervisor':        s.supervisor        ?? '',
-        'Chapa Supervisor':  s.chapaSupervisor   ?? '',
-        'E-mail Supervisor': s.email             ?? '',
-        'Situação':          s.codsituacao       ?? '',
+        'Nome':              s.nome               ?? '',
+        'Matrícula':         s.chapa              ?? '',
+        'Função':            s.funcao             ?? '',
+        'Área':              s.area               ?? '',
+        'Base':              s.base               ?? '',
+        'Local':             s.local              ?? '',
+        'Filial (UF)':       s.filial             ?? '',
+        'Regional':          s.regional           ?? '',
+        'Supervisor':        s.supervisor         ?? '',
+        'Chapa Supervisor':  s.chapaSupervisor    ?? '',
+        'E-mail Supervisor': s.email              ?? '',
+        'Situação':          s.codsituacao        ?? '',
         'Data': s.data
           ? (() => {
               const raw = String(s.data).trim()
@@ -1672,17 +1700,6 @@ export default function TaxaContatoPage() {
     setBusca(''); setCampoBusca('todos'); setFiltroArea(''); setFiltroStatus('')
     setFiltroBase(''); setFiltroFuncao('')
     setFiltroUf([]); setFiltroRegional([]); setCurrentPage(1)
-  }
-
-  async function handleDelete() {
-    if (!deleteTarget || isDeleting) return
-    setIsDeleting(true)
-    try {
-      await api.delete(`/taxa-contato/${deleteTarget.id}`)
-      setData(prev => prev.filter(r => r.id !== deleteTarget.id))
-      setDeleteTarget(null)
-    } catch (e: any) { alert(e.response?.data?.message || 'Erro ao excluir.') }
-    finally { setIsDeleting(false) }
   }
 
   function handleStatusChange(id: string, newStatus: string) {
@@ -1726,7 +1743,7 @@ export default function TaxaContatoPage() {
       if (filtroStatus  && (s.codsituacao || '').toUpperCase() !== filtroStatus) return false
       if (filtroBase    && s.base !== filtroBase) return false
       if (filtroFuncao  && s.funcao !== filtroFuncao) return false
-      if (filtroUf.length > 0       && !filtroUf.includes(s.filial))         return false
+      if (filtroUf.length > 0       && !filtroUf.includes(s.filial))          return false
       if (filtroRegional.length > 0 && !filtroRegional.includes(s.regional)) return false
       return true
     }).sort((a, b) => {
@@ -1740,15 +1757,15 @@ export default function TaxaContatoPage() {
     })
   }, [data, busca, campoBusca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf, filtroRegional, sortField, sortDir])
 
-  const paginated   = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const mesLabel   = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
+  const paginated   = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const mesLabel    = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
   const userFullName = userData?.nomeCompleto || userData?.name || ''
   const userChapa    = userData?.chapa ?? ''
   const userRegional = userData?.regional ?? ''
 
   return (
-    <DashboardLayout title="Taxa de Contato" breadcrumb="SIGS / Gestão de Pessoas / Taxa de Contato" navItems={navItems}>
+    <DashboardLayout title="Taxa de Contato" breadcrumb="SIGS / Gestão de Funcionários / Taxa de Contato" navItems={navItems}>
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
         .gp-root { font-family:'DM Sans',sans-serif; padding:16px; }
@@ -1773,7 +1790,7 @@ export default function TaxaContatoPage() {
         .gp-row td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; font-size:13px; }
         .gp-row:hover td { background:#fafbfc; }
         .pag-wrap { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid #f1f5f9; }
-        .pg-btn { min-width:32px; height:32px; border-radius:8px; border:1.5px solid #e3e8ef; background:#fff; cursor:pointer; display:flex; align-items:center; justify-center; font-size:12px; font-weight:600; }
+        .pg-btn { min-width:32px; height:32px; border-radius:8px; border:1.5px solid #e3e8ef; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
         .pg-btn:disabled { opacity:.4; cursor:not-allowed; }
         .btn-outline { background:#fff; color:#374151; padding:8px 13px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .15s; }
         .btn-outline:hover { border-color:#094780; color:#094780; }
@@ -1831,7 +1848,6 @@ export default function TaxaContatoPage() {
                 </button>
               </>
             )}
-            {/* Botão "Funções" — visível somente para admin */}
             {isAdmin && (
               <button onClick={() => setShowGerenciarFuncoes(true)} className="btn-violet">
                 <Tag size={14} /> Funções
@@ -1936,6 +1952,7 @@ export default function TaxaContatoPage() {
                         Data {sortField === 'data' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
                       <th>Situação</th>
+                      {/* CORRIGIDO: Coluna de ações visível somente para admin */}
                       {isAdmin && <th style={{ width: 52 }} />}
                     </tr>
                   </thead>
@@ -1995,16 +2012,40 @@ export default function TaxaContatoPage() {
                             canEdit={canEditStatus}
                           />
                         </td>
-                        {isAdmin && <td><ActionMenu row={s} onEdit={setEditTarget} onDelete={setDeleteTarget} /></td>}
+                        {/* CORRIGIDO: ActionMenu sem excluir, com menu em position:fixed */}
+                        {isAdmin && (
+                          <td>
+                            <ActionMenu row={s} onEdit={setEditTarget} />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <div className="pag-wrap">
-                <span className="text-[11px] text-[#8896ab]">
-                  Página {currentPage} de {totalPages} · Exibindo {Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-[#8896ab]">
+                    Página {currentPage} de {totalPages} · Exibindo {Math.min(currentPage * pageSize, filtered.length)} de {filtered.length}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Itens:</span>
+                    {[10, 20, 30].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => { setPageSize(n); setCurrentPage(1) }}
+                        className={cn(
+                          'min-w-[32px] h-7 rounded-lg border text-[11px] font-bold transition-all px-2',
+                          pageSize === n
+                            ? 'bg-[#094780] text-white border-[#094780]'
+                            : 'bg-white text-slate-500 border-[#e3e8ef] hover:border-[#094780] hover:text-[#094780]'
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex gap-1">
                   <button className="pg-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft size={14} /></button>
                   <button className="pg-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight size={14} /></button>
@@ -2015,9 +2056,6 @@ export default function TaxaContatoPage() {
         </div>
       </div>
 
-      {isAdmin && deleteTarget && (
-        <DeleteModal row={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} isDeleting={isDeleting} />
-      )}
       {isAdmin && editTarget && (
         <EditModal
           row={editTarget}
@@ -2026,7 +2064,6 @@ export default function TaxaContatoPage() {
           dynamicOptions={dynamicOptions}
         />
       )}
-      {/* Modal de gerenciamento de funções — somente admin */}
       {isAdmin && showGerenciarFuncoes && (
         <GerenciarFuncoesModal onClose={() => setShowGerenciarFuncoes(false)} />
       )}

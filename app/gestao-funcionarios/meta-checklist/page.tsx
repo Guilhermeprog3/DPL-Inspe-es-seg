@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Search, SlidersHorizontal, Download, LayoutDashboard,
   AlertCircle, ChevronLeft, RefreshCw, Calendar,
-  ChevronDown, MoreVertical, Edit2, Trash2, Loader2,
+  ChevronDown, MoreVertical, Edit2, Loader2,
   CheckCircle, ChevronRight, X, Pencil, Save, Ban,
   Briefcase,
 } from 'lucide-react'
@@ -13,19 +13,49 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useSession } from 'next-auth/react'
 import api from '@/lib/api'
 
-// ─── Nav ──────────────────────────────────────────────────────────────────────
 const navItems = [
-  { section: 'Meta Checklist' },
-  { label: 'Dashboard', href: '/meta-checklist', icon: LayoutDashboard },
+  { section: 'Gestão de Funcionários' },
+  { label: 'Taxa de Contato', href: '/gestao-funcionarios/taxa-contato', icon: LayoutDashboard },
+  { label: 'Meta Checklist', href: '/gestao-funcionarios/meta-checklist', icon: CheckCircle },
 ]
 
+// ─── Status config expandido (igual à Taxa de Contato) ────────────────────────
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  'ATIVO':     { label: 'Ativo',     color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
-  'INATIVO':   { label: 'Inativo',   color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
-  'FÉRIAS':    { label: 'Férias',    color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
-  'AFASTADO':  { label: 'Afastado',  color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-  'DESLIGADO': { label: 'Desligado', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'ATIVO':                             { label: 'Ativo',                        color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+  'INATIVO':                           { label: 'Inativo',                      color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'FÉRIAS':                            { label: 'Férias',                       color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'FERIAS':                            { label: 'Férias',                       color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'AFASTADO':                          { label: 'Afastado',                     color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'DESLIGADO':                         { label: 'Desligado',                    color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'PENDENTE':                          { label: 'Pendente',                     color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'ADM':                               { label: 'ADM',                          color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'ADMISSÃO PROX.MÊS':                 { label: 'Admissão Próx. Mês',           color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'AF.AC.TRABALHO':                    { label: 'Af. Ac. Trabalho',             color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'AF.PREVIDÊNCIA':                    { label: 'Af. Previdência',              color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'AFASTAMENTO MEDICO':                { label: 'Afastamento Médico',           color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'APOS. POR INCAPACIDADE PERMANENTE': { label: 'Apos. Incapacidade Perm.',     color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'ATESTADO':                          { label: 'Atestado',                     color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  'AVISO PRÉVIO':                      { label: 'Aviso Prévio',                 color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'BASE':                              { label: 'Base',                         color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'CONTRATO DE TRABALHO SUSPENSO':     { label: 'Contrato Suspenso',            color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'DEMITIDO':                          { label: 'Demitido',                     color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'FISCAL':                            { label: 'Fiscal',                       color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'INSS':                              { label: 'INSS',                         color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+  'LICENÇA S/VENC':                    { label: 'Licença s/ Venc.',             color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  'PRISÃO / CÁRCERE':                  { label: 'Prisão / Cárcere',             color: '#1e293b', bg: '#f1f5f9', border: '#cbd5e1' },
+  'PROMOVIDO':                         { label: 'Promovido',                    color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
+  'SUPERVISOR':                        { label: 'Supervisor',                   color: '#094780', bg: '#eff6ff', border: '#dbeafe' },
+  'TRANSFERIDO':                       { label: 'Transferido',                  color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
 }
+
+const STATUS_OPTIONS = [
+  'ATIVO', 'INATIVO', 'FÉRIAS', 'FERIAS', 'AFASTADO', 'DESLIGADO', 'PENDENTE',
+  'ADM', 'ADMISSÃO PROX.MÊS', 'AF.AC.TRABALHO', 'AF.PREVIDÊNCIA',
+  'AFASTAMENTO MEDICO', 'APOS. POR INCAPACIDADE PERMANENTE', 'ATESTADO',
+  'AVISO PRÉVIO', 'BASE', 'CONTRATO DE TRABALHO SUSPENSO', 'DEMITIDO',
+  'FISCAL', 'INSS', 'LICENÇA S/VENC', 'PRISÃO / CÁRCERE', 'PROMOVIDO',
+  'SUPERVISOR', 'TRANSFERIDO',
+]
 
 const UF_LABELS: Record<string, string> = { PI: 'Piauí', MA: 'Maranhão' }
 
@@ -42,10 +72,10 @@ const FIELDS_MA: ChecklistField[] = [
 ]
 
 const FIELDS_PI: ChecklistField[] = [
-  { key: 'metaDds',        label: 'Meta Diálogo de Segurança', short: 'DDS',    icon: '📋' },
+  { key: 'metaDds',        label: 'Meta Diálogo de Segurança', short: 'DDS',     icon: '📋' },
   { key: 'acaoComunidade', label: 'Meta Palestra Comunidade',  short: 'Palest.', icon: '🤝' },
-  { key: 'metaDinamica',   label: 'Meta Dinâmica',             short: 'Dinâm.', icon: '🎯' },
-  { key: 'metaEstatica',   label: 'Meta Estática',             short: 'Estát.', icon: '📌' },
+  { key: 'metaDinamica',   label: 'Meta Dinâmica',             short: 'Dinâm.',  icon: '🎯' },
+  { key: 'metaEstatica',   label: 'Meta Estática',             short: 'Estát.',  icon: '📌' },
 ]
 
 const ALL_CHECKLIST_FIELDS: ChecklistField[] = [
@@ -78,15 +108,13 @@ function getFieldsForUfs(ufs: string[]): ChecklistField[] {
 }
 
 function fieldBelongsToUf(fieldKey: string, uf: string | null | undefined): boolean {
-  const fields = getFieldsForUf(uf)
-  return fields.some(f => f.key === fieldKey)
+  return getFieldsForUf(uf).some(f => f.key === fieldKey)
 }
 
-// CORREÇÃO DA DATA: O banco retorna "YYYY-MM-DD HH:mm:ss"
 function formatarDataBR(dataStr: string | null | undefined): string {
   if (!dataStr) return '—'
   try {
-    const dataApenas = dataStr.split(' ')[0] // Pega "2026-04-01"
+    const dataApenas = dataStr.split(' ')[0]
     const [ano, mes, dia] = dataApenas.split('-')
     if (ano && mes && dia) return `${dia}/${mes}/${ano}`
     return dataStr
@@ -98,65 +126,118 @@ function formatarDataBR(dataStr: string | null | undefined): string {
 type SortField = 'nome' | 'funcao' | 'area' | 'regional'
 type SortDir   = 'asc' | 'desc'
 
-// ─── Components ───────────────────────────────────────────────────────────────
+// ─── StatusSelector (dropdown fixo, igual à Taxa de Contato) ─────────────────
+function StatusSelector({ row, onStatusChange, canEdit }: {
+  row: any
+  onStatusChange: (id: any, newStatus: string) => void
+  canEdit: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
 
-function StatusSelect({ rowId, initialStatus, onUpdate }: { rowId: any, initialStatus: string, onUpdate: (newStatus: string) => void }) {
-  const [status, setStatus] = useState(initialStatus || 'ATIVO')
-  const [loading, setLoading] = useState(false)
-  const cfg = STATUS_CFG[status.toUpperCase()] || STATUS_CFG['ATIVO']
+  const currentKey = (row.status || 'ATIVO').toUpperCase()
+  const cfg = STATUS_CFG[currentKey] ?? STATUS_CFG['ATIVO']
 
-  async function handleStatusChange(newStatus: string) {
-    setLoading(true)
-    const oldStatus = status
-    setStatus(newStatus)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        dropRef.current && !dropRef.current.contains(e.target as Node)
+      ) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  function handleOpen() {
+    if (!canEdit || !btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const top = spaceBelow > 220 ? rect.bottom + 4 : rect.top - 220
+    setDropdownPos({ top, left: rect.left })
+    setOpen(o => !o)
+  }
+
+  async function handleSelect(status: string) {
+    setOpen(false)
+    if (status === currentKey) return
+    setSaving(true)
     try {
-      await api.patch(`/meta-checklist/${rowId}`, { status: newStatus })
-      onUpdate(newStatus)
-    } catch (err) {
-      console.error(err)
-      setStatus(oldStatus)
-      alert('Erro ao atualizar status.')
+      await api.patch(`/meta-checklist/${row.id}`, { status })
+      onStatusChange(row.id, status)
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao atualizar status.')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
-  return (
-    <div className="relative group min-w-[85px] mx-auto">
-      <select
-        value={status.toUpperCase()}
-        disabled={loading}
-        onChange={(e) => handleStatusChange(e.target.value)}
-        className={cn(
-          "appearance-none w-full px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer outline-none",
-          loading && "opacity-50 cursor-wait"
-        )}
-        style={{ 
-          background: cfg.bg, 
-          color: cfg.color, 
-          borderColor: cfg.border,
-          paddingRight: '18px' 
-        }}
+  if (!canEdit) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
+        style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}
       >
-        {Object.keys(STATUS_CFG).map(s => (
-          <option key={s} value={s} style={{ background: '#fff', color: '#334155' }}>
-            {STATUS_CFG[s].label}
-          </option>
-        ))}
-      </select>
-      {loading ? (
-        <Loader2 size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />
-      ) : (
-        <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none" />
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color }} />
+        {cfg.label}
+      </span>
+    )
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        disabled={saving}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all hover:shadow-sm hover:brightness-95 active:scale-95 cursor-pointer"
+        style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.border }}
+      >
+        {saving
+          ? <Loader2 size={10} className="animate-spin" />
+          : <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color }} />
+        }
+        {cfg.label}
+        <ChevronDown size={9} className="ml-0.5 opacity-60" />
+      </button>
+
+      {open && (
+        <div
+          ref={dropRef}
+          className="bg-white border border-slate-200 rounded-xl shadow-xl w-52 py-1 animate-fadeIn max-h-[220px] overflow-y-auto"
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
+        >
+          {STATUS_OPTIONS.map(s => {
+            const c = STATUS_CFG[s]
+            const isActive = s === currentKey
+            return (
+              <button
+                key={s}
+                onClick={() => handleSelect(s)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold transition-colors border-b border-slate-50 last:border-0',
+                  isActive ? 'bg-slate-50' : 'hover:bg-slate-50'
+                )}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                <span style={{ color: c.color }} className="truncate">{c.label}</span>
+                {isActive && <CheckCircle size={10} className="ml-auto text-slate-400" />}
+              </button>
+            )
+          })}
+        </div>
       )}
-    </div>
+    </>
   )
 }
 
 function MetaCell({ value }: { value: number | null | undefined }) {
   const isNull = value === null || value === undefined
   if (isNull) return <span className="inline-flex items-center justify-center w-8 h-6 rounded text-[11px] font-bold text-slate-300">—</span>
-  
   const num = Number(value)
   const color = num === 0 ? '#ef4444' : num >= 10 ? '#10b981' : num >= 5 ? '#f59e0b' : '#3b82f6'
   const bg    = num === 0 ? '#fef2f2' : num >= 10 ? '#f0fdf4' : num >= 5 ? '#fffbeb' : '#eff6ff'
@@ -167,7 +248,7 @@ function MetaCell({ value }: { value: number | null | undefined }) {
   )
 }
 
-function MetaCellForUf({ value, fieldKey, uf }: { value: number | null | undefined, fieldKey: string, uf: string | null | undefined }) {
+function MetaCellForUf({ value, fieldKey, uf }: { value: number | null | undefined; fieldKey: string; uf: string | null | undefined }) {
   if (!fieldBelongsToUf(fieldKey, uf)) return <span className="inline-flex items-center justify-center w-8 h-6 rounded text-[11px] text-slate-200">·</span>
   return <MetaCell value={value} />
 }
@@ -197,9 +278,11 @@ function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
           <button onClick={() => onChange([])} className={cn('chip', value.length === 0 && 'chip-active')}>Todos</button>
         )}
         {options.map((opt: any) => (
-          <button key={opt}
+          <button
+            key={opt}
             onClick={() => value.includes(opt) ? onChange(value.filter((v: any) => v !== opt)) : onChange([...value, opt])}
-            className={cn('chip', (value.includes(opt) || options.length === 1) && 'chip-active')}>
+            className={cn('chip', (value.includes(opt) || options.length === 1) && 'chip-active')}
+          >
             {renderLabel ? renderLabel(opt) : opt}
           </button>
         ))}
@@ -208,59 +291,61 @@ function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
   )
 }
 
-function ActionMenu({ row, onEdit, onDelete }: { row: any; onEdit: (row: any) => void; onDelete: (row: any) => void }) {
+// ─── ActionMenu: sem excluir, menu em position:fixed ──────────────────────────
+function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!open) return
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const handler = (e: MouseEvent) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target as Node) &&
+        menuRef.current && !menuRef.current.contains(e.target as Node)
+      ) setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  function handleOpen() {
+    if (!btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const menuHeight = 52
+    const spaceBelow = window.innerHeight - rect.bottom
+    const top = spaceBelow > menuHeight + 8 ? rect.bottom + 4 : rect.top - menuHeight - 4
+    const left = rect.right - 160
+    setMenuPos({ top, left })
+    setOpen(o => !o)
+  }
+
   return (
-    <div ref={ref} className="relative flex justify-end">
-      <button onClick={() => setOpen(o => !o)}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all">
+    <>
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all"
+      >
         <MoreVertical size={15} />
       </button>
+
       {open && (
-        <div className="absolute right-0 top-9 z-50 bg-white border border-slate-200 rounded-xl shadow-xl w-40 py-1 animate-fadeIn">
-          <button onClick={() => { setOpen(false); onEdit(row) }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+        <div
+          ref={menuRef}
+          className="bg-white border border-slate-200 rounded-xl shadow-xl w-40 py-1 animate-fadeIn"
+          style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 99999 }}
+        >
+          <button
+            onClick={() => { setOpen(false); onEdit(row) }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
             <Edit2 size={14} className="text-[#094780]" /> Editar
-          </button>
-          <div className="mx-3 my-1 border-t border-slate-100" />
-          <button onClick={() => { setOpen(false); onDelete(row) }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-red-500 hover:bg-red-50 transition-colors">
-            <Trash2 size={14} /> Excluir
           </button>
         </div>
       )}
-    </div>
-  )
-}
-
-function DeleteModal({ row, onConfirm, onCancel, isDeleting }: { row: any; onConfirm: () => void; onCancel: () => void; isDeleting: boolean }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-6">
-      <div className="bg-white rounded-2xl w-full max-w-xs p-8 text-center shadow-2xl border border-[#e3e8ef] animate-scaleIn">
-        <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={24} className="text-red-500" /></div>
-        <h3 className="text-[16px] font-bold text-[#111827] mb-1">Excluir registro?</h3>
-        <p className="text-[13px] font-medium text-[#4b5563] mb-1">{row?.nome}</p>
-        <p className="text-[12px] text-[#9ca3af] mb-6">Esta ação não pode ser desfeita.</p>
-        <div className="flex gap-2">
-          <button onClick={onCancel} disabled={isDeleting}
-            className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-lg text-[13px] font-medium hover:bg-slate-50 transition-all">
-            Cancelar
-          </button>
-          <button onClick={onConfirm} disabled={isDeleting}
-            className="flex-1 py-2.5 bg-red-500 text-white rounded-lg text-[13px] font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2">
-            {isDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-            {isDeleting ? 'Excluindo...' : 'Excluir'}
-          </button>
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -273,16 +358,16 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 }) {
   const [editMode, setEditMode] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [success,   setSuccess ] = useState(false)
+  const [success,  setSuccess ] = useState(false)
 
   const INITIAL = {
-    nome:      row?.nome       ?? '',
-    matricula: row?.matricula  ?? '',
-    status:    row?.status     ?? 'ATIVO',
-    funcao:    row?.funcao     ?? '',
-    area:      row?.area       ?? '',
-    regional:  row?.regional   ?? '',
-    filial:    row?.filial     ?? '',
+    nome:                row?.nome                ?? '',
+    matricula:           row?.matricula           ?? '',
+    status:              row?.status              ?? 'ATIVO',
+    funcao:              row?.funcao              ?? '',
+    area:                row?.area                ?? '',
+    regional:            row?.regional            ?? '',
+    filial:              row?.filial              ?? '',
     metaDds:             row?.metaDds             ?? null,
     acaoComunidade:      row?.acaoComunidade      ?? null,
     blitzCampo:          row?.blitzCampo          ?? null,
@@ -296,6 +381,46 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   }
   const [form, setForm] = useState(INITIAL)
 
+  // ── Busca de colaborador (igual à Taxa de Contato) ──────────────────────────
+  const [colaboradoresRepo,  setColaboradoresRepo ] = useState<any[]>([])
+  const [colabSelecionado,   setColabSelecionado  ] = useState<any>({ nome: row?.nome, chapa: row?.matricula })
+  const [nomeColabPesquisa,  setNomeColabPesquisa ] = useState(row?.nome      ?? '')
+  const [matColabPesquisa,   setMatColabPesquisa  ] = useState(row?.matricula ?? '')
+  const [showColabNome,      setShowColabNome     ] = useState(false)
+  const [showColabMat,       setShowColabMat      ] = useState(false)
+
+  useEffect(() => {
+    api.get('/base-gente/recentes')
+      .then(r => setColaboradoresRepo(r.data))
+      .catch(console.error)
+  }, [])
+
+  const colabsFiltradosNome = useMemo(() => {
+    const t = nomeColabPesquisa.trim().toLowerCase()
+    if (t.length < 2) return []
+    return colaboradoresRepo
+      .filter(c => String(c.nome || '').toLowerCase().includes(t))
+      .slice(0, 8)
+  }, [nomeColabPesquisa, colaboradoresRepo])
+
+  const colabsFiltradosMat = useMemo(() => {
+    const t = matColabPesquisa.trim()
+    if (!t) return []
+    return colaboradoresRepo
+      .filter(c => String(c.chapa || '').includes(t))
+      .slice(0, 8)
+  }, [matColabPesquisa, colaboradoresRepo])
+
+  function selecionarColab(item: any) {
+    setColabSelecionado(item)
+    setNomeColabPesquisa(item.nome)
+    setMatColabPesquisa(item.chapa)
+    setForm(f => ({ ...f, nome: item.nome, matricula: item.chapa }))
+    setShowColabNome(false)
+    setShowColabMat(false)
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   const modalFields = useMemo(() => getFieldsForUf(form.filial), [form.filial])
 
   function handleChange(field: string, value: any) {
@@ -307,10 +432,16 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
       setForm(f => ({ ...f, [field]: null }))
     } else {
       const num = parseInt(raw, 10)
-      if (!isNaN(num) && num >= 0) {
-        setForm(f => ({ ...f, [field]: num }))
-      }
+      if (!isNaN(num) && num >= 0) setForm(f => ({ ...f, [field]: num }))
     }
+  }
+
+  function handleCancel() {
+    setForm(INITIAL)
+    setNomeColabPesquisa(row?.nome      ?? '')
+    setMatColabPesquisa(row?.matricula  ?? '')
+    setColabSelecionado({ nome: row?.nome, chapa: row?.matricula })
+    setEditMode(false)
   }
 
   async function handleSave() {
@@ -330,10 +461,10 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
     }
   }
 
-  const selectCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
-  const inputCls  = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
-  const labelCls  = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
-  const viewCls   = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
+  const selectCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
+  const inputSelCls  = 'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13px] outline-none transition-all'
+  const labelCls     = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
+  const viewCls      = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
 
   function ViewValue({ value }: { value: string }) {
     return value
@@ -348,13 +479,16 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
       <div className="bg-white w-full sm:max-w-xl rounded-t-3xl sm:rounded-2xl shadow-2xl border border-[#e3e8ef] animate-slideUp flex flex-col max-h-[92vh]">
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-[15px] font-bold text-[#1a2535] truncate">{form.nome || 'Registro'}</p>
               {ufLabel && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
-                  style={{ color: ufColor, background: ufBg, borderColor: ufColor + '44' }}>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                  style={{ color: ufColor, background: ufBg, borderColor: ufColor + '44' }}
+                >
                   {ufLabel}
                 </span>
               )}
@@ -363,8 +497,10 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!editMode ? (
-              <button onClick={() => setEditMode(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[12px] font-bold hover:bg-amber-100 transition-all">
+              <button
+                onClick={() => setEditMode(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[12px] font-bold hover:bg-amber-100 transition-all"
+              >
                 <Pencil size={13} /> Editar
               </button>
             ) : (
@@ -378,24 +514,114 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
           </div>
         </div>
 
+        {/* Body */}
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
+
+          {/* ── Seção Colaborador ─────────────────────────────────────────── */}
           <div>
-            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Colaborador</p>
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">
+              Colaborador {editMode && <span className="text-red-400">*</span>}
+            </p>
+
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+                {/* Busca por nome */}
+                <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Nome</label>
-                  <input value={form.nome} onChange={e => handleChange('nome', e.target.value)} className={inputCls} />
+                  <input
+                    type="text"
+                    value={nomeColabPesquisa}
+                    placeholder="Buscar nome..."
+                    className={cn(
+                      inputSelCls,
+                      colabSelecionado
+                        ? 'border-emerald-500 bg-emerald-50/30'
+                        : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
+                    )}
+                    onChange={e => {
+                      setNomeColabPesquisa(e.target.value.replace(/[0-9]/g, ''))
+                      setColabSelecionado(null)
+                      setForm(f => ({ ...f, nome: '', matricula: '' }))
+                      setShowColabNome(true)
+                    }}
+                    onFocus={() => setShowColabNome(true)}
+                    onBlur={() => setTimeout(() => setShowColabNome(false), 200)}
+                  />
+                  {colabSelecionado && (
+                    <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />
+                  )}
+                  {showColabNome && colabsFiltradosNome.length > 0 && (
+                    <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      {colabsFiltradosNome.map((c, i) => (
+                        <div
+                          key={i}
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                          onMouseDown={() => selecionarColab(c)}
+                        >
+                          <p className="font-bold text-slate-700 uppercase">{c.nome}</p>
+                          <p className="text-slate-400">Matrícula: {c.chapa}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div>
+
+                {/* Busca por matrícula */}
+                <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Matrícula</label>
-                  <input value={form.matricula} onChange={e => handleChange('matricula', e.target.value)} className={inputCls} />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={matColabPesquisa}
+                    placeholder="Buscar matrícula..."
+                    className={cn(
+                      inputSelCls,
+                      colabSelecionado
+                        ? 'border-emerald-500 bg-emerald-50/30'
+                        : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
+                    )}
+                    onChange={e => {
+                      setMatColabPesquisa(e.target.value.replace(/[^0-9]/g, ''))
+                      setColabSelecionado(null)
+                      setForm(f => ({ ...f, nome: '', matricula: '' }))
+                      setShowColabMat(true)
+                    }}
+                    onFocus={() => setShowColabMat(true)}
+                    onBlur={() => setTimeout(() => setShowColabMat(false), 200)}
+                  />
+                  {showColabMat && colabsFiltradosMat.length > 0 && (
+                    <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                      {colabsFiltradosMat.map((c, i) => (
+                        <div
+                          key={i}
+                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
+                          onMouseDown={() => selecionarColab(c)}
+                        >
+                          <p className="font-bold text-slate-700">{c.chapa}</p>
+                          <p className="text-slate-400 uppercase">{c.nome}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div>
+
+                {/* Aviso se digitou mas não selecionou */}
+                {!colabSelecionado && (nomeColabPesquisa || matColabPesquisa) && (
+                  <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                    <AlertCircle size={11} /> Selecione um colaborador da lista
+                  </p>
+                )}
+
+                {/* Status (mantido no modo edição) */}
+                <div className="col-span-2">
                   <label className={labelCls}>Status</label>
                   <div className="relative">
-                    <select value={form.status} onChange={e => handleChange('status', e.target.value)} className={selectCls}>
-                      {Object.keys(STATUS_CFG).map(s => <option key={s} value={s}>{STATUS_CFG[s].label}</option>)}
+                    <select
+                      value={form.status.toUpperCase()}
+                      onChange={e => handleChange('status', e.target.value)}
+                      className={selectCls}
+                    >
+                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CFG[s]?.label ?? s}</option>)}
                     </select>
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   </div>
@@ -414,11 +640,19 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                 <div>
                   <label className={labelCls}>Status</label>
                   <div className="mt-1">
-                    <StatusSelect 
-                        rowId={row.id} 
-                        initialStatus={form.status} 
-                        onUpdate={(s) => handleChange('status', s)} 
-                    />
+                    {(() => {
+                      const key = (form.status || 'ATIVO').toUpperCase()
+                      const c = STATUS_CFG[key] ?? STATUS_CFG['ATIVO']
+                      return (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
+                          style={{ background: c.bg, color: c.color, borderColor: c.border }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.color }} />
+                          {c.label}
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
@@ -427,22 +661,31 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 
           <div className="border-t border-slate-50" />
 
+          {/* ── Seção Lotação ─────────────────────────────────────────────── */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Lotação</p>
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { field: 'funcao', label: 'Função', opts: dynamicOptions.funcoes },
-                  { field: 'area', label: 'Área', opts: dynamicOptions.areas },
-                  { field: 'regional', label: 'Regional', opts: dynamicOptions.regionais },
-                  { field: 'filial', label: 'Filial (UF)', opts: dynamicOptions.ufs },
+                  { field: 'funcao',   label: 'Função',      opts: dynamicOptions.funcoes },
+                  { field: 'area',     label: 'Área',        opts: dynamicOptions.areas },
+                  { field: 'regional', label: 'Regional',    opts: dynamicOptions.regionais },
+                  { field: 'filial',   label: 'Filial (UF)', opts: dynamicOptions.ufs },
                 ].map(({ field, label, opts }) => (
                   <div key={field}>
                     <label className={labelCls}>{label}</label>
                     <div className="relative">
-                      <select value={(form as any)[field]} onChange={e => handleChange(field, e.target.value)} className={selectCls}>
+                      <select
+                        value={(form as any)[field]}
+                        onChange={e => handleChange(field, e.target.value)}
+                        className={selectCls}
+                      >
                         <option value="">Selecione...</option>
-                        {opts.map((o: string) => <option key={o} value={o}>{field === 'filial' ? (UF_LABELS[o] ?? o) : o}</option>)}
+                        {opts.map((o: string) => (
+                          <option key={o} value={o}>
+                            {field === 'filial' ? (UF_LABELS[o] ?? o) : o}
+                          </option>
+                        ))}
                       </select>
                       <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     </div>
@@ -452,10 +695,10 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
             ) : (
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { field: 'funcao', label: 'Função' },
-                  { field: 'area', label: 'Área' },
+                  { field: 'funcao',   label: 'Função' },
+                  { field: 'area',     label: 'Área' },
                   { field: 'regional', label: 'Regional' },
-                  { field: 'filial', label: 'Filial (UF)' },
+                  { field: 'filial',   label: 'Filial (UF)' },
                 ].map(({ field, label }) => (
                   <div key={field}>
                     <label className={labelCls}>{label}</label>
@@ -468,12 +711,12 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 
           <div className="border-t border-slate-50" />
 
+          {/* ── Seção Metas ───────────────────────────────────────────────── */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Metas por Modalidade</p>
               {ufLabel && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ color: ufColor, background: ufBg }}>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ color: ufColor, background: ufBg }}>
                   Campos de {ufLabel}
                 </span>
               )}
@@ -483,10 +726,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                 const val = (form as any)[f.key]
                 const displayVal = val === null || val === undefined ? null : Number(val)
                 return (
-                  <div key={f.key} className={cn(
-                    'flex items-center justify-between px-4 py-3 transition-colors',
-                    i > 0 && 'border-t border-slate-100/70',
-                  )}>
+                  <div key={f.key} className={cn('flex items-center justify-between px-4 py-3 transition-colors', i > 0 && 'border-t border-slate-100/70')}>
                     <div className="flex items-center gap-2.5">
                       <span className="text-base">{f.icon}</span>
                       <span className="text-[13px] font-semibold text-[#1a2535]">{f.label}</span>
@@ -510,15 +750,22 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
           </div>
         </div>
 
+        {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
           {editMode ? (
             <>
-              <button onClick={() => { setForm(INITIAL); setEditMode(false) }} disabled={isSaving}
-                className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5">
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
+              >
                 <Ban size={14} /> Cancelar
               </button>
-              <button onClick={handleSave} disabled={isSaving || success}
-                className="flex-1 py-2.5 bg-[#094780] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0a5494] transition-all flex items-center justify-center gap-2">
+              <button
+                onClick={handleSave}
+                disabled={isSaving || success}
+                className="flex-1 py-2.5 bg-[#094780] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0a5494] transition-all flex items-center justify-center gap-2"
+              >
                 {success ? <><CheckCircle size={14} /> Salvo!</> : isSaving ? <Loader2 size={14} className="animate-spin" /> : <><Save size={14} /> Salvar</>}
               </button>
             </>
@@ -539,7 +786,7 @@ export default function MetaChecklistPage() {
   const userData = session?.user as any
   const isAdmin  = userData?.role === 'admin'
 
-  const [data,     setData  ] = useState<any[]>([])
+  const [data,    setData  ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const [busca,           setBusca         ] = useState('')
@@ -548,18 +795,16 @@ export default function MetaChecklistPage() {
   const [filtroFuncao,    setFiltroFuncao  ] = useState('')
   const [filtroArea,      setFiltroArea    ] = useState('')
   const [filtroUf,        setFiltroUf      ] = useState<string[]>([])
-  const [filtroRegional, setFiltroRegional] = useState<string[]>([])
+  const [filtroRegional,  setFiltroRegional] = useState<string[]>([])
   const [filtroMes,       setFiltroMes     ] = useState('')
   const [mesesOptions,    setMesesOptions  ] = useState<{ value: string; label: string }[]>([])
 
   const [sortField,    setSortField   ] = useState<SortField>('nome')
   const [sortDir,      setSortDir     ] = useState<SortDir>('asc')
   const [currentPage,  setCurrentPage ] = useState(1)
-  const PAGE_SIZE = 12
+  const [pageSize,     setPageSize    ] = useState(10)
 
-  const [deleteTarget, setDeleteTarget] = useState<any>(null)
-  const [isDeleting,   setIsDeleting  ] = useState(false)
-  const [editTarget,   setEditTarget  ] = useState<any>(null)
+  const [editTarget, setEditTarget] = useState<any>(null)
 
   const dynamicOptions = useMemo(() => {
     const areas = new Set<string>(); const funcoes = new Set<string>()
@@ -612,7 +857,7 @@ export default function MetaChecklistPage() {
 
   useEffect(() => {
     if (filtroMes) {
-      setCurrentPage(1) 
+      setCurrentPage(1)
       fetchData(filtroMes)
     }
   }, [filtroMes])
@@ -632,18 +877,16 @@ export default function MetaChecklistPage() {
       const exportData = filtered.map((s: any) => {
         const ufFields = getFieldsForUf(s.filial)
         const row: Record<string, any> = {
-          'Nome':         s.nome    ?? '',
-          'Matrícula':    s.matricula ?? '',
-          'Status':       s.status  || 'Ativo',
-          'Função':       s.funcao  ?? '',
-          'Área':          s.area    ?? '',
-          'Regional':      s.regional ?? '',
-          'Filial (UF)': s.filial ?? '',
-          'Data':          formatarDataBR(s.data),
+          'Nome':        s.nome        ?? '',
+          'Matrícula':   s.matricula   ?? '',
+          'Status':      s.status      || 'Ativo',
+          'Função':      s.funcao      ?? '',
+          'Área':        s.area        ?? '',
+          'Regional':    s.regional    ?? '',
+          'Filial (UF)': s.filial      ?? '',
+          'Data':        formatarDataBR(s.data),
         }
-        ufFields.forEach(f => {
-          row[f.label] = s[f.key] ?? ''
-        })
+        ufFields.forEach(f => { row[f.label] = s[f.key] ?? '' })
         return row
       })
       const ws = XLSX.utils.json_to_sheet(exportData)
@@ -663,17 +906,6 @@ export default function MetaChecklistPage() {
     setBusca(''); setCampoBusca('todos'); setFiltroStatus('')
     setFiltroFuncao(''); setFiltroArea('')
     setFiltroUf([]); setFiltroRegional([]); setCurrentPage(1)
-  }
-
-  async function handleDelete() {
-    if (!deleteTarget || isDeleting) return
-    setIsDeleting(true)
-    try {
-      await api.delete(`/meta-checklist/${deleteTarget.id}`)
-      setData(prev => prev.filter(r => r.id !== deleteTarget.id))
-      setDeleteTarget(null)
-    } catch (e: any) { alert(e.response?.data?.message || 'Erro ao excluir.') }
-    finally { setIsDeleting(false) }
   }
 
   const filtered = useMemo(() => {
@@ -703,14 +935,12 @@ export default function MetaChecklistPage() {
     const ufsNosFiltrados = Array.from(
       new Set(filtered.map((r: any) => (r.filial ?? '').toUpperCase()).filter(Boolean))
     ) as string[]
-    const ufsReferencia = filtroUf.length > 0
-      ? filtroUf.map(u => u.toUpperCase())
-      : ufsNosFiltrados
+    const ufsReferencia = filtroUf.length > 0 ? filtroUf.map(u => u.toUpperCase()) : ufsNosFiltrados
     return getFieldsForUfs(ufsReferencia)
   }, [filtered, filtroUf])
 
-  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const mesLabel   = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
   const filtrosAtivos = [busca, filtroStatus, filtroFuncao, filtroArea, filtroUf.length > 0, filtroRegional.length > 0].filter(Boolean).length
 
@@ -768,7 +998,12 @@ export default function MetaChecklistPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex items-center">
               <Calendar size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#094780] z-10" />
-              <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setCurrentPage(1) }} className="gp-select-date" style={{ minWidth: 180 }}>
+              <select
+                value={filtroMes}
+                onChange={e => { setFiltroMes(e.target.value); setCurrentPage(1) }}
+                className="gp-select-date"
+                style={{ minWidth: 180 }}
+              >
                 {mesesOptions.length === 0 && <option value="">Nenhuma competência...</option>}
                 {mesesOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
@@ -803,8 +1038,13 @@ export default function MetaChecklistPage() {
                     <option value="matricula">Matrícula</option>
                     <option value="funcao">Função</option>
                   </select>
-                  <input className="search-input-field" type="text" placeholder="Pesquisar..." value={busca}
-                    onChange={e => { setBusca(e.target.value); setCurrentPage(1) }} />
+                  <input
+                    className="search-input-field"
+                    type="text"
+                    placeholder="Pesquisar..."
+                    value={busca}
+                    onChange={e => { setBusca(e.target.value); setCurrentPage(1) }}
+                  />
                   <div className="flex items-center pr-3">
                     <Search size={14} className="text-slate-400" />
                   </div>
@@ -824,12 +1064,20 @@ export default function MetaChecklistPage() {
             </div>
 
             <div className="flex flex-wrap gap-x-10 gap-y-3">
-              <ChipFilter label="Filial (UF)" options={ufsVisiveis} value={filtroUf}
+              <ChipFilter
+                label="Filial (UF)"
+                options={ufsVisiveis}
+                value={filtroUf}
                 onChange={(v: any) => { setFiltroUf(v); setCurrentPage(1) }}
-                renderLabel={(uf: any) => UF_LABELS[uf] ?? uf} />
+                renderLabel={(uf: any) => UF_LABELS[uf] ?? uf}
+              />
               {regionaisDisponiveis.length > 0 && (
-                <ChipFilter label="Regional" options={regionaisDisponiveis} value={filtroRegional}
-                  onChange={(v: any) => { setFiltroRegional(v); setCurrentPage(1) }} />
+                <ChipFilter
+                  label="Regional"
+                  options={regionaisDisponiveis}
+                  value={filtroRegional}
+                  onChange={(v: any) => { setFiltroRegional(v); setCurrentPage(1) }}
+                />
               )}
             </div>
           </div>
@@ -863,10 +1111,7 @@ export default function MetaChecklistPage() {
                       {tableFieldsFinal.map(f => {
                         const usadoPorMA = FIELDS_MA.some(fm => fm.key === f.key)
                         const usadoPorPI = FIELDS_PI.some(fp => fp.key === f.key)
-                        const thClass = usadoPorMA && usadoPorPI
-                          ? 'center'
-                          : usadoPorMA ? 'center uf-ma'
-                          : 'center uf-pi'
+                        const thClass = usadoPorMA && usadoPorPI ? 'center' : usadoPorMA ? 'center uf-ma' : 'center uf-pi'
                         return (
                           <th key={f.key} className={thClass} title={f.label}>
                             {f.short}
@@ -896,22 +1141,18 @@ export default function MetaChecklistPage() {
                           <div className="font-bold text-slate-700">{s.filial}</div>
                           <div className="text-[10px] text-slate-400 font-bold">{s.regional}</div>
                         </td>
-                        <td className="center w-[90px]">
-                            <StatusSelect 
-                                rowId={s.id} 
-                                initialStatus={s.status} 
-                                onUpdate={(newStatus) => {
-                                    setData(prev => prev.map(item => item.id === s.id ? { ...item, status: newStatus } : item))
-                                }}
-                            />
+                        <td className="center w-[120px]">
+                          <StatusSelector
+                            row={s}
+                            onStatusChange={(id, newStatus) => {
+                              setData(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item))
+                            }}
+                            canEdit={isAdmin}
+                          />
                         </td>
                         {tableFieldsFinal.map(f => (
                           <td key={f.key} className="center">
-                            <MetaCellForUf
-                              value={s[f.key]}
-                              fieldKey={f.key}
-                              uf={s.filial}
-                            />
+                            <MetaCellForUf value={s[f.key]} fieldKey={f.key} uf={s.filial} />
                           </td>
                         ))}
                         <td className="center">
@@ -919,19 +1160,48 @@ export default function MetaChecklistPage() {
                             {formatarDataBR(s.data)}
                           </div>
                         </td>
-                        {isAdmin && <td><ActionMenu row={s} onEdit={setEditTarget} onDelete={setDeleteTarget} /></td>}
+                        {isAdmin && (
+                          <td>
+                            <ActionMenu row={s} onEdit={setEditTarget} />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              {/* Paginação com controle de itens por página */}
               <div className="pag-wrap">
-                <span className="text-[11px] text-[#8896ab]">
-                  Página {currentPage} de {totalPages} · Exibindo {Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-[#8896ab]">
+                    Página {currentPage} de {totalPages} · Exibindo {Math.min(currentPage * pageSize, filtered.length)} de {filtered.length}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Itens:</span>
+                    {[10, 20, 30].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => { setPageSize(n); setCurrentPage(1) }}
+                        className={cn(
+                          'min-w-[32px] h-7 rounded-lg border text-[11px] font-bold transition-all px-2',
+                          pageSize === n
+                            ? 'bg-[#094780] text-white border-[#094780]'
+                            : 'bg-white text-slate-500 border-[#e3e8ef] hover:border-[#094780] hover:text-[#094780]'
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex gap-1">
-                  <button className="pg-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft size={14} /></button>
-                  <button className="pg-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight size={14} /></button>
+                  <button className="pg-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button className="pg-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
               </div>
             </>
@@ -939,10 +1209,7 @@ export default function MetaChecklistPage() {
         </div>
       </div>
 
-      {/* Modais */}
-      {isAdmin && deleteTarget && (
-        <DeleteModal row={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} isDeleting={isDeleting} />
-      )}
+      {/* Modal de edição */}
       {editTarget && (
         <EditModal
           row={editTarget}
