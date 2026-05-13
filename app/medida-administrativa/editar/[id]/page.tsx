@@ -9,9 +9,10 @@ import {
   Paperclip, CheckCircle, Loader2,
   Trash2, Search, X,
   Upload, File, FileImage, LayoutDashboard, PlusCircle, List, AlertCircle,
-  Link2, Hash
+  Link2, Hash, MapPin
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { REGIONAIS_POR_UF, type UF } from '@/types'
 import api from '@/lib/api'
 
 type TipoCategoria = 'SEGURANÇA' | 'ADMINISTRATIVA' | ''
@@ -97,6 +98,8 @@ export default function EditarMedidaPage() {
   const [matSupInput,    setMatSupInput   ] = useState('')
 
   const [dataMedida,    setDataMedida   ] = useState('')
+  const [uf,            setUf           ] = useState<UF | ''>('')
+  const [regional,      setRegional     ] = useState('')
   const [tipoCategoria, setTipoCategoria] = useState<TipoCategoria>('')
   const [tipoMedida,    setTipoMedida   ] = useState<TipoMedida>('')
   const [diasSuspensao, setDiasSuspensao] = useState('')
@@ -147,7 +150,6 @@ export default function EditarMedidaPage() {
     }).catch(console.error)
   }, [session])
 
-  // ── Filtros de busca — comparação sempre em string ──────────────────────────
   const colabsFiltradosNome = useMemo(() => {
     const t = nomeColabInput.trim().toLowerCase()
     if (t.length < 2) return []
@@ -176,8 +178,6 @@ export default function EditarMedidaPage() {
     searchQuery ? CLASSIFICACOES_DATA.filter(i => i.toLowerCase().includes(searchQuery.toLowerCase())) : CLASSIFICACOES_DATA
   , [searchQuery])
 
-  // ── Helpers de seleção ──────────────────────────────────────────────────────
-  // A chave da correção: sempre normalizar chapa para string antes de comparar
   function selecionarColab(item: any) {
     const normalizado = { ...item, chapa: String(item.chapa ?? '') }
     setColabSelecionado(normalizado)
@@ -246,6 +246,8 @@ export default function EditarMedidaPage() {
         setMatSupInput(chapaSup)
         setNomeSupInput(d.nomeSupervisor ?? '')
         setDataMedida(d.data ? d.data.slice(0, 10) : '')
+        setUf((d.uf as UF) ?? '')
+        setRegional(d.regional ?? '')
         setTipoCategoria((d.tipo as TipoCategoria) ?? '')
         setTipoMedida((d.medida as TipoMedida) ?? '')
         setDiasSuspensao(d.diasSuspensao ? String(d.diasSuspensao) : '')
@@ -265,7 +267,6 @@ export default function EditarMedidaPage() {
 
         if (d.classificacao) setClassificacaoSelecionada(true)
 
-        // Popula os objetos selecionados com chapa sempre como string
         if (d.colaborador) setColabSelecionado({ nome: d.colaborador, chapa: chapaColab })
         if (d.nomeSupervisor) setSupSelecionado({ nome: d.nomeSupervisor, chapa: chapaSup })
 
@@ -284,6 +285,8 @@ export default function EditarMedidaPage() {
           supervisor:      chapaSup,
           nomeSupervisor:  d.nomeSupervisor ?? '',
           data:            d.data ? d.data.slice(0, 10) : '',
+          uf:              d.uf ?? '',
+          regional:        d.regional ?? '',
           tipo:            d.tipo           ?? '',
           medida:          d.medida         ?? '',
           diasSuspensao:   d.diasSuspensao ? String(d.diasSuspensao) : '',
@@ -310,6 +313,8 @@ export default function EditarMedidaPage() {
       supervisor:      matSupInput,
       nomeSupervisor:  nomeSupInput,
       data:            dataMedida,
+      uf:              uf,
+      regional:        regional,
       tipo:            tipoCategoria,
       medida:          tipoMedida,
       diasSuspensao,
@@ -321,7 +326,7 @@ export default function EditarMedidaPage() {
     }
     const changed = Object.keys(original).some(k => original[k] !== (current as any)[k])
     if (changed) setHasChanges(true)
-  }, [nomeColabInput, matColabInput, matSupInput, nomeSupInput, dataMedida, tipoCategoria, tipoMedida, diasSuspensao, gravidade, classificacao, ocorrencia, inspecoes, origem, original, loadState])
+  }, [nomeColabInput, matColabInput, matSupInput, nomeSupInput, dataMedida, uf, regional, tipoCategoria, tipoMedida, diasSuspensao, gravidade, classificacao, ocorrencia, inspecoes, origem, original, loadState])
 
   async function handleSave() {
     if (isSaving || !allValid) return
@@ -333,6 +338,8 @@ export default function EditarMedidaPage() {
     fd.append('supervisor',     matSupInput)
     fd.append('nomeSupervisor', nomeSupInput)
     fd.append('data',           new Date(dataMedida).toISOString())
+    fd.append('uf',             uf)
+    fd.append('regional',       regional)
     fd.append('tipo',           tipoCategoria)
     fd.append('medida',         tipoMedida)
     fd.append('ocorrencia',     ocorrencia)
@@ -369,7 +376,7 @@ export default function EditarMedidaPage() {
   }
 
   const tabValid: Record<TabKey, boolean> = {
-    identificacao: !!colabSelecionado && !!supSelecionado && !!dataMedida,
+    identificacao: !!colabSelecionado && !!supSelecionado && !!dataMedida && !!uf && !!regional,
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade:     true,
     ocorrencia:    !!classificacao && classificacaoSelecionada && ocorrencia.trim().length >= 10,
@@ -379,8 +386,6 @@ export default function EditarMedidaPage() {
   const tabOrder: TabKey[] = ['identificacao', 'classificacao', 'gravidade', 'ocorrencia', 'anexos']
   const allValid           = tabOrder.every(k => tabValid[k])
 
-  // ── Helpers de estilo ───────────────────────────────────────────────────────
-  // Verifica se o item está "confirmado" — chapa e nome batem com o selecionado
   const colabConfirmado = !!colabSelecionado &&
     String(colabSelecionado.chapa) === matColabInput &&
     colabSelecionado.nome === nomeColabInput
@@ -482,7 +487,6 @@ export default function EditarMedidaPage() {
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
 
-                  {/* Matrícula colaborador */}
                   <div className="relative">
                     <input
                       type="text"
@@ -515,12 +519,8 @@ export default function EditarMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['matColab'] && !colabSelecionado && matColabInput && (
-                      <FieldError message="Selecione um colaborador da lista" />
-                    )}
                   </div>
 
-                  {/* Matrícula supervisor */}
                   <div className="relative">
                     <input
                       type="text"
@@ -553,9 +553,6 @@ export default function EditarMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['matSup'] && !supSelecionado && matSupInput && (
-                      <FieldError message="Selecione um supervisor da lista" />
-                    )}
                   </div>
                 </div>
 
@@ -563,7 +560,6 @@ export default function EditarMedidaPage() {
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
 
-                  {/* Nome colaborador */}
                   <div className="relative">
                     <input
                       type="text"
@@ -595,12 +591,8 @@ export default function EditarMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['nomeColab'] && !colabSelecionado && nomeColabInput && (
-                      <FieldError message="Selecione um colaborador da lista" />
-                    )}
                   </div>
 
-                  {/* Nome supervisor */}
                   <div className="relative">
                     <input
                       type="text"
@@ -632,9 +624,36 @@ export default function EditarMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['nomeSup'] && !supSelecionado && nomeSupInput && (
-                      <FieldError message="Selecione um supervisor da lista" />
-                    )}
+                  </div>
+                </div>
+
+                {/* ─── EDIÇÃO UF E REGIONAL ─── */}
+                <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]">
+                  <span className={cn(labelCls, 'mt-2')}>Localização *</span>
+                  <div className="w-full">
+                    <select
+                      value={uf}
+                      onChange={e => { setUf(e.target.value as UF); setRegional(''); setHasChanges(true) }}
+                      className={inputCls(!!uf)}
+                    >
+                      <option value="">Estado (UF)</option>
+                      {Object.keys(REGIONAIS_POR_UF).map(u => (
+                        <option key={u} value={u}>{u}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-full">
+                    <select
+                      value={regional}
+                      onChange={e => { setRegional(e.target.value); setHasChanges(true) }}
+                      disabled={!uf}
+                      className={cn(inputCls(!!regional), !uf && 'opacity-50 cursor-not-allowed')}
+                    >
+                      <option value="">Regional</option>
+                      {uf && REGIONAIS_POR_UF[uf as UF].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

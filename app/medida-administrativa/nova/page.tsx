@@ -7,7 +7,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import {
   User, Tag, AlertTriangle, FileText, Paperclip, CheckCircle, Loader2,
   Search, X, ArrowLeft, Upload, File, Trash2, FileImage,
-  LayoutDashboard, PlusCircle, List, AlertCircle, Link2, Hash
+  LayoutDashboard, PlusCircle, List, AlertCircle, Link2, Hash, MapPin
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/lib/api'
@@ -25,11 +25,19 @@ const navItems = [
 ]
 
 const CLASSIFICACOES = [
-  "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO SE APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","FALHA DE PROCEDIMENTO / ATO INSEGURO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","DIREÇÃO DISTRAÍDA","NEGLIGÊNCIA DURANTE A ATIVIDADE","ATO INSEGURO","AUTOINSPECÇÃO DIÁRIA","SEM O USO DO CINTO DE SEGURANÇA","OBSTRUÇÃO CÂMERA","ATERRAMENTO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
+  "ADMNISTRATIVA","NÃO CONFORMIDADE GRAVE EM PROCEDIMENTOS DE SEGURANÇA DURANTE A ATIVIDADE","VELOCIDADE","PAPEL DE GUARDIÃO","CELULAR","REINTEGRA","CÂMERA","LUVA/MANGA ISOLANTE/PROTETOR FACIAL","OBSTRUÇÃO DE CÂMERA","REGRAS DE OURO","LUVAS DE VAQUETA/ VISEIRA/ BALACLAVA","EPI / EPI'S","CAMISA POR FORA DA CALÇA/ PERNEIRAS/ÓCULOS DE PROTEÇÃO/CINTO PARAQUEDITAS/CAPACETE/SINALIZAÇÃO","CINTO DE SEGURANÇA","SINALIZAÇÃO/PR","SONOLÊNCIA","PROTETOR FACIAL/SEM SINALIZAÇÃO/ SEM GUARDIÃO","EXCESSO DE VELOCIDADE","MANTAS ISOLANTES","VELOCIDADE/ OBSTRUÇÃO","ATERRAMENTO TEMPORÁRIO BT","MANOBRA DE RÉ / MANOBRA MARCHA RÉ","COLABORADOR NÃO se APRESENTOU NO SOBREAVISO","BALACLAVA/LUVA ISOLANTE/LUVA DE COBERTURA/VESTIMENTA RF","VELOCIDADE/ CELULAR","CABO DE MT PARTIDO","FOLHA DE PONTO","CAPACETE","APR","NÃO UTILIZOU EPI ADEQUADO","PROTETOR FACIAL","NÃO COMUNICOU ACIDENTE DE TRABALHO","BALACLAVA/PROTETOR FACIAL/SINALIZAÇÃO","NOTA COMERCIAL ENCERRADA DE FORMA INCORRETA","LUVA CLASSE 0","LENÇOL ISOLANTE/ BALACLAVA/ MANGA ISOLANTE/ SINALIZAÇÃO","PNEUS","ESCADA/ MANGAS ISOLANTES/LENÇÓIS ISOLANTES/CINTO PARAQUEDITA","FALTA DE SINALIZAÇÃO NO LOCAL DE SERVIÇO","RECUSOU SE DESLOCAR PARA OUTRA CIDADE (SOLITAÇÃO DO SUPERVISOR DE CAMPO)","ERRO DE PROCEDIMENTO OPERACIONAL","TRANSITAR EM VIA PÚBLICA PELA CONTRA MÃO","BANDEIROLA","ESCADA/TRAVA QUEDAS","PROTETOR FACIAL(VISEIRA)","ESCADA","AUSÊNCIA SEM JUSTIFICATIVA NA REC DE NR35","LUVA ISOLANTE/ LUVA DE COBERTURA/VESTIMENTA RF","DESCUPRIMENTO DAS LEIS DE TRÂNSITO","DELIMITAÇÃO DA AREA/EPI","CELULAR/EXCESSO DE VELOCIDADE","FREIO ABS/TRAVA QUEDA","CIGARRO / FUMANDO","DESCUMPRIMENTO DE PROCEDIMENTO CRÍTICO DE SEGURANÇA","FALHA DE PROCEDIMENTO / ATO INSEGURO","LINHA VIVA","EPC/PROCEDIMENTO DE SEGURANÇA","SEM SINALIZAÇÃO DA AREA/PAPEL DE GUARDIÃO","DIREÇÃO DISTRAÍDA","NEGLIGÊNCIA DURANTE A ATIVIDADE","ATO INSEGURO","AUTOINSPECÇÃO DIÁRIA","SEM O USO DO CINTO DE SEGURANÇA","OBSTRUÇÃO CÂMERA","ATERRAMENTO","COLABORADOR ESTAVA COCHILANDO AO VOLANTE",
   "OUTROS"
 ]
 
 const ORIGENS = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE GENTE']
+
+const UFS = ['PI', 'MA'] as const
+type UF = typeof UFS[number]
+
+const REGIONAIS_POR_UF: Record<UF, string[]> = {
+  PI: ['METROPOLITANA', 'SUL', 'NORTE'],
+  MA: ['SUL', 'NORTE', 'LESTE', 'NOROESTE'],
+}
 
 const GRAVIDADE_CFG: Record<string, { color: string; bg: string; border: string; label: string }> = {
   LEVE:              { color: '#10b981', bg: '#f0fdf4', border: '#10b981', label: 'Ocorrência de baixo impacto' },
@@ -73,9 +81,9 @@ export default function NovaMedidaPage() {
   const router = useRouter()
   const { data: session } = useSession()
 
-  const [tab,             setTab            ] = useState<TabKey>('identificacao')
-  const [successModal,    setSuccessModal   ] = useState(false)
-  const [isRegistering,   setIsRegistering  ] = useState(false)
+  const [tab,              setTab            ] = useState<TabKey>('identificacao')
+  const [successModal,     setSuccessModal   ] = useState(false)
+  const [isRegistering,    setIsRegistering  ] = useState(false)
   const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -88,6 +96,8 @@ export default function NovaMedidaPage() {
   const [matSupPesquisa,    setMatSupPesquisa   ] = useState('')
 
   const [dataMedida,    setDataMedida   ] = useState('')
+  const [uf,            setUf           ] = useState<'' | UF>('')
+  const [regional,      setRegional     ] = useState('')
   const [tipoCategoria, setTipoCategoria] = useState<TipoCategoria>('')
   const [tipoMedida,    setTipoMedida   ] = useState<TipoMedida>('')
   const [diasSuspensao, setDiasSuspensao] = useState('')
@@ -96,7 +106,6 @@ export default function NovaMedidaPage() {
   const [ocorrencia,    setOcorrencia   ] = useState('')
   const [origem,        setOrigem       ] = useState('')
 
-  // ── Múltiplas inspeções ──────────────────────────────────────────────────────
   const [inspecoes,    setInspecoes   ] = useState<string[]>([])
   const [novaInspecao, setNovaInspecao] = useState('')
 
@@ -110,7 +119,6 @@ export default function NovaMedidaPage() {
   function removerInspecao(idx: number) {
     setInspecoes(prev => prev.filter((_, i) => i !== idx))
   }
-  // ────────────────────────────────────────────────────────────────────────────
 
   const [showColabDropdown,     setShowColabDropdown    ] = useState(false)
   const [showMatriculaDropdown, setShowMatriculaDropdown] = useState(false)
@@ -165,10 +173,27 @@ export default function NovaMedidaPage() {
       : CLASSIFICACOES
   , [searchQuery])
 
+  // SELEÇÃO COM PREENCHIMENTO AUTOMÁTICO DE LOCALIZAÇÃO
   function selecionarColab(item: any) {
     setColabSelecionado(item)
     setNomeColabPesquisa(item.nome)
     setMatColabPesquisa(item.chapa)
+    
+    const ufLimpa = item.uf?.trim().toUpperCase() as UF;
+
+    if (ufLimpa && REGIONAIS_POR_UF[ufLimpa]) {
+      setUf(ufLimpa)
+      const regionalLimpa = item.regional?.trim().toUpperCase() || '';
+      if (REGIONAIS_POR_UF[ufLimpa].includes(regionalLimpa)) {
+          setRegional(regionalLimpa);
+      } else {
+          setRegional('');
+      }
+    } else {
+      setUf('');
+      setRegional('');
+    }
+
     setShowColabDropdown(false)
     setShowMatriculaDropdown(false)
   }
@@ -214,11 +239,12 @@ export default function NovaMedidaPage() {
     setIsRegistering(true)
     const fd = new FormData()
     
-    const loggedUserId = (session?.user as any)?.id
     fd.append('colaborador',    colabSelecionado.nome)
     fd.append('matricula',      colabSelecionado.chapa)
-    fd.append('supervisor',     supSelecionado.chapa)
+    fd.append('supervisor',      supSelecionado.chapa)
     fd.append('nomeSupervisor', supSelecionado.nome)
+    fd.append('uf',             uf)
+    fd.append('regional',       regional)
     fd.append('tipo',           tipoCategoria)
     fd.append('medida',         tipoMedida)
     fd.append('ocorrencia',     ocorrencia)
@@ -241,7 +267,7 @@ export default function NovaMedidaPage() {
   }
 
   const tabValid: Record<TabKey, boolean> = {
-    identificacao: !!colabSelecionado && !!supSelecionado && !!dataMedida,
+    identificacao: !!colabSelecionado && !!supSelecionado && !!dataMedida && !!uf && !!regional,
     classificacao: !!tipoCategoria && !!tipoMedida && (tipoMedida !== 'SUSPENSÃO' || !!diasSuspensao),
     gravidade:     true,
     ocorrencia:    !!classificacao && classificacaoSelecionada && ocorrencia.trim().length >= 10,
@@ -316,7 +342,6 @@ export default function NovaMedidaPage() {
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm overflow-visible">
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Dados do Colaborador e Supervisor</div>
 
-                {/* Matrículas */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Matrículas *</span>
                   <div className="relative">
@@ -332,7 +357,6 @@ export default function NovaMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['matColab'] && !colabSelecionado && matColabPesquisa && <FieldError message="Selecione um colaborador da lista" />}
                   </div>
                   <div className="relative">
                     <input type="text" inputMode="numeric" value={matSupPesquisa} placeholder="Pesquisar Chapa Sup."
@@ -347,11 +371,9 @@ export default function NovaMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['matSup'] && !supSelecionado && matSupPesquisa && <FieldError message="Selecione um supervisor da lista" />}
                   </div>
                 </div>
 
-                {/* Nomes */}
                 <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef] overflow-visible">
                   <span className={cn(labelCls, 'mt-2')}>Nomes *</span>
                   <div className="relative">
@@ -367,7 +389,6 @@ export default function NovaMedidaPage() {
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['nomeColab'] && !colabSelecionado && nomeColabPesquisa && <FieldError message="Selecione um colaborador da lista" />}
                   </div>
                   <div className="relative">
                     <input type="text" value={nomeSupPesquisa} placeholder="Pesquisar Nome Sup."
@@ -378,11 +399,39 @@ export default function NovaMedidaPage() {
                     <AbsoluteDropdown open={showSupDropdown && supsFiltradosNome.length > 0}>
                       {supsFiltradosNome.map((c, i) => (
                         <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarSupervisor(c)}>
-                          <p className="font-bold text-slate-700">{c.nome}</p><p className="text-slate-400">Chapa: {c.chapa}</p>
+                          <p className="font-bold text-slate-700">{c.chapa}</p><p className="text-slate-400">{c.nome}</p>
                         </div>
                       ))}
                     </AbsoluteDropdown>
-                    {touched['nomeSup'] && !supSelecionado && nomeSupPesquisa && <FieldError message="Selecione um supervisor da lista" />}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-[180px_1fr_1fr] gap-x-4 gap-y-1 items-start px-6 py-4 border-b border-[#e3e8ef]">
+                  <span className={cn(labelCls, 'mt-2')}>Localização *</span>
+                  <div className="w-full">
+                    <select 
+                      value={uf} 
+                      onChange={e => { setUf(e.target.value as UF); setRegional('') }} 
+                      className={inputCls(!!uf)}
+                    >
+                      <option value="">Selecione a UF</option>
+                      {UFS.map(item => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </div>
+                  <div className="w-full">
+                    <select 
+                      value={regional} 
+                      onChange={e => setRegional(e.target.value)} 
+                      disabled={!uf}
+                      className={cn(inputCls(!!regional), !uf && 'opacity-50 cursor-not-allowed')}
+                    >
+                      <option value="">{uf ? 'Selecione a Regional' : 'Aguardando UF...'}</option>
+                      {uf && REGIONAIS_POR_UF[uf as UF] ? (
+                        REGIONAIS_POR_UF[uf as UF].map(item => (
+                          <option key={item} value={item}>{item}</option>
+                        ))
+                      ) : null}
+                    </select>
                   </div>
                 </div>
 
@@ -391,15 +440,10 @@ export default function NovaMedidaPage() {
                   <input type="date" value={dataMedida} onChange={e => setDataMedida(e.target.value)} className={cn(inputCls(), 'w-[200px]')} />
                 </div>
               </div>
-              {(!colabSelecionado || !supSelecionado) && (
-                <p className="mt-3 text-[11px] text-amber-600 font-medium flex items-center gap-1.5">
-                  <AlertCircle size={14} /> Selecione os nomes nas listas de pesquisa para validar a etapa.
-                </p>
-              )}
             </div>
           )}
 
-          {/* ── CLASSIFICAÇÃO ── */}
+          {/* AS OUTRAS ABAS CONTINUAM IGUAIS... */}
           {tab === 'classificacao' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
@@ -433,7 +477,6 @@ export default function NovaMedidaPage() {
             </div>
           )}
 
-          {/* ── GRAVIDADE ── */}
           {tab === 'gravidade' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
@@ -444,7 +487,7 @@ export default function NovaMedidaPage() {
                       className={cn('p-4 rounded-xl border-2 cursor-pointer flex items-center gap-4 transition-all group',
                         gravidade === g ? 'shadow-sm' : 'border-transparent bg-slate-50/60 hover:bg-slate-100/60')}
                       style={gravidade === g ? { borderColor: cfg.border, backgroundColor: cfg.bg } : {}}>
-                      <div className="w-3 h-3 rounded-full shrink-0 transition-transform group-hover:scale-110" style={{ background: cfg.color }} />
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: cfg.color }} />
                       <div className="flex-1">
                         <p className="text-sm font-bold text-slate-700">{g}</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">{cfg.label}</p>
@@ -457,90 +500,45 @@ export default function NovaMedidaPage() {
             </div>
           )}
 
-          {/* ── OCORRÊNCIA ── */}
           {tab === 'ocorrencia' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl shadow-sm" style={{ overflow: 'visible' }}>
                 <div className={secTitle} style={{ borderRadius: '0.75rem 0.75rem 0 0' }}>Detalhes da Ocorrência</div>
                 <div className="p-6 space-y-6" style={{ overflow: 'visible' }}>
-
-                  {/* Classificação */}
                   <div>
                     <label className="text-[12px] font-bold text-slate-500 uppercase mb-1.5 block">Desvio *</label>
                     <div style={{ position: 'relative', overflow: 'visible' }}>
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                       <input type="text" placeholder="Busque e selecione um motivo..." value={searchQuery}
-                        className={cn(
-                          'w-full bg-[#f8fafc] border rounded-lg h-11 pl-10 pr-10 text-[13.5px] outline-none transition-all',
-                          classificacaoSelecionada
-                            ? 'border-emerald-500 bg-emerald-50/30'
-                            : touched['classificacao'] && !classificacaoSelecionada
-                              ? 'border-red-400 bg-red-50/40 focus:border-red-500'
-                              : 'border-[#e3e8ef] focus:border-[#3d6cf0] focus:bg-white'
-                        )}
-                        onChange={e => {
-                          setSearchQuery(e.target.value)
-                          setClassificacaoSelecionada(false)
-                          setClassificacao('')
-                          setShowClassifDropdown(true)
-                        }}
+                        className={cn('w-full bg-[#f8fafc] border rounded-lg h-11 pl-10 pr-10 text-[13.5px] outline-none transition-all',
+                          classificacaoSelecionada ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#3d6cf0] focus:bg-white')}
+                        onChange={e => { setSearchQuery(e.target.value); setClassificacaoSelecionada(false); setClassificacao(''); setShowClassifDropdown(true) }}
                         onFocus={() => setShowClassifDropdown(true)}
-                        onBlur={() => {
-                          touch('classificacao')
-                          setTimeout(() => {
-                            setShowClassifDropdown(false)
-                            if (!classificacaoSelecionada) { setSearchQuery(''); setClassificacao('') }
-                          }, 200)
-                        }} />
-                      {classificacaoSelecionada && (
-                        <CheckCircle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 pointer-events-none" />
-                      )}
-                      {touched['classificacao'] && !classificacaoSelecionada && searchQuery && (
-                        <AlertCircle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-red-400 pointer-events-none" />
-                      )}
+                        onBlur={() => { touch('classificacao'); setTimeout(() => { setShowClassifDropdown(false); if (!classificacaoSelecionada) { setSearchQuery(''); setClassificacao('') } }, 200) }} />
                       <AbsoluteDropdown open={showClassifDropdown}>
-                        {filteredClassificacoes.length > 0
-                          ? filteredClassificacoes.map((item, i) => (
-                              <button key={i} type="button"
-                                onMouseDown={() => { setClassificacao(item); setSearchQuery(item); setClassificacaoSelecionada(true); setShowClassifDropdown(false) }}
-                                className={cn('w-full text-left px-4 py-3 text-[12.5px] font-medium border-b border-slate-50 last:border-0 transition-colors',
-                                  classificacao === item ? 'bg-blue-50 text-[#3d6cf0] font-semibold' : 'text-slate-600 hover:bg-slate-50')}>
-                                {item}
-                              </button>
-                            ))
-                          : <div className="p-6 text-center text-slate-400 text-xs">Nenhum resultado</div>
-                        }
+                        {filteredClassificacoes.length > 0 ? filteredClassificacoes.map((item, i) => (
+                          <button key={i} type="button" onMouseDown={() => { setClassificacao(item); setSearchQuery(item); setClassificacaoSelecionada(true); setShowClassifDropdown(false) }}
+                            className={cn('w-full text-left px-4 py-3 text-[12.5px] font-medium border-b border-slate-50 last:border-0 transition-colors',
+                              classificacao === item ? 'bg-blue-50 text-[#3d6cf0] font-semibold' : 'text-slate-600 hover:bg-slate-50')}>{item}</button>
+                        )) : <div className="p-6 text-center text-slate-400 text-xs">Nenhum resultado</div>}
                       </AbsoluteDropdown>
                     </div>
-                    {touched['classificacao'] && !classificacaoSelecionada && (
-                      <FieldError message="Selecione uma classificação da lista" />
-                    )}
                   </div>
-
-                  {/* Descrição */}
                   <div className="space-y-1.5">
-                    <label className="text-[12px] font-bold text-slate-500 uppercase block">
-                      Descrição * <span className="font-normal normal-case text-slate-400">(mín. 10 caracteres)</span>
-                    </label>
+                    <label className="text-[12px] font-bold text-slate-500 uppercase block">Descrição *</label>
                     <textarea value={ocorrencia} onChange={e => setOcorrencia(e.target.value)} rows={6}
                       className={cn('w-full bg-[#f8fafc] border rounded-lg px-3 py-3 text-[13.5px] outline-none transition-all resize-none',
                         ocorrencia.length > 0 && ocorrencia.trim().length < 10 ? 'border-red-300 focus:border-red-400' : 'border-[#e3e8ef] focus:border-[#3d6cf0] focus:bg-white')}
                       placeholder="Descreva o que aconteceu..." />
-                    {ocorrencia.length > 0 && ocorrencia.trim().length < 10 && (
-                      <FieldError message="Descrição muito curta (mínimo 10 caracteres)" />
-                    )}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── ANEXOS & VÍNCULO ── */}
           {tab === 'anexos' && (
             <div className="fade-up mx-4 sm:mx-8 mt-6">
               <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
-
-                {/* Upload */}
                 <div className={secTitle}>Anexos</div>
                 <div className="p-6 border-b border-[#e3e8ef]">
                   <div className={cn('border-2 border-dashed rounded-2xl transition-all cursor-pointer',
@@ -550,17 +548,12 @@ export default function NovaMedidaPage() {
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={e => { e.preventDefault(); setIsDragging(false); handleFilesAdd(e.dataTransfer.files) }}>
                     <div className="flex flex-col items-center justify-center py-10 px-6 text-center select-none">
-                      <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border transition-all',
-                        isDragging ? 'bg-blue-100 border-blue-300 text-[#3d6cf0]' : 'bg-white border-slate-200 text-slate-400')}>
-                        <Upload size={24} />
-                      </div>
+                      <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border transition-all', isDragging ? 'bg-blue-100 border-blue-300 text-[#3d6cf0]' : 'bg-white border-slate-200 text-slate-400')}><Upload size={24} /></div>
                       <p className="text-sm font-semibold text-slate-600 mb-1">Clique para selecionar arquivos</p>
                     </div>
                   </div>
                   <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={e => handleFilesAdd(e.target.files)} />
                 </div>
-
-                {/* Lista de arquivos */}
                 {anexos.length > 0 && (
                   <div className="px-6 py-4 space-y-2 border-b border-[#e3e8ef]">
                     {anexos.map(a => (
@@ -570,104 +563,57 @@ export default function NovaMedidaPage() {
                           <p className="text-[13px] font-semibold text-slate-700 truncate">{a.file.name}</p>
                           <p className="text-[11px] text-slate-400">{fmt(a.file.size)}</p>
                         </div>
-                        <button onClick={() => removerAnexo(a.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 transition-all">
-                          <Trash2 size={15} />
-                        </button>
+                        <button onClick={() => removerAnexo(a.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-400 transition-all"><Trash2 size={15} /></button>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {/* Origem */}
                 <div className={secTitle}>Origem *</div>
                 <div className="px-6 py-5 border-b border-[#e3e8ef]">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {ORIGENS.map(op => (
                       <button key={op} type="button" onClick={() => setOrigem(origem === op ? '' : op)}
-                        className={cn('py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative',
-                          origem === op ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-[#3d6cf0]/30 hover:bg-blue-50/30')}>
-                        {op}
-                        {origem === op && <CheckCircle size={13} className="absolute top-2 right-2 text-white/80" />}
+                        className={cn('py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all text-left relative', origem === op ? 'bg-[#3d6cf0] border-[#3d6cf0] text-white shadow-sm' : 'bg-white border-slate-100 text-slate-500 hover:border-[#3d6cf0]/30 hover:bg-blue-50/30')}>
+                        {op} {origem === op && <CheckCircle size={13} className="absolute top-2 right-2 text-white/80" />}
                       </button>
                     ))}
                   </div>
                 </div>
-
-                {/* ── Vínculo Externo — Múltiplas Inspeções CLICK ── */}
                 <div className={secTitle}>Vínculo Externo</div>
                 <div className="px-6 py-5 space-y-4">
-                  <div>
-                    <p className={labelCls}>Inspeções CLICK vinculadas</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5 mb-4">
-                      Adicione uma ou mais inspeções para vincular a esta medida
-                    </p>
-
-                    {/* Input + botão Adicionar */}
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <input
-                          type="text"
-                          value={novaInspecao}
-                          onChange={e => setNovaInspecao(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), adicionarInspecao())}
-                          placeholder="Ex: 2024-00123"
-                          className={cn(inputCls(), 'pl-8')}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={adicionarInspecao}
-                        disabled={!novaInspecao.trim() || inspecoes.includes(novaInspecao.trim())}
-                        className={cn(
-                          'px-4 py-2 rounded-lg text-xs font-bold transition-all border shrink-0',
-                          novaInspecao.trim() && !inspecoes.includes(novaInspecao.trim())
-                            ? 'bg-[#3d6cf0] text-white border-[#3d6cf0] hover:bg-[#2f5cd9]'
-                            : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                        )}
-                      >
-                        + Adicionar
-                      </button>
+                  <p className={labelCls}>Inspeções CLICK vinculadas</p>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <input type="text" value={novaInspecao} onChange={e => setNovaInspecao(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), adicionarInspecao())} placeholder="Ex: 2024-00123" className={cn(inputCls(), 'pl-8')} />
                     </div>
-
-                    {/* Lista de inspeções adicionadas */}
-                    {inspecoes.length > 0 ? (
-                      <div className="mt-3 space-y-1.5">
-                        {inspecoes.map((insp, idx) => (
-                          <div key={idx} className="scale-in flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                            <Link2 size={13} className="text-[#3d6cf0] shrink-0" />
-                            <span className="text-[12px] font-bold text-[#3d6cf0] flex-1">CLICK #{insp}</span>
-                            <button
-                              type="button"
-                              onClick={() => removerInspecao(idx)}
-                              className="text-slate-300 hover:text-red-400 transition-colors"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-3 text-[11px] text-slate-400 italic">Nenhuma inspeção vinculada</p>
-                    )}
+                    <button type="button" onClick={adicionarInspecao} disabled={!novaInspecao.trim() || inspecoes.includes(novaInspecao.trim())} className={cn('px-4 py-2 rounded-lg text-xs font-bold transition-all border shrink-0', novaInspecao.trim() && !inspecoes.includes(novaInspecao.trim()) ? 'bg-[#3d6cf0] text-white border-[#3d6cf0]' : 'bg-slate-100 text-slate-400 border-slate-200')}>+ Adicionar</button>
                   </div>
+                  {inspecoes.length > 0 ? (
+                    <div className="mt-3 space-y-1.5">
+                      {inspecoes.map((insp, idx) => (
+                        <div key={idx} className="scale-in flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                          <Link2 size={13} className="text-[#3d6cf0] shrink-0" />
+                          <span className="text-[12px] font-bold text-[#3d6cf0] flex-1">CLICK #{insp}</span>
+                          <button type="button" onClick={() => removerInspecao(idx)} className="text-slate-300 hover:text-red-400 transition-colors"><X size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="mt-3 text-[11px] text-slate-400 italic">Nenhuma inspeção vinculada</p>}
                 </div>
-
               </div>
             </div>
           )}
         </div>
 
-        {/* Barra inferior */}
+        {/* BARRA INFERIOR */}
         <div className="fixed bottom-0 right-0 bg-white/80 backdrop-blur-md border-t border-[#e3e8ef] px-8 py-4 flex items-center justify-between z-40 transition-all"
           style={{ left: sidebarExpanded ? 240 : 0 }}>
           <div className="hidden md:flex items-center gap-4">
             <span className="text-[10px] font-black text-slate-400 uppercase">Etapas: {completedCount}/5</span>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            {currentIdx > 0 && (
-              <button onClick={goPrev} className="flex-1 md:flex-none px-6 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:border-slate-300">VOLTAR</button>
-            )}
+            {currentIdx > 0 && <button onClick={goPrev} className="flex-1 md:flex-none px-6 py-2 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-500 hover:border-slate-300">VOLTAR</button>}
             <button disabled={currentIdx === 4 ? (!allValid || isRegistering) : false} onClick={goNext}
               className={cn('flex-1 md:flex-none px-8 py-2 rounded-xl text-xs font-black text-white transition-all',
                 (currentIdx < 4 || allValid) && !isRegistering ? 'bg-[#3d6cf0] hover:bg-[#2f5cd9]' : 'bg-slate-200 cursor-not-allowed')}>
@@ -676,22 +622,17 @@ export default function NovaMedidaPage() {
           </div>
         </div>
 
-        {/* Modal sucesso */}
+        {/* MODAL SUCESSO */}
         {successModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
             <div className="bg-white p-10 rounded-3xl text-center shadow-2xl max-w-sm">
-              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle size={48} className="text-emerald-500" />
-              </div>
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={48} className="text-emerald-500" /></div>
               <h3 className="font-black text-xl text-slate-800 mb-2">Sucesso!</h3>
               <p className="text-slate-500 text-sm mb-8">A medida foi registrada com sucesso.</p>
-              <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs hover:bg-[#2f5cd9]">
-                VER LISTAGEM
-              </button>
+              <button onClick={() => router.push('/medida-administrativa/lista')} className="w-full py-4 bg-[#3d6cf0] text-white rounded-2xl font-black text-xs hover:bg-[#2f5cd9]">VER LISTAGEM</button>
             </div>
           </div>
         )}
-
       </div>
     </DashboardLayout>
   )

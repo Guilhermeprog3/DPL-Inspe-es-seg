@@ -21,8 +21,7 @@ import api from '@/lib/api'
  */
 function formatDateBR(raw: string | null | undefined): string {
   if (!raw) return '—'
-  // Extrai apenas a parte "YYYY-MM-DD" e reconstrói manualmente
-  const datePart = raw.split('T')[0] // "2026-04-24"
+  const datePart = raw.split('T')[0] 
   const [y, m, d] = datePart.split('-')
   if (!y || !m || !d) return '—'
   return `${d}/${m}/${y}`
@@ -30,12 +29,11 @@ function formatDateBR(raw: string | null | undefined): string {
 
 /**
  * Retorna um número comparável para ordenação por data
- * (evita o mesmo bug de timezone ao usar Date diretamente).
  */
 function dateSort(raw: string | null | undefined): number {
   if (!raw) return 0
   const datePart = raw.split('T')[0]
-  return parseInt(datePart.replace(/-/g, ''), 10) // ex: 20260424
+  return parseInt(datePart.replace(/-/g, ''), 10) 
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -47,17 +45,21 @@ function isAdminUser(user: any): boolean {
 
 function normalizeUfs(user: any): string[] {
   if (!user) return []
+  if (Array.isArray(user.uf)) return user.uf
+  if (typeof user.uf === 'string' && user.uf.trim()) {
+    return user.uf.split(',').map((u: string) => u.trim().toUpperCase()).filter(Boolean)
+  }
   if (Array.isArray(user.filiais) && user.filiais.length > 0) return user.filiais
-  if (Array.isArray(user.uf) && user.uf.length > 0) return user.uf
-  if (typeof user.uf === 'string' && user.uf.trim()) return [user.uf.trim()]
   return []
 }
 
 function normalizeRegionais(user: any): string[] {
   if (!user) return []
+  if (Array.isArray(user.regional)) return user.regional
+  if (typeof user.regional === 'string' && user.regional.trim()) {
+    return user.regional.split(',').map((r: string) => r.trim().toUpperCase()).filter(Boolean)
+  }
   if (Array.isArray(user.regionais) && user.regionais.length > 0) return user.regionais
-  if (Array.isArray(user.regional) && user.regional.length > 0) return user.regional
-  if (typeof user.regional === 'string' && user.regional.trim()) return [user.regional.trim()]
   return []
 }
 
@@ -111,22 +113,22 @@ const ORIGENS_LIST = ['ESS', 'CLICK', 'NMC', 'MULTA DE TRÂNSITO', 'GESTÃO DE G
 
 function exportToExcel(data: any[]) {
   const rows = data.map(m => ({
-    'ID':                m.id ?? '',
-    'Filial':            m.uf ?? '',
-    'Regional':          m.regional ?? '',
-    'Colaborador':       m.colaborador ?? '',
-    'Matrícula Colab.':  m.matricula ?? '',
-    'Supervisor':        m.nomeSupervisor ?? '',
-    'Matrícula Sup.':    m.supervisor ?? '',
-    'Data':              formatDateBR(m.data),
-    'Categoria':         m.tipo ?? '',
-    'Tipo de Medida':    m.medida ?? '',
-    'Dias Suspensão':    m.diasSuspensao ?? '',
-    'Gravidade':         m.gravidade ?? '',
-    'Classificação':     m.classificacao ?? '',
-    'Descrição':         m.ocorrencia ?? '',
-    'Origem':            m.origem ?? '',
-    'Inspeções CLICK':   Array.isArray(m.numerosInspecao) ? m.numerosInspecao.join(', ') : (m.numeroInspecao ?? ''),
+    'ID':                 m.id ?? '',
+    'Filial':             m.uf ?? '',
+    'Regional':           m.regional ?? '',
+    'Colaborador':        m.colaborador ?? '',
+    'Matrícula Colab.':   m.matricula ?? '',
+    'Supervisor':         m.nomeSupervisor ?? '',
+    'Matrícula Sup.':     m.supervisor ?? '',
+    'Data':               formatDateBR(m.data),
+    'Categoria':          m.tipo ?? '',
+    'Tipo de Medida':     m.medida ?? '',
+    'Dias Suspensão':     m.diasSuspensao ?? '',
+    'Gravidade':          m.gravidade ?? '',
+    'Classificação':      m.classificacao ?? '',
+    'Descrição':          m.ocorrencia ?? '',
+    'Origem':             m.origem ?? '',
+    'Inspeções CLICK':    Array.isArray(m.numerosInspecao) ? m.numerosInspecao.join(', ') : (m.numeroInspecao ?? ''),
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   ws['!cols'] = [
@@ -202,15 +204,8 @@ function ActionMenu({ onVisualizar, onEditar, onExcluir }: {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  useEffect(() => {
-    if (!open) return
-    const h = () => setOpen(false)
-    window.addEventListener('scroll', h, true)
-    return () => window.removeEventListener('scroll', h, true)
-  }, [open])
-
   return (
-    <>
+    <div className="relative">
       <button ref={btnRef} type="button" onClick={handleOpen}
         className={cn('p-2 rounded-xl transition-all',
           open ? 'bg-[#f0f4f9] text-[#094780]' : 'text-[#b0bac8] hover:text-[#094780] hover:bg-[#f0f4f9]')}>
@@ -229,7 +224,7 @@ function ActionMenu({ onVisualizar, onEditar, onExcluir }: {
           <button type="button" className="action-item delete" onClick={() => { setOpen(false); onExcluir() }}><Trash2 size={14} /> Excluir</button>
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -266,7 +261,7 @@ function OrigemBadge({ origem }: { origem?: string }) {
   )
 }
 
-// ─── SortButton — cabeçalho de coluna clicável ────────────────────────────────
+// ─── SortButton ────────────────────────────────────────────────────────────────
 function SortButton({
   field, label, currentField, currentDir, onClick,
 }: {
@@ -360,8 +355,8 @@ export default function ListagemMedidasPage() {
   const router = useRouter()
   const { data: session } = useSession()
 
-  const isAdmin       = useMemo(() => isAdminUser(session?.user),                                  [session])
-  const userFiliais   = useMemo(() => isAdmin ? ALL_UFS       : normalizeUfs(session?.user),       [session, isAdmin])
+  const isAdmin       = useMemo(() => isAdminUser(session?.user), [session])
+  const userFiliais   = useMemo(() => isAdmin ? ALL_UFS : normalizeUfs(session?.user), [session, isAdmin])
   const userRegionais = useMemo(() => isAdmin ? ALL_REGIONAIS : normalizeRegionais(session?.user), [session, isAdmin])
 
   const [medidas,         setMedidas        ] = useState<any[]>([])
@@ -382,26 +377,23 @@ export default function ListagemMedidasPage() {
   const [filtroRegional,  setFiltroRegional ] = useState<string[]>([])
   const [filtroData,      setFiltroData     ] = useState('')
 
-  // ── Ordenação: padrão = data mais recente (desc) ──────────────────────────
+  // Ordenação
   const [sortField, setSortField] = useState<SortField>('data')
   const [sortDir,   setSortDir  ] = useState<SortDir>('desc')
 
   function handleSort(field: SortField) {
     if (field === sortField) {
-      // Mesmo campo → inverte direção
       setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     } else {
-      // Novo campo → desc para data, asc para texto
       setSortField(field)
       setSortDir(field === 'data' ? 'desc' : 'asc')
     }
     setCurrentPage(1)
   }
-  // ──────────────────────────────────────────────────────────────────────────
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize,    setPageSize    ] = useState<PageSize>(10)
+  const [pageSize,     setPageSize    ] = useState<PageSize>(10)
 
   useEffect(() => {
     async function fetchMedidas() {
@@ -438,7 +430,6 @@ export default function ListagemMedidasPage() {
     finally { setIsDeleting(false); setIdParaDeletar(null) }
   }
 
-  // ── Filtro ────────────────────────────────────────────────────────────────
   const filteredData = useMemo(() => {
     const filtered = medidas.filter(m => {
       const t = busca.toLowerCase()
@@ -449,34 +440,31 @@ export default function ListagemMedidasPage() {
           case 'supervisor':    return m.nomeSupervisor?.toLowerCase().includes(t)
           case 'matSupervisor': return m.supervisor?.toLowerCase().includes(t)
           default: return (
-  m.colaborador?.toLowerCase().includes(t)    ||
-  m.matricula?.toLowerCase().includes(t)      ||
-  m.nomeSupervisor?.toLowerCase().includes(t) ||
-  m.supervisor?.toLowerCase().includes(t)     ||
-  String(m.id || '').toLowerCase().includes(t)
-)
+            m.colaborador?.toLowerCase().includes(t)    ||
+            m.matricula?.toLowerCase().includes(t)      ||
+            m.nomeSupervisor?.toLowerCase().includes(t) ||
+            m.supervisor?.toLowerCase().includes(t)     ||
+            String(m.id || '').toLowerCase().includes(t)
+          )
         }
       })()
       return (
         matchBusca &&
-        (filtroUf.length       === 0 || filtroUf.includes(m.uf)           ) &&
+        (filtroUf.length       === 0 || filtroUf.includes(m.uf)) &&
         (filtroRegional.length === 0 || filtroRegional.includes(m.regional)) &&
-        (filtroCategoria === 'Todos' || m.tipo      === filtroCategoria    ) &&
-        (filtroMedida    === 'Todos' || m.medida    === filtroMedida       ) &&
-        (filtroGravidade === 'Todos' || m.gravidade === filtroGravidade    ) &&
-        (filtroOrigem    === 'Todos' || m.origem    === filtroOrigem       ) &&
-        // ── Correção bug de data: compara apenas a parte "YYYY-MM-DD" ──────
+        (filtroCategoria === 'Todos' || m.tipo      === filtroCategoria) &&
+        (filtroMedida    === 'Todos' || m.medida    === filtroMedida) &&
+        (filtroGravidade === 'Todos' || m.gravidade === filtroGravidade) &&
+        (filtroOrigem    === 'Todos' || m.origem    === filtroOrigem) &&
         (!filtroData || m.data?.split('T')[0] === filtroData)
       )
     })
 
-    // ── Ordenação ────────────────────────────────────────────────────────────
     filtered.sort((a, b) => {
       if (sortField === 'data') {
         const diff = dateSort(a.data) - dateSort(b.data)
         return sortDir === 'desc' ? -diff : diff
       }
-      // Ordenação alfabética por nome do colaborador
       const nameA = (a.colaborador ?? '').toLowerCase()
       const nameB = (b.colaborador ?? '').toLowerCase()
       const diff  = nameA.localeCompare(nameB, 'pt-BR')
@@ -486,7 +474,6 @@ export default function ListagemMedidasPage() {
     return filtered
   }, [medidas, busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade, filtroOrigem, filtroUf, filtroRegional, filtroData, sortField, sortDir])
 
-  // Reset página ao mudar filtro, ordenação ou tamanho
   useEffect(() => { setCurrentPage(1) }, [
     busca, campoBusca, filtroCategoria, filtroMedida, filtroGravidade,
     filtroOrigem, filtroUf, filtroRegional, filtroData, pageSize, sortField, sortDir,
@@ -534,57 +521,24 @@ export default function ListagemMedidasPage() {
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap');
         .list-root { font-family:'DM Sans',sans-serif; padding:16px; min-height:calc(100vh - 60px); }
-
-        /* ── Filtros ── */
         .filter-wrap { background:#fff; border:1px solid #e3e8ef; border-radius:14px; margin-bottom:16px; overflow:hidden; }
         .filter-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #f1f5f9; }
         .filter-badge { background:#3d6cf0; color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:99px; }
-
-        .filter-body {
-          padding:14px;
-          display:grid;
-          grid-template-columns:1fr;
-          gap:12px;
-        }
-        @media(min-width:768px) {
-          .filter-body { grid-template-columns:1fr 1fr; }
-        }
-        @media(min-width:1280px) {
-          .filter-body { grid-template-columns:1.8fr 1fr 1fr 1fr 1fr 1fr; }
-        }
-
-        .filter-chips-row {
-          padding:0 14px 14px;
-          display:grid;
-          grid-template-columns:1fr;
-          gap:12px;
-          border-top:1px solid #f1f5f9;
-          padding-top:12px;
-        }
-        @media(min-width:768px) {
-          .filter-chips-row { grid-template-columns:1fr 1fr; }
-        }
-
+        .filter-body { padding:14px; display:grid; grid-template-columns:1fr; gap:12px; }
+        @media(min-width:768px) { .filter-body { grid-template-columns:1fr 1fr; } }
+        @media(min-width:1280px) { .filter-body { grid-template-columns:1.8fr 1fr 1fr 1fr 1fr 1fr; } }
+        .filter-chips-row { padding:0 14px 14px; display:grid; grid-template-columns:1fr; gap:12px; border-top:1px solid #f1f5f9; padding-top:12px; }
+        @media(min-width:768px) { .filter-chips-row { grid-template-columns:1fr 1fr; } }
         .filter-label-text { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; display:block; }
         .filter-input { height:36px; background:#f8fafc; border:1px solid #e3e8ef; border-radius:8px; padding:0 10px; font-size:13px; width:100%; outline:none; transition:border .15s; }
         .filter-input:focus { border-color:#094780; }
-
-        /* ── Chip Filter ── */
         .chip-filter-wrap { display:flex; flex-direction:column; gap:6px; }
         .chip-filter-label { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
         .chip-group { display:flex; flex-wrap:wrap; gap:5px; }
-        .chip {
-          display:inline-flex; align-items:center; gap:4px;
-          padding:4px 11px; border-radius:99px; cursor:pointer;
-          font-size:11px; font-weight:700; border:1.5px solid #e3e8ef;
-          background:#fff; color:#64748b;
-          transition:all .15s ease; user-select:none; line-height:1; white-space:nowrap;
-        }
+        .chip { display:inline-flex; align-items:center; gap:4px; padding:4px 11px; border-radius:99px; cursor:pointer; font-size:11px; font-weight:700; border:1.5px solid #e3e8ef; background:#fff; color:#64748b; transition:all .15s ease; user-select:none; line-height:1; white-space:nowrap; }
         .chip:hover { border-color:#094780; color:#094780; background:#eef4fb; }
         .chip-active { background:#094780 !important; color:#fff !important; border-color:#094780 !important; }
         .chip-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; transition:background .15s; }
-
-        /* ── Tabela ── */
         .ins-main-card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; }
         .ins-table { width:100%; border-collapse:collapse; min-width:1150px; }
         .ins-table th { background:#f8fafc; padding:12px 14px; text-align:left; font-size:10px; font-weight:800; color:#8896ab; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid #e2e8f0; }
@@ -592,15 +546,11 @@ export default function ListagemMedidasPage() {
         .ins-row td { padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
         .ins-row:last-child td { border-bottom:none; }
         .ins-row:hover td { background:#fafbfc; }
-
-        /* ── Botões topo ── */
         .btn-new { background:#E67A0E; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:12px; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s; }
         .btn-new:hover { opacity:.9; }
         .btn-export { background:#fff; color:#374151; padding:8px 12px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s; }
         .btn-export:hover { border-color:#094780; color:#094780; }
         .btn-export:disabled { opacity:.4; cursor:not-allowed; }
-
-        /* ── Paginação ── */
         .pagination-wrap { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:14px 20px; border-top:1px solid #f1f5f9; }
         .pagination-info { font-size:12px; color:#8896ab; }
         .pagination-controls { display:flex; align-items:center; gap:4px; }
@@ -609,9 +559,7 @@ export default function ListagemMedidasPage() {
         .pg-num:hover:not(:disabled) { border-color:#094780; color:#094780; }
         .pg-active { background:#094780 !important; color:#fff !important; border-color:#094780 !important; }
         .pg-ellipsis { padding:0 4px; color:#8896ab; font-size:13px; line-height:34px; }
-
-        /* ── Action menu ── */
-        .action-item { width:100%; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; border:none; background:none; cursor:pointer; color:#374151; transition:background .1s; }
+        .action-item { width:100%; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; border:none; background:none; cursor:pointer; color:#374151; transition:background .1s; text-align:left;}
         .action-item:hover { background:#f8fafc; }
         .action-item.delete { color:#ef4444; }
         .action-sep { height:1px; background:#f1f5f9; margin:2px 0; }
@@ -620,7 +568,6 @@ export default function ListagemMedidasPage() {
       `}} />
 
       <div className="list-root">
-
         {/* ── Header ── */}
         <div className="flex justify-between items-start mb-4 gap-3 flex-wrap">
           <div>
@@ -657,7 +604,6 @@ export default function ListagemMedidasPage() {
           </div>
 
           <div className="filter-body">
-            {/* Busca */}
             <div className="flex flex-col">
               <span className="filter-label-text">Busca</span>
               <div className="flex border border-[#e3e8ef] rounded-lg overflow-hidden h-9 bg-slate-50 focus-within:border-[#094780] transition-colors">
@@ -678,7 +624,6 @@ export default function ListagemMedidasPage() {
               </div>
             </div>
 
-            {/* Categoria */}
             <div className="flex flex-col">
               <span className="filter-label-text">Categoria</span>
               <select className="filter-input" value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}>
@@ -688,7 +633,6 @@ export default function ListagemMedidasPage() {
               </select>
             </div>
 
-            {/* Medida */}
             <div className="flex flex-col">
               <span className="filter-label-text">Medida</span>
               <select className="filter-input" value={filtroMedida} onChange={e => setFiltroMedida(e.target.value)}>
@@ -701,7 +645,6 @@ export default function ListagemMedidasPage() {
               </select>
             </div>
 
-            {/* Gravidade */}
             <div className="flex flex-col">
               <span className="filter-label-text">Gravidade</span>
               <select className="filter-input" value={filtroGravidade} onChange={e => setFiltroGravidade(e.target.value)}>
@@ -710,7 +653,6 @@ export default function ListagemMedidasPage() {
               </select>
             </div>
 
-            {/* Origem */}
             <div className="flex flex-col">
               <span className="filter-label-text">Origem</span>
               <select className="filter-input" value={filtroOrigem} onChange={e => setFiltroOrigem(e.target.value)}>
@@ -719,22 +661,20 @@ export default function ListagemMedidasPage() {
               </select>
             </div>
 
-            {/* Data */}
             <div className="flex flex-col">
               <span className="filter-label-text">Data</span>
               <input className="filter-input" type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
             </div>
           </div>
 
-          {/* Chips filial + regional */}
           <div className="filter-chips-row">
             <ChipFilter
               label="Filial" options={userFiliais} value={filtroUf} onChange={setFiltroUf}
-              renderLabel={uf => UF_LABELS[uf] ?? uf} dotColor={ufDotColor}
+              renderLabel={(uf: string) => UF_LABELS[uf] ?? uf} dotColor={ufDotColor}
             />
             <ChipFilter
               label="Regional" options={userRegionais} value={filtroRegional} onChange={setFiltroRegional}
-              renderLabel={reg => reg.charAt(0) + reg.slice(1).toLowerCase()}
+              renderLabel={(reg: string) => reg.charAt(0) + reg.slice(1).toLowerCase()}
             />
           </div>
         </div>
@@ -763,7 +703,6 @@ export default function ListagemMedidasPage() {
                 <table className="ins-table">
                   <thead>
                     <tr>
-                      {/* Cabeçalho clicável para ordenação por data */}
                       <th className="sortable">
                         <SortButton
                           field="data" label="ID / Data"
@@ -772,7 +711,6 @@ export default function ListagemMedidasPage() {
                         />
                       </th>
                       <th>Local</th>
-                      {/* Cabeçalho clicável para ordenação por nome */}
                       <th className="sortable">
                         <SortButton
                           field="colaborador" label="Colaborador"
@@ -790,8 +728,6 @@ export default function ListagemMedidasPage() {
                   <tbody>
                     {paginatedData.map(item => (
                       <tr key={item.id} className="ins-row">
-
-                        {/* ID / Data — usando formatDateBR para evitar bug de timezone */}
                         <td>
                           <div
                             className="font-bold text-[#094780] text-[12px] cursor-pointer hover:underline"
@@ -803,42 +739,28 @@ export default function ListagemMedidasPage() {
                             {formatDateBR(item.data)}
                           </div>
                         </td>
-
-                        {/* Local */}
                         <td>
                           <div className="flex items-center gap-1 font-bold text-slate-700 text-[11px] uppercase">
                             <MapPin size={10} className="text-[#E67A0E]" /> {item.uf || '—'}
                           </div>
                           <div className="text-[9px] text-[#8896ab] font-bold">{item.regional || '—'}</div>
                         </td>
-
-                        {/* Colaborador */}
                         <td>
                           <div className="font-bold text-[#1a2535] text-[13px]">{item.colaborador}</div>
                           <div className="text-[10px] text-[#8896ab]">Mat: {item.matricula}</div>
                         </td>
-
-                        {/* Supervisor */}
                         <td>
                           <div className="font-bold text-[#1a2535] text-[13px]">{item.nomeSupervisor || '—'}</div>
                           {item.supervisor && <div className="text-[10px] text-[#8896ab]">Mat: {item.supervisor}</div>}
                         </td>
-
-                        {/* Medida */}
                         <td><MedidaBadge medida={item.medida} /></td>
-
-                        {/* Gravidade */}
                         <td><GravidadeBadge gravidade={item.gravidade} /></td>
-
-                        {/* Origem */}
                         <td><OrigemBadge origem={item.origem} /></td>
-
-                        {/* Ações */}
                         <td style={{ textAlign:'right' }}>
                           <ActionMenu
                             onVisualizar={() => router.push(`/medida-administrativa/detalhes/${item.id}`)}
-                            onEditar={()     => router.push(`/medida-administrativa/editar/${item.id}`)}
-                            onExcluir={()    => handleOpenDeleteModal(item.id)}
+                            onEditar={()      => router.push(`/medida-administrativa/editar/${item.id}`)}
+                            onExcluir={()     => handleOpenDeleteModal(item.id)}
                           />
                         </td>
                       </tr>
@@ -846,7 +768,6 @@ export default function ListagemMedidasPage() {
                   </tbody>
                 </table>
               </div>
-
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -860,7 +781,6 @@ export default function ListagemMedidasPage() {
         </div>
       </div>
 
-      {/* ── Modal exclusão ── */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
