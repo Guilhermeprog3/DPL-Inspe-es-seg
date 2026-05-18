@@ -8,6 +8,8 @@ import {
   CheckCircle, ChevronRight, X, Pencil, Save, Ban, Mail, Briefcase,
   Link2, Unlink2, Tag, Loader2,
   ShieldCheck, Plus,
+  BarChart2,
+  CheckSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -18,8 +20,10 @@ import api from '@/lib/api'
 // CORRIGIDO: Rotas atualizadas para o módulo gestao-funcionarios
 const navItems = [
   { section: 'Gestão de Funcionários' },
-  { label: 'Taxa de Contato', href: '/gestao-funcionarios/taxa-contato', icon: LayoutDashboard },
-  { label: 'Meta Checklist', href: '/gestao-funcionarios/meta-checklist', icon: CheckCircle },
+  { label: 'Dashboard', href: '/gestao-funcionarios', icon: LayoutDashboard },
+  { section: 'Módulos' },
+  { label: 'Taxa de Contato', href: '/gestao-funcionarios/taxa-contato', icon: BarChart2 },
+  { label: 'Meta Checklist', href: '/gestao-funcionarios/meta-checklist', icon: CheckSquare },
 ]
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {

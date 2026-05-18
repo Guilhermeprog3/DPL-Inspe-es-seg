@@ -6,7 +6,12 @@ import {
   AlertCircle, ChevronLeft, RefreshCw, Calendar,
   ChevronDown, MoreVertical, Edit2, Loader2,
   CheckCircle, ChevronRight, X, Pencil, Save, Ban,
-  Briefcase,
+  Briefcase, Plus, Trash2,
+  BarChart2,
+  CheckSquare,
+  Users,
+  FlaskConical,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
@@ -15,11 +20,12 @@ import api from '@/lib/api'
 
 const navItems = [
   { section: 'Gestão de Funcionários' },
-  { label: 'Taxa de Contato', href: '/gestao-funcionarios/taxa-contato', icon: LayoutDashboard },
-  { label: 'Meta Checklist', href: '/gestao-funcionarios/meta-checklist', icon: CheckCircle },
+  { label: 'Dashboard', href: '/gestao-funcionarios', icon: LayoutDashboard },
+  { section: 'Módulos' },
+  { label: 'Taxa de Contato', href: '/gestao-funcionarios/taxa-contato', icon: BarChart2 },
+  { label: 'Meta Checklist', href: '/gestao-funcionarios/meta-checklist', icon: CheckSquare },
 ]
 
-// ─── Status config expandido (igual à Taxa de Contato) ────────────────────────
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   'ATIVO':                             { label: 'Ativo',                        color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0' },
   'INATIVO':                           { label: 'Inativo',                      color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
@@ -64,6 +70,7 @@ type ChecklistField = { key: string; label: string; short: string; icon: string 
 const FIELDS_MA: ChecklistField[] = [
   { key: 'metaDds',             label: 'Diálogo de Segurança',  short: 'DDS',      icon: '📋' },
   { key: 'acaoComunidade',      label: 'Ação Comunidade',        short: 'Comuni.',  icon: '🤝' },
+  { key: 'blitzCampo',          label: 'Blitz Campo',           short: 'Blitz',    icon: '🔦' },
   { key: 'inspecEpcFerramenta', label: 'Insp. EPC/Ferramenta',  short: 'EPC/Fer.', icon: '🔧' },
   { key: 'inspecEpi',           label: 'Insp. EPI',             short: 'EPI',      icon: '🦺' },
   { key: 'inspecEdificacao',    label: 'Insp. Edificação',      short: 'Edific.',  icon: '🏗️' },
@@ -75,7 +82,7 @@ const FIELDS_PI: ChecklistField[] = [
   { key: 'metaDds',        label: 'Meta Diálogo de Segurança', short: 'DDS',     icon: '📋' },
   { key: 'acaoComunidade', label: 'Meta Palestra Comunidade',  short: 'Palest.', icon: '🤝' },
   { key: 'metaDinamica',   label: 'Meta Dinâmica',             short: 'Dinâm.',  icon: '🎯' },
-  { key: 'metaEstatica',   label: 'Meta Estática',             short: 'Estát.',  icon: '📌' },
+  { key: 'metaEstatica',   label: 'Meta Estática',             short: 'Estát.',   icon: '📌' },
 ]
 
 const ALL_CHECKLIST_FIELDS: ChecklistField[] = [
@@ -126,7 +133,9 @@ function formatarDataBR(dataStr: string | null | undefined): string {
 type SortField = 'nome' | 'funcao' | 'area' | 'regional'
 type SortDir   = 'asc' | 'desc'
 
-// ─── StatusSelector (dropdown fixo, igual à Taxa de Contato) ─────────────────
+// ── TAB TYPE ──
+type ActiveTab = 'colaborador' | 'funcao'
+
 function StatusSelector({ row, onStatusChange, canEdit }: {
   row: any
   onStatusChange: (id: any, newStatus: string) => void
@@ -291,8 +300,7 @@ function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
   )
 }
 
-// ─── ActionMenu: sem excluir, menu em position:fixed ──────────────────────────
-function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
+function ActionMenu({ row, onEdit, onDeleteRequest }: { row: any; onEdit: (row: any) => void; onDeleteRequest: (row: any) => void }) {
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -313,7 +321,7 @@ function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
   function handleOpen() {
     if (!btnRef.current) return
     const rect = btnRef.current.getBoundingClientRect()
-    const menuHeight = 52
+    const menuHeight = 85
     const spaceBelow = window.innerHeight - rect.bottom
     const top = spaceBelow > menuHeight + 8 ? rect.bottom + 4 : rect.top - menuHeight - 4
     const left = rect.right - 160
@@ -339,9 +347,18 @@ function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
         >
           <button
             onClick={() => { setOpen(false); onEdit(row) }}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Edit2 size={14} className="text-[#094780]" /> Editar
+          </button>
+          
+          <div className="border-t border-slate-100 my-1" />
+          
+          <button
+            onClick={() => { setOpen(false); onDeleteRequest(row) }}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={14} className="text-red-500" /> Excluir
           </button>
         </div>
       )}
@@ -349,14 +366,60 @@ function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
   )
 }
 
-// ─── EditModal ────────────────────────────────────────────────────────────────
+function ConfirmDeleteModal({ row, onClose, onConfirm }: { row: any; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  async function handleConfirm() {
+    setIsDeleting(true)
+    try {
+      await onConfirm()
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-[#111827]/60 backdrop-blur-md p-4 animate-fadeIn">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-150 p-6 animate-scaleIn flex flex-col items-center text-center">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4 border border-red-100">
+          <Trash2 size={22} />
+        </div>
+        
+        <h3 className="text-[16px] font-bold text-[#1a2535]">Excluir Registro de Metas</h3>
+        <p className="text-[13px] text-slate-500 mt-2 max-w-sm">
+          Você tem certeza que deseja remover as metas de <strong className="text-slate-800 uppercase">{row?.nome || 'este colaborador'}</strong>? Essa ação é permanente e não poderá ser desfeita.
+        </p>
+
+        <div className="flex gap-2 w-full mt-6">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="flex-1 h-10 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={isDeleting}
+            className="flex-1 h-10 bg-red-650 hover:bg-red-700 text-white rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2"
+            style={{ backgroundColor: '#dc2626' }}
+          >
+            {isDeleting ? <Loader2 size={14} className="animate-spin" /> : 'Confirmar Exclusão'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   row: any
   onClose: () => void
   onSaved: (updated: any) => void
   dynamicOptions: any
 }) {
-  const [editMode, setEditMode] = useState(false)
+  const isCreateMode = !row
+  const [editMode, setEditMode] = useState(isCreateMode)
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
 
@@ -381,9 +444,8 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   }
   const [form, setForm] = useState(INITIAL)
 
-  // ── Busca de colaborador (igual à Taxa de Contato) ──────────────────────────
   const [colaboradoresRepo,  setColaboradoresRepo ] = useState<any[]>([])
-  const [colabSelecionado,   setColabSelecionado  ] = useState<any>({ nome: row?.nome, chapa: row?.matricula })
+  const [colabSelecionado,   setColabSelecionado  ] = useState<any>(isCreateMode ? null : { nome: row?.nome, chapa: row?.matricula })
   const [nomeColabPesquisa,  setNomeColabPesquisa ] = useState(row?.nome      ?? '')
   const [matColabPesquisa,   setMatColabPesquisa  ] = useState(row?.matricula ?? '')
   const [showColabNome,      setShowColabNome     ] = useState(false)
@@ -415,16 +477,39 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
     setColabSelecionado(item)
     setNomeColabPesquisa(item.nome)
     setMatColabPesquisa(item.chapa)
-    setForm(f => ({ ...f, nome: item.nome, matricula: item.chapa }))
+    setForm(f => ({ 
+      ...f, 
+      nome: item.nome, 
+      matricula: item.chapa,
+      funcao: item.funcao || f.funcao,
+      area: item.area || f.area,
+      regional: item.regional || f.regional,
+      filial: item.uf || item.filial || f.filial
+    }))
     setShowColabNome(false)
     setShowColabMat(false)
   }
-  // ────────────────────────────────────────────────────────────────────────────
 
   const modalFields = useMemo(() => getFieldsForUf(form.filial), [form.filial])
 
+  const regionaisFiltradasNoModal = useMemo(() => {
+    if (!form.filial) return dynamicOptions.regionais
+    const s = dynamicOptions.ufToRegionais[form.filial.toUpperCase()]
+    if (!s) return []
+    return dynamicOptions.regionais.filter((r: string) => s.has(r))
+  }, [dynamicOptions, form.filial])
+
   function handleChange(field: string, value: any) {
-    setForm(f => ({ ...f, [field]: value }))
+    setForm(f => {
+      const updated = { ...f, [field]: value }
+      if (field === 'filial') {
+        const permitidas = dynamicOptions.ufToRegionais[value.toUpperCase()]
+        if (!permitidas || !permitidas.has(f.regional)) {
+          updated.regional = ''
+        }
+      }
+      return updated
+    })
   }
 
   function handleNumericChange(field: string, raw: string) {
@@ -437,18 +522,35 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   }
 
   function handleCancel() {
-    setForm(INITIAL)
-    setNomeColabPesquisa(row?.nome      ?? '')
-    setMatColabPesquisa(row?.matricula  ?? '')
-    setColabSelecionado({ nome: row?.nome, chapa: row?.matricula })
-    setEditMode(false)
+    if (isCreateMode) {
+      onClose()
+    } else {
+      setForm(INITIAL)
+      setNomeColabPesquisa(row?.nome      ?? '')
+      setMatColabPesquisa(row?.matricula  ?? '')
+      setColabSelecionado({ nome: row?.nome, chapa: row?.matricula })
+      setEditMode(false)
+    }
   }
 
   async function handleSave() {
+    if (isCreateMode && (!form.nome || !form.matricula)) {
+      alert('Por favor, selecione um colaborador válido da lista de sugestões.')
+      return
+    }
     setIsSaving(true)
     try {
-      const res = await api.patch(`/meta-checklist/${row.id}`, form)
-      const updated = res.data ?? { ...row, ...form }
+      let res
+      if (isCreateMode) {
+        res = await api.post('/meta-checklist', form)
+      } else {
+        res = await api.patch(`/meta-checklist/${row.id}`, form)
+      }
+      
+      const backendRow = res.data ?? {}
+      const idFinal = backendRow.id ?? backendRow.ID ?? row?.id
+      const updated = { ...row, ...form, ...backendRow, id: idFinal }
+      
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)
@@ -464,7 +566,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   const selectCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
   const inputSelCls  = 'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13px] outline-none transition-all'
   const labelCls     = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
-  const viewCls      = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
+  const viewCls      = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1 font-weight: 500'
 
   function ViewValue({ value }: { value: string }) {
     return value
@@ -483,7 +585,9 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-[15px] font-bold text-[#1a2535] truncate">{form.nome || 'Registro'}</p>
+              <p className="text-[15px] font-bold text-[#1a2535] truncate">
+                {isCreateMode ? 'Novo Cadastro de Meta' : (form.nome || 'Registro')}
+              </p>
               {ufLabel && (
                 <span
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
@@ -493,20 +597,24 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">Matrícula: {form.matricula || '—'}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {isCreateMode ? 'Vincule um funcionário ativo e distribua suas metas mensais' : `Matrícula: ${form.matricula || '—'}`}
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {!editMode ? (
-              <button
-                onClick={() => setEditMode(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[12px] font-bold hover:bg-amber-100 transition-all"
-              >
-                <Pencil size={13} /> Editar
-              </button>
-            ) : (
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 text-white text-[12px] font-bold">
-                <Pencil size={13} /> Editando
-              </span>
+            {!isCreateMode && (
+              !editMode ? (
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[12px] font-bold hover:bg-amber-100 transition-all"
+                >
+                  <Pencil size={13} /> Editar
+                </button>
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 text-white text-[12px] font-bold">
+                  <Pencil size={13} /> Editando
+                </span>
+              )
             )}
             <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
               <X size={16} />
@@ -516,8 +624,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 
         {/* Body */}
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
-
-          {/* ── Seção Colaborador ─────────────────────────────────────────── */}
+          {/* Seção Colaborador */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">
               Colaborador {editMode && <span className="text-red-400">*</span>}
@@ -525,7 +632,6 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
-                {/* Busca por nome */}
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Nome</label>
                   <input
@@ -534,9 +640,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                     placeholder="Buscar nome..."
                     className={cn(
                       inputSelCls,
-                      colabSelecionado
-                        ? 'border-emerald-500 bg-emerald-50/30'
-                        : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
+                      colabSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
                     )}
                     onChange={e => {
                       setNomeColabPesquisa(e.target.value.replace(/[0-9]/g, ''))
@@ -547,17 +651,11 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                     onFocus={() => setShowColabNome(true)}
                     onBlur={() => setTimeout(() => setShowColabNome(false), 200)}
                   />
-                  {colabSelecionado && (
-                    <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />
-                  )}
+                  {colabSelecionado && <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />}
                   {showColabNome && colabsFiltradosNome.length > 0 && (
                     <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                       {colabsFiltradosNome.map((c, i) => (
-                        <div
-                          key={i}
-                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
-                          onMouseDown={() => selecionarColab(c)}
-                        >
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarColab(c)}>
                           <p className="font-bold text-slate-700 uppercase">{c.nome}</p>
                           <p className="text-slate-400">Matrícula: {c.chapa}</p>
                         </div>
@@ -566,7 +664,6 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                   )}
                 </div>
 
-                {/* Busca por matrícula */}
                 <div style={{ position: 'relative' }}>
                   <label className={labelCls}>Matrícula</label>
                   <input
@@ -576,9 +673,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                     placeholder="Buscar matrícula..."
                     className={cn(
                       inputSelCls,
-                      colabSelecionado
-                        ? 'border-emerald-500 bg-emerald-50/30'
-                        : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
+                      colabSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white'
                     )}
                     onChange={e => {
                       setMatColabPesquisa(e.target.value.replace(/[^0-9]/g, ''))
@@ -592,11 +687,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                   {showColabMat && colabsFiltradosMat.length > 0 && (
                     <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                       {colabsFiltradosMat.map((c, i) => (
-                        <div
-                          key={i}
-                          className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0"
-                          onMouseDown={() => selecionarColab(c)}
-                        >
+                        <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarColab(c)}>
                           <p className="font-bold text-slate-700">{c.chapa}</p>
                           <p className="text-slate-400 uppercase">{c.nome}</p>
                         </div>
@@ -605,22 +696,16 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                   )}
                 </div>
 
-                {/* Aviso se digitou mas não selecionou */}
                 {!colabSelecionado && (nomeColabPesquisa || matColabPesquisa) && (
                   <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
                     <AlertCircle size={11} /> Selecione um colaborador da lista
                   </p>
                 )}
 
-                {/* Status (mantido no modo edição) */}
                 <div className="col-span-2">
                   <label className={labelCls}>Status</label>
                   <div className="relative">
-                    <select
-                      value={form.status.toUpperCase()}
-                      onChange={e => handleChange('status', e.target.value)}
-                      className={selectCls}
-                    >
+                    <select value={form.status.toUpperCase()} onChange={e => handleChange('status', e.target.value)} className={selectCls}>
                       {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CFG[s]?.label ?? s}</option>)}
                     </select>
                     <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -644,10 +729,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
                       const key = (form.status || 'ATIVO').toUpperCase()
                       const c = STATUS_CFG[key] ?? STATUS_CFG['ATIVO']
                       return (
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border"
-                          style={{ background: c.bg, color: c.color, borderColor: c.border }}
-                        >
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border" style={{ background: c.bg, color: c.color, borderColor: c.border }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.color }} />
                           {c.label}
                         </span>
@@ -661,30 +743,29 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 
           <div className="border-t border-slate-50" />
 
-          {/* ── Seção Lotação ─────────────────────────────────────────────── */}
+          {/* Seção Lotação */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Lotação</p>
             {editMode ? (
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { field: 'funcao',   label: 'Função',      opts: dynamicOptions.funcoes },
+                  { field: 'funcao',   label: 'Função',     opts: dynamicOptions.funcoes },
                   { field: 'area',     label: 'Área',        opts: dynamicOptions.areas },
-                  { field: 'regional', label: 'Regional',    opts: dynamicOptions.regionais },
                   { field: 'filial',   label: 'Filial (UF)', opts: dynamicOptions.ufs },
+                  { field: 'regional', label: 'Regional',    opts: regionaisFiltradasNoModal },
                 ].map(({ field, label, opts }) => (
                   <div key={field}>
                     <label className={labelCls}>{label}</label>
                     <div className="relative">
-                      <select
-                        value={(form as any)[field]}
-                        onChange={e => handleChange(field, e.target.value)}
+                      <select 
+                        value={(form as any)[field]} 
+                        onChange={e => handleChange(field, e.target.value)} 
                         className={selectCls}
+                        disabled={field === 'regional' && !form.filial}
                       >
-                        <option value="">Selecione...</option>
+                        <option value="">{field === 'regional' && !form.filial ? "Selecione a Filial primeiro..." : "Selecione..."}</option>
                         {opts.map((o: string) => (
-                          <option key={o} value={o}>
-                            {field === 'filial' ? (UF_LABELS[o] ?? o) : o}
-                          </option>
+                          <option key={o} value={o}>{field === 'filial' ? (UF_LABELS[o] ?? o) : o}</option>
                         ))}
                       </select>
                       <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -711,7 +792,7 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
 
           <div className="border-t border-slate-50" />
 
-          {/* ── Seção Metas ───────────────────────────────────────────────── */}
+          {/* Seção Metas */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Metas por Modalidade</p>
@@ -754,17 +835,16 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
           {editMode ? (
             <>
-              <button
-                onClick={handleCancel}
-                disabled={isSaving}
-                className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
-              >
+              <button onClick={handleCancel} disabled={isSaving} className="flex-1 py-2.5 border border-[#e3e8ef] text-[#4b5563] rounded-xl text-[13px] font-medium hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5">
                 <Ban size={14} /> Cancelar
               </button>
               <button
                 onClick={handleSave}
-                disabled={isSaving || success}
-                className="flex-1 py-2.5 bg-[#094780] text-white rounded-xl text-[13px] font-semibold hover:bg-[#0a5494] transition-all flex items-center justify-center gap-2"
+                disabled={isSaving || success || (isCreateMode && !colabSelecionado)}
+                className={cn(
+                  "flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2 text-white",
+                  (!isCreateMode || colabSelecionado) ? "bg-[#094780] hover:bg-[#0a5494] cursor-pointer" : "bg-slate-300 cursor-not-allowed"
+                )}
               >
                 {success ? <><CheckCircle size={14} /> Salvo!</> : isSaving ? <Loader2 size={14} className="animate-spin" /> : <><Save size={14} /> Salvar</>}
               </button>
@@ -780,11 +860,73 @@ function EditModal({ row, onClose, onSaved, dynamicOptions }: {
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ── ABA: METAS POR FUNÇÃO (Em Produção) ──
+function MetasPorFuncaoTab() {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-6 select-none">
+      <div className="relative mb-8">
+        {/* Ícones decorativos ao redor */}
+        <div className="absolute -top-4 -left-8 w-10 h-10 rounded-xl bg-[#eff6ff] border border-[#dbeafe] flex items-center justify-center opacity-60 rotate-[-12deg]">
+          <Wrench size={16} className="text-[#2563eb]" />
+        </div>
+        <div className="absolute -top-2 -right-8 w-10 h-10 rounded-xl bg-[#f0fdfa] border border-[#ccfbf1] flex items-center justify-center opacity-60 rotate-[10deg]">
+          <BarChart2 size={16} className="text-[#0f766e]" />
+        </div>
+        <div className="absolute -bottom-4 -left-4 w-8 h-8 rounded-lg bg-[#fffbeb] border border-[#fde68a] flex items-center justify-center opacity-50 rotate-[6deg]">
+          <FlaskConical size={13} className="text-[#d97706]" />
+        </div>
+
+        {/* Ícone principal */}
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#094780] to-[#1d6fb5] flex items-center justify-center shadow-lg shadow-[#094780]/20">
+          <Users size={36} className="text-white" />
+        </div>
+      </div>
+
+      {/* Badge de status */}
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 mb-5">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+        </span>
+        <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Em desenvolvimento</span>
+      </div>
+
+      <h3 className="text-[22px] font-black text-[#0d1e33] mb-2" style={{ fontFamily: 'Syne, sans-serif' }}>
+        Metas por Função
+      </h3>
+      <p className="text-[13px] text-slate-500 text-center max-w-sm leading-relaxed">
+        Esta funcionalidade está sendo desenvolvida e em breve estará disponível. 
+        Aqui você poderá visualizar e gerenciar metas agrupadas por função dos colaboradores.
+      </p>
+
+      {/* Linha decorativa de features futuras */}
+      <div className="mt-10 grid grid-cols-3 gap-3 w-full max-w-sm">
+        {[
+          { icon: '📊', label: 'Agrupamento por função' },
+          { icon: '📈', label: 'Análise comparativa' },
+          { icon: '🎯', label: 'Metas consolidadas' },
+        ].map((item, i) => (
+          <div
+            key={i}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 opacity-50"
+          >
+            <span className="text-xl">{item.icon}</span>
+            <span className="text-[10px] font-bold text-slate-500 text-center leading-tight">{item.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── COMPONENTE PRINCIPAL ──
 export default function MetaChecklistPage() {
   const { data: session } = useSession()
   const userData = session?.user as any
   const isAdmin  = userData?.role === 'admin'
+
+  // ── Estado da aba ativa ──
+  const [activeTab, setActiveTab] = useState<ActiveTab>('colaborador')
 
   const [data,    setData  ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -804,7 +946,9 @@ export default function MetaChecklistPage() {
   const [currentPage,  setCurrentPage ] = useState(1)
   const [pageSize,     setPageSize    ] = useState(10)
 
-  const [editTarget, setEditTarget] = useState<any>(null)
+  const [editTarget,    setEditTarget   ] = useState<any>(null)
+  const [deleteTarget,  setDeleteTarget ] = useState<any>(null)
+  const [isCreateOpen,  setIsCreateOpen ] = useState(false)
 
   const dynamicOptions = useMemo(() => {
     const areas = new Set<string>(); const funcoes = new Set<string>()
@@ -819,8 +963,9 @@ export default function MetaChecklistPage() {
       if (item.regional) regionais.add(item.regional)
       statusSet.add((item.status || 'ATIVO').toUpperCase())
       if (item.filial && item.regional) {
-        if (!ufToRegionais[item.filial]) ufToRegionais[item.filial] = new Set()
-        ufToRegionais[item.filial].add(item.regional)
+        const uKey = item.filial.toUpperCase()
+        if (!ufToRegionais[uKey]) ufToRegionais[uKey] = new Set()
+        ufToRegionais[uKey].add(item.regional)
       }
     })
     return {
@@ -841,7 +986,7 @@ export default function MetaChecklistPage() {
   const regionaisDisponiveis = useMemo(() => {
     if (filtroUf.length === 0) return dynamicOptions.regionais
     const s = new Set<string>()
-    filtroUf.forEach(uf => dynamicOptions.ufToRegionais[uf]?.forEach((r: string) => s.add(r)))
+    filtroUf.forEach(uf => dynamicOptions.ufToRegionais[uf.toUpperCase()]?.forEach((r: string) => s.add(r)))
     return dynamicOptions.regionais.filter((r: string) => s.has(r))
   }, [dynamicOptions, filtroUf])
 
@@ -869,6 +1014,17 @@ export default function MetaChecklistPage() {
       setData(res.data as any[])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return
+    try {
+      await api.delete(`/meta-checklist/${deleteTarget.id}`)
+      setData(prev => prev.filter(item => item.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao excluir o registro.')
+    }
   }
 
   async function handleExport() {
@@ -978,9 +1134,17 @@ export default function MetaChecklistPage() {
         .pg-btn:disabled { opacity:.4; cursor:not-allowed; }
         .btn-outline { background:#fff; color:#374151; padding:8px 13px; border-radius:12px; font-weight:700; font-size:12px; border:1.5px solid #e3e8ef; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all .15s; }
         .btn-outline:hover { border-color:#094780; color:#094780; }
+        /* Tabs */
+        .tab-bar { display:flex; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:4px; gap:2px; width:fit-content; }
+        .tab-btn { display:flex; align-items:center; gap:6px; padding:7px 16px; border-radius:10px; font-size:12px; font-weight:700; cursor:pointer; border:none; background:transparent; color:#64748b; transition:all .18s; white-space:nowrap; }
+        .tab-btn:hover { color:#094780; background:#fff; }
+        .tab-btn.tab-active { background:#fff; color:#094780; box-shadow:0 1px 4px rgba(9,71,128,.10); border:1px solid #e2e8f0; }
+        .tab-btn.tab-active svg { color:#094780; }
         @keyframes fadeIn  { from{opacity:0;transform:scale(.97)} to{opacity:1;transform:scale(1)} }
         @keyframes scaleIn { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:scale(1)} }
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+        @keyframes ping { 75%,100%{transform:scale(2);opacity:0} }
+        .animate-ping { animation:ping 1s cubic-bezier(0,0,.2,1) infinite }
         .animate-fadeIn  { animation: fadeIn  .15s ease forwards }
         .animate-scaleIn { animation: scaleIn .2s cubic-bezier(.22,.68,0,1.2) forwards }
         .animate-slideUp { animation: slideUp .25s ease forwards }
@@ -996,14 +1160,18 @@ export default function MetaChecklistPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && activeTab === 'colaborador' && (
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="bg-[#094780] text-white px-4 h-10 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-[#073661] transition-all cursor-pointer"
+              >
+                <Plus size={14} /> Novo Colaborador
+              </button>
+            )}
+
             <div className="relative flex items-center">
               <Calendar size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#094780] z-10" />
-              <select
-                value={filtroMes}
-                onChange={e => { setFiltroMes(e.target.value); setCurrentPage(1) }}
-                className="gp-select-date"
-                style={{ minWidth: 180 }}
-              >
+              <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setCurrentPage(1) }} className="gp-select-date" style={{ minWidth: 180 }}>
                 {mesesOptions.length === 0 && <option value="">Nenhuma competência...</option>}
                 {mesesOptions.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
@@ -1012,204 +1180,216 @@ export default function MetaChecklistPage() {
             <button onClick={() => fetchData(filtroMes)} className="btn-outline">
               <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Atualizar
             </button>
-            <button onClick={handleExport} className="btn-outline">
-              <Download size={13} /> Exportar
+            {activeTab === 'colaborador' && (
+              <button onClick={handleExport} className="btn-outline">
+                <Download size={13} /> Exportar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── ABAS ── */}
+        <div className="mb-4">
+          <div className="tab-bar">
+            <button
+              onClick={() => setActiveTab('colaborador')}
+              className={cn('tab-btn', activeTab === 'colaborador' && 'tab-active')}
+            >
+              <Users size={14} />
+              Metas por Colaborador
+            </button>
+            <button
+              onClick={() => setActiveTab('funcao')}
+              className={cn('tab-btn', activeTab === 'funcao' && 'tab-active')}
+            >
+              <Briefcase size={14} />
+              Metas por Função
             </button>
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="filter-wrap">
-          <div className="filter-header">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-              <SlidersHorizontal size={13} /> Filtros
-              {filtrosAtivos > 0 && <span className="bg-[#094780] text-white px-1.5 py-0.5 rounded-full text-[10px]">{filtrosAtivos}</span>}
-            </div>
-            {filtrosAtivos > 0 && <button onClick={limparTudo} className="text-xs font-bold text-slate-400 hover:text-red-500">Limpar tudo</button>}
-          </div>
-          <div className="filter-body">
-            <div className="filter-row-main">
-              <div className="flex flex-col gap-1.5" style={{ flex: '0 0 auto', width: 320 }}>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Busca</span>
-                <div className="search-container">
-                  <select className="search-select" value={campoBusca} onChange={e => setCampoBusca(e.target.value)}>
-                    <option value="todos">Todos</option>
-                    <option value="nome">Nome</option>
-                    <option value="matricula">Matrícula</option>
-                    <option value="funcao">Função</option>
-                  </select>
-                  <input
-                    className="search-input-field"
-                    type="text"
-                    placeholder="Pesquisar..."
-                    value={busca}
-                    onChange={e => { setBusca(e.target.value); setCurrentPage(1) }}
-                  />
-                  <div className="flex items-center pr-3">
-                    <Search size={14} className="text-slate-400" />
+        {/* ── CONTEÚDO DAS ABAS ── */}
+        {activeTab === 'colaborador' ? (
+          <>
+            {/* Filtros */}
+            <div className="filter-wrap">
+              <div className="filter-header">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  <SlidersHorizontal size={13} /> Filtros
+                  {filtrosAtivos > 0 && <span className="bg-[#094780] text-white px-1.5 py-0.5 rounded-full text-[10px]">{filtrosAtivos}</span>}
+                </div>
+                {filtrosAtivos > 0 && <button onClick={limparTudo} className="text-xs font-bold text-slate-400 hover:text-red-500">Limpar tudo</button>}
+              </div>
+              <div className="filter-body">
+                <div className="filter-row-main">
+                  <div className="flex flex-col gap-1.5" style={{ flex: '0 0 auto', width: 320 }}>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Busca</span>
+                    <div className="search-container">
+                      <select className="search-select" value={campoBusca} onChange={e => setCampoBusca(e.target.value)}>
+                        <option value="todos">Todos</option>
+                        <option value="nome">Nome</option>
+                        <option value="matricula">Matrícula</option>
+                        <option value="funcao">Função</option>
+                      </select>
+                      <input className="search-input-field" type="text" placeholder="Pesquisar..." value={busca} onChange={e => { setBusca(e.target.value); setCurrentPage(1) }} />
+                      <div className="flex items-center pr-3">
+                        <Search size={14} className="text-slate-400" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-1" style={{ minWidth: 0 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <FilterSelect label="Status" value={filtroStatus} onChange={(v: string) => { setFiltroStatus(v); setCurrentPage(1) }} options={dynamicOptions.status} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <FilterSelect label="Função" value={filtroFuncao} onChange={(v: string) => { setFiltroFuncao(v); setCurrentPage(1) }} options={dynamicOptions.funcoes} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <FilterSelect label="Área" value={filtroArea} onChange={(v: string) => { setFiltroArea(v); setCurrentPage(1) }} options={dynamicOptions.areas} />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-2 flex-1" style={{ minWidth: 0 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <FilterSelect label="Status" value={filtroStatus} onChange={(v: string) => { setFiltroStatus(v); setCurrentPage(1) }} options={dynamicOptions.status} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <FilterSelect label="Função" value={filtroFuncao} onChange={(v: string) => { setFiltroFuncao(v); setCurrentPage(1) }} options={dynamicOptions.funcoes} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <FilterSelect label="Área" value={filtroArea} onChange={(v: string) => { setFiltroArea(v); setCurrentPage(1) }} options={dynamicOptions.areas} />
+
+                <div className="flex flex-wrap gap-x-10 gap-y-3">
+                  <ChipFilter label="Filial (UF)" options={ufsVisiveis} value={filtroUf} onChange={(v: any) => { setFiltroUf(v); setCurrentPage(1) }} renderLabel={(uf: any) => UF_LABELS[uf] ?? uf} />
+                  {regionaisDisponiveis.length > 0 && (
+                    <ChipFilter label="Regional" options={regionaisDisponiveis} value={filtroRegional} onChange={(v: any) => { setFiltroRegional(v); setCurrentPage(1) }} />
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-x-10 gap-y-3">
-              <ChipFilter
-                label="Filial (UF)"
-                options={ufsVisiveis}
-                value={filtroUf}
-                onChange={(v: any) => { setFiltroUf(v); setCurrentPage(1) }}
-                renderLabel={(uf: any) => UF_LABELS[uf] ?? uf}
-              />
-              {regionaisDisponiveis.length > 0 && (
-                <ChipFilter
-                  label="Regional"
-                  options={regionaisDisponiveis}
-                  value={filtroRegional}
-                  onChange={(v: any) => { setFiltroRegional(v); setCurrentPage(1) }}
-                />
+            {/* Tabela */}
+            <div className="main-card">
+              {loading ? (
+                <div className="py-20 text-center animate-pulse text-slate-400 font-bold">Carregando dados de {mesLabel}...</div>
+              ) : filtered.length === 0 ? (
+                <div className="py-20 text-center">
+                  <AlertCircle size={32} className="mx-auto mb-3 text-slate-300" />
+                  <p className="text-[14px] font-semibold text-slate-400">Nenhum registro encontrado</p>
+                </div>
+              ) : (
+                <>
+                  <div className="table-scroll">
+                    <table className="gp-table">
+                      <thead>
+                        <tr>
+                          <th className="sortable" onClick={() => handleSort('nome')}>
+                            Colaborador {sortField === 'nome' && (sortDir === 'asc' ? '↑' : '↓')}
+                          </th>
+                          <th className="sortable" onClick={() => handleSort('funcao')}>
+                            Função / Área {sortField === 'funcao' && (sortDir === 'asc' ? '↑' : '↓')}
+                          </th>
+                          <th className="sortable" onClick={() => handleSort('regional')}>
+                            Filial / Regional {sortField === 'regional' && (sortDir === 'asc' ? '↑' : '↓')}
+                          </th>
+                          <th className="center">Status</th>
+                          {tableFieldsFinal.map(f => {
+                            const usadoPorMA = FIELDS_MA.some(fm => fm.key === f.key)
+                            const usadoPorPI = FIELDS_PI.some(fp => fp.key === f.key)
+                            const thClass = usadoPorMA && usadoPorPI ? 'center' : usadoPorMA ? 'center uf-ma' : 'center uf-pi'
+                            return (
+                              <th key={f.key} className={thClass} title={f.label}>
+                                {f.short}
+                              </th>
+                            )
+                          })}
+                          <th className="center">Data</th>
+                          {isAdmin && <th style={{ width: 52 }} />}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginated.map((s: any) => (
+                          <tr key={s.id || Math.random()} className="gp-row">
+                            <td>
+                              <div className="font-bold text-[#1a2535] uppercase truncate max-w-[200px]" title={s.nome}>
+                                {s.nome || 'N/I'}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-bold">Matrícula: {s.matricula || '—'}</div>
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                                <Briefcase size={12} className="text-slate-400" /> {s.funcao || 'N/I'}
+                              </div>
+                              <div className="text-[10px] text-[#8896ab] font-bold mt-0.5 uppercase">{s.area || 'N/I'}</div>
+                            </td>
+                            <td>
+                              <div className="font-bold text-slate-700">{s.filial || '—'}</div>
+                              <div className="text-[10px] text-slate-400 font-bold">{s.regional || '—'}</div>
+                            </td>
+                            <td className="center w-[120px]">
+                              <StatusSelector
+                                row={s}
+                                onStatusChange={(id, newStatus) => {
+                                  setData(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item))
+                                }}
+                                canEdit={isAdmin}
+                              />
+                            </td>
+                            {tableFieldsFinal.map(f => (
+                              <td key={f.key} className="center">
+                                <MetaCellForUf value={s[f.key]} fieldKey={f.key} uf={s.filial} />
+                              </td>
+                            ))}
+                            <td className="center">
+                              <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md inline-block">
+                                {formatarDataBR(s.data)}
+                              </div>
+                            </td>
+                            {isAdmin && (
+                              <td>
+                                <ActionMenu row={s} onEdit={setEditTarget} onDeleteRequest={setDeleteTarget} />
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="pag-wrap">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] text-[#8896ab]">
+                        Página {currentPage} de {totalPages} · Exibindo {Math.min(currentPage * pageSize, filtered.length)} de {filtered.length}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Itens:</span>
+                        {[10, 20, 30].map(n => (
+                          <button
+                            key={n}
+                            onClick={() => { setPageSize(n); setCurrentPage(1) }}
+                            className={cn(
+                              'min-w-[32px] h-7 rounded-lg border text-[11px] font-bold transition-all px-2 cursor-pointer',
+                              pageSize === n ? 'bg-[#094780] text-white border-[#094780]' : 'bg-white text-slate-500 border-[#e3e8ef] hover:border-[#094780] hover:text-[#094780]'
+                            )}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button className="pg-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                        <ChevronLeft size={14} />
+                      </button>
+                      <button className="pg-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
+          </>
+        ) : (
+          /* ── ABA: METAS POR FUNÇÃO ── */
+          <div className="main-card">
+            <MetasPorFuncaoTab />
           </div>
-        </div>
-
-        {/* Tabela */}
-        <div className="main-card">
-          {loading ? (
-            <div className="py-20 text-center animate-pulse text-slate-400 font-bold">Carregando dados de {mesLabel}...</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-20 text-center">
-              <AlertCircle size={32} className="mx-auto mb-3 text-slate-300" />
-              <p className="text-[14px] font-semibold text-slate-400">Nenhum registro encontrado</p>
-            </div>
-          ) : (
-            <>
-              <div className="table-scroll">
-                <table className="gp-table">
-                  <thead>
-                    <tr>
-                      <th className="sortable" onClick={() => handleSort('nome')}>
-                        Colaborador {sortField === 'nome' && (sortDir === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="sortable" onClick={() => handleSort('funcao')}>
-                        Função / Área {sortField === 'funcao' && (sortDir === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="sortable" onClick={() => handleSort('regional')}>
-                        Filial / Regional {sortField === 'regional' && (sortDir === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="center">Status</th>
-                      {tableFieldsFinal.map(f => {
-                        const usadoPorMA = FIELDS_MA.some(fm => fm.key === f.key)
-                        const usadoPorPI = FIELDS_PI.some(fp => fp.key === f.key)
-                        const thClass = usadoPorMA && usadoPorPI ? 'center' : usadoPorMA ? 'center uf-ma' : 'center uf-pi'
-                        return (
-                          <th key={f.key} className={thClass} title={f.label}>
-                            {f.short}
-                          </th>
-                        )
-                      })}
-                      <th className="center">Data</th>
-                      {isAdmin && <th style={{ width: 52 }} />}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginated.map((s: any) => (
-                      <tr key={s.id} className="gp-row">
-                        <td>
-                          <div className="font-bold text-[#1a2535] uppercase truncate max-w-[200px]" title={s.nome}>
-                            {s.nome}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-bold">Matrícula: {s.matricula || '—'}</div>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1.5 text-slate-700 font-bold">
-                            <Briefcase size={12} className="text-slate-400" /> {s.funcao || 'N/I'}
-                          </div>
-                          <div className="text-[10px] text-[#8896ab] font-bold mt-0.5 uppercase">{s.area}</div>
-                        </td>
-                        <td>
-                          <div className="font-bold text-slate-700">{s.filial}</div>
-                          <div className="text-[10px] text-slate-400 font-bold">{s.regional}</div>
-                        </td>
-                        <td className="center w-[120px]">
-                          <StatusSelector
-                            row={s}
-                            onStatusChange={(id, newStatus) => {
-                              setData(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item))
-                            }}
-                            canEdit={isAdmin}
-                          />
-                        </td>
-                        {tableFieldsFinal.map(f => (
-                          <td key={f.key} className="center">
-                            <MetaCellForUf value={s[f.key]} fieldKey={f.key} uf={s.filial} />
-                          </td>
-                        ))}
-                        <td className="center">
-                          <div className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md inline-block">
-                            {formatarDataBR(s.data)}
-                          </div>
-                        </td>
-                        {isAdmin && (
-                          <td>
-                            <ActionMenu row={s} onEdit={setEditTarget} />
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Paginação com controle de itens por página */}
-              <div className="pag-wrap">
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] text-[#8896ab]">
-                    Página {currentPage} de {totalPages} · Exibindo {Math.min(currentPage * pageSize, filtered.length)} de {filtered.length}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Itens:</span>
-                    {[10, 20, 30].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => { setPageSize(n); setCurrentPage(1) }}
-                        className={cn(
-                          'min-w-[32px] h-7 rounded-lg border text-[11px] font-bold transition-all px-2',
-                          pageSize === n
-                            ? 'bg-[#094780] text-white border-[#094780]'
-                            : 'bg-white text-slate-500 border-[#e3e8ef] hover:border-[#094780] hover:text-[#094780]'
-                        )}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <button className="pg-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
-                    <ChevronLeft size={14} />
-                  </button>
-                  <button className="pg-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Modal de edição */}
+      {/* Modais */}
       {editTarget && (
         <EditModal
           row={editTarget}
@@ -1219,6 +1399,26 @@ export default function MetaChecklistPage() {
             setEditTarget(null)
           }}
           dynamicOptions={dynamicOptions}
+        />
+      )}
+
+      {isCreateOpen && (
+        <EditModal
+          row={null}
+          onClose={() => setIsCreateOpen(false)}
+          onSaved={newRow => {
+            setData(prev => [newRow, ...prev])
+            setIsCreateOpen(false)
+          }}
+          dynamicOptions={dynamicOptions}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          row={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteConfirm}
         />
       )}
     </DashboardLayout>

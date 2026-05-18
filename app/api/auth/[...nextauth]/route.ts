@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+const TOKEN_DURATION_MS = 4 * 60 * 60 * 1000; 
+
 const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
@@ -10,8 +12,6 @@ const handler = NextAuth({
       credentials: {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
-        // CORREÇÃO: uf e regional removidos — o backend os lê do banco,
-        // não aceita mais esses valores vindos do cliente.
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
@@ -23,7 +23,6 @@ const handler = NextAuth({
             body: JSON.stringify({
               email: credentials.email,
               password: credentials.password,
-              // CORREÇÃO: uf e regional removidos do body.
             }),
             headers: {
               "Content-Type": "application/json",
@@ -35,8 +34,6 @@ const handler = NextAuth({
         const data = await res.json();
 
         if (!res.ok) {
-          // CORREÇÃO: lança a mensagem real do backend para que o login.tsx
-          // consiga detectar "inativa" / "aprovação" e mostrar o banner correto.
           throw new Error(data.message || "Falha na autenticação");
         }
 
@@ -50,6 +47,7 @@ const handler = NextAuth({
           regional: data.user.regional,
           chapa: data.user.chapa,
           accessToken: data.access_token,
+          loggedInAt: Date.now(),
         };
       },
     }),
@@ -61,36 +59,44 @@ const handler = NextAuth({
 
   callbacks: {
     async jwt({ token, user }) {
-  if (user) {
-    token.id = user.id;
-    token.accessToken = (user as any).accessToken;
-    token.role = (user as any).role;
-    token.uf = (user as any).uf;
-    token.regional = (user as any).regional;
-    // Garante que a chapa vinda do authorize seja salva no token JWT
-    token.chapa = (user as any).chapa;
-    token.nomeCompleto = (user as any).nomeCompleto;
-  }
-  return token;
-},
-async session({ session, token }) {
-  if (session.user) {
-    (session.user as any).id = token.id;
-    (session.user as any).role = token.role;
-    (session.user as any).uf = token.uf;
-    (session.user as any).regional = token.regional;
-    (session.user as any).access_token = token.accessToken;
-    // Garante que a chapa do token seja exposta na sessão do frontend e enviada no cabeçalho
-    (session.user as any).chapa = token.chapa;
-    (session.user as any).nomeCompleto = token.nomeCompleto;
-    session.user.name = token.nomeCompleto as string;
-  }
-  return session;
-},
+      if (user) {
+        token.id = user.id;
+        token.accessToken = (user as any).accessToken;
+        token.role = (user as any).role;
+        token.uf = (user as any).uf;
+        token.regional = (user as any).regional;
+        token.chapa = (user as any).chapa;
+        token.nomeCompleto = (user as any).nomeCompleto;
+        token.expiresAt = (user as any).loggedInAt + TOKEN_DURATION_MS;
+      }
+
+      if (token.expiresAt && Date.now() > (token.expiresAt as number)) {
+        return { ...token, error: "TokenExpired" };
+      }
+
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
+        (session.user as any).uf = token.uf;
+        (session.user as any).regional = token.regional;
+        (session.user as any).access_token = token.accessToken;
+        (session.user as any).chapa = token.chapa;
+        (session.user as any).nomeCompleto = token.nomeCompleto;
+        session.user.name = token.nomeCompleto as string;
+        (session as any).expiresAt = token.expiresAt;
+        (session as any).error = token.error;
+      }
+      return session;
+    },
   },
 
   session: {
     strategy: "jwt",
+    maxAge: 4 * 60 * 60, 
   },
 });
 

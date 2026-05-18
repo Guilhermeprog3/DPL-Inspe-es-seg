@@ -31,7 +31,15 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
   const [role,         setRole        ] = useState('')
   const [ativo,        setAtivo       ] = useState(false)
   const [senha,        setSenha       ] = useState('')
-  const [errors,       setErrors      ] = useState<Record<string, string>>({})
+  const [errors,       setErrors ] = useState<Record<string, string>>({})
+
+  const isFormValid = 
+    nomeCompleto.trim() !== '' &&
+    email.trim() !== '' &&
+    uf !== '' &&
+    regionais.length > 0 &&
+    role !== '' &&
+    (isEdit || senha.trim() !== '')
 
   useEffect(() => {
     if (!isEdit || !userId || !session) return
@@ -74,9 +82,12 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!validate()) return
+    if (!validate() || !isFormValid) return
     setIsSaving(true)
     setGlobalError('')
+    
+
+    setErrors({})
 
     const payload: any = { 
       nomeCompleto: nomeCompleto.trim(),
@@ -92,16 +103,45 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
 
     try {
       if (isEdit) {
-        // Envia para a rota de admin para permitir edição de todos os campos
         await api.patch(`/users/${userId}/admin`, payload)
       } else {
         await api.post('/users', payload)
       }
       setSuccess(true)
-      setTimeout(() => router.push('/admin/usuarios'), 1500)
+      setTimeout(() => router.push('/admin/usuarios/lista'), 1500)
     } catch (err: any) {
-      const msg = err.response?.data?.message
-      setGlobalError(Array.isArray(msg) ? msg.join(' | ') : msg || 'Erro ao salvar usuário.')
+      const responseData = err.response?.data
+      const msg = responseData?.message
+
+
+      if (Array.isArray(msg)) {
+        const fieldErrors: Record<string, string> = {}
+        const genericMessages: string[] = []
+
+        msg.forEach((item: any) => {
+          if (item && typeof item === 'object' && item.property && item.constraints) {
+            const mensagensValidacao = Object.values(item.constraints).join(' | ')
+            fieldErrors[item.property] = mensagensValidacao
+          } else {
+            genericMessages.push(String(item))
+          }
+        });
+
+        if (Object.keys(fieldErrors).length > 0) {
+          setErrors(fieldErrors)
+        }
+        
+        if (genericMessages.length > 0) {
+          setGlobalError(genericMessages.join(' | '))
+        } else {
+          setGlobalError('Verifique os campos destacados abaixo.')
+        }
+
+      } else if (typeof msg === 'string') {
+        setGlobalError(msg)
+      } else {
+        setGlobalError('Erro ao salvar usuário. Tente novamente.')
+      }
     } finally {
       setIsSaving(false)
     }
@@ -129,7 +169,6 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
         </div>
       )}
 
-      {/* Seção Dados Pessoais */}
       <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
         <div className="text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]">Dados Pessoais</div>
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -147,10 +186,31 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls('email')} />
             {errors.email && <p className="text-[10px] text-red-500 mt-1">{errors.email}</p>}
           </div>
+
+          {!isEdit && (
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-bold text-[#6b7a8d] uppercase mb-1.5 block">Senha de Acesso *</label>
+              <div className="relative">
+                <input 
+                  type={showSenha ? 'text' : 'password'} 
+                  value={senha} 
+                  onChange={e => setSenha(e.target.value)} 
+                  className={inputCls('password')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSenha(!showSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showSenha ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-[10px] text-red-500 mt-1 leading-relaxed">{errors.password}</p>}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Seção Localização */}
       <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
         <div className="text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]">Localização</div>
         <div className="p-6 space-y-6">
@@ -161,6 +221,7 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
               <option value="PI">Piauí</option>
               <option value="MA">Maranhão</option>
             </select>
+            {errors.uf && <p className="text-[10px] text-red-500 mt-1">{errors.uf}</p>}
           </div>
           <div>
             <label className="text-[11px] font-bold text-[#6b7a8d] uppercase mb-1.5 block">Regionais *</label>
@@ -183,7 +244,6 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
         </div>
       </div>
 
-      {/* Seção Acesso */}
       <div className="bg-white border border-[#e3e8ef] rounded-xl overflow-hidden shadow-sm">
         <div className="text-[11px] font-bold uppercase tracking-widest text-[#9ca3af] px-6 py-3 bg-[#f8fafc] border-b border-[#e3e8ef]">Acesso</div>
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -199,6 +259,7 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
               <option value="sesmt">SESMT</option>
               <option value="admin">Administrador</option>
             </select>
+            {errors.role && <p className="text-[10px] text-red-500 mt-1">{errors.role}</p>}
           </div>
           <div>
             <label className="text-[11px] font-bold text-[#6b7a8d] uppercase mb-1.5 block">Status</label>
@@ -211,8 +272,20 @@ export function UsuarioForm({ isEdit = false }: { isEdit?: boolean }) {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e3e8ef] p-4 flex justify-between z-50">
-        <button type="button" onClick={() => router.push('/admin/usuarios')} className="text-slate-500 font-bold flex items-center gap-2 text-xs"><ArrowLeft size={16} /> Voltar</button>
-        <button type="submit" disabled={isSaving} className="bg-[#094780] text-white px-8 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2">
+        <button type="button" onClick={() => router.push('/admin/usuarios/lista')} className="text-slate-500 font-bold flex items-center gap-2 text-xs">
+          <ArrowLeft size={16} /> Voltar
+        </button>
+        
+        <button 
+          type="submit" 
+          disabled={!isFormValid || isSaving} 
+          className={cn(
+            "text-white px-8 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all",
+            isFormValid && !isSaving
+              ? "bg-[#094780] hover:bg-[#073661] cursor-pointer opacity-100" 
+              : "bg-[#094780] opacity-40 cursor-not-allowed"
+          )}
+        >
           {isSaving ? <Loader2 size={14} className="animate-spin" /> : isEdit ? 'Salvar Alterações' : 'Criar Usuário'}
         </button>
       </div>

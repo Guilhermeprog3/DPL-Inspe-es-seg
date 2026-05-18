@@ -48,11 +48,10 @@ export interface Equipamento {
   uuid: string;
   codigo: string;       
   codigoGalao?: string; 
-  tipo: string | TipoEquipamento; // Usar o tipo para lógica condicional
+  tipo: string | TipoEquipamento;
   
-  // Novos campos solicitados para extintores (institores)
-  carga?: string;           // Ex: 6kg, 10L
-  agente?: string;          // Ex: PQS, CO2, Água
+  carga?: string;
+  agente?: string;
   numeroSerieCilindro?: string; 
 
   capacidade: string;
@@ -83,7 +82,7 @@ export interface RespostaChecklist {
   idItem: string;
   resposta: 'ok' | 'nao_conforme' | null
   observacao?: string
-  valor: 'OK' | 'NC';  // O valor da resposta
+  valor: 'OK' | 'NC'; 
 }
 
 export interface Inspecao {
@@ -112,7 +111,6 @@ export interface MetricaConformidade {
   ultimaNaoConformidade?: string
 }
 
-// Mapeamento de regionais por UF
 export const REGIONAIS_POR_UF: Record<UF, Regional[]> = {
   PI: ['METROPOLITANA', 'SUL', 'NORTE'],
   MA: ['SUL', 'NORTE', 'LESTE', 'NOROESTE'],

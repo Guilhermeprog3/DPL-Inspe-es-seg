@@ -10,12 +10,11 @@ interface ChecklistFormProps {
 }
 
 export function ChecklistForm({ equipamento, itens, onChange }: ChecklistFormProps) {
-  // Corrigido para usar 'idItem' e incluir 'valor' conforme sua interface
   const [respostas, setRespostas] = useState<RespostaChecklist[]>(
     itens.map((i) => ({ 
       idItem: i.id, 
       resposta: null,
-      valor: 'NC' // Inicializando com um valor padrão para satisfazer o TS
+      valor: 'NC'
     }))
   )
 
@@ -37,7 +36,6 @@ export function ChecklistForm({ equipamento, itens, onChange }: ChecklistFormPro
 
   return (
     <div className="space-y-6">
-      {/* Dados do Cilindro */}
       {isExtintor && (
         <div className="bg-[#f8fafc] border border-[#dde3ec] rounded-lg p-4 mb-6">
           <h4 className="text-xs font-bold text-[#6b7a90] uppercase tracking-wider mb-3">
@@ -60,7 +58,6 @@ export function ChecklistForm({ equipamento, itens, onChange }: ChecklistFormPro
         </div>
       )}
 
-      {/* Lista de Perguntas */}
       <div className="divide-y divide-[#dde3ec]">
         {itens.map((item) => {
           const resp = respostas.find((r) => r.idItem === item.id)

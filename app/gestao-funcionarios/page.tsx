@@ -31,7 +31,7 @@ const actions = [
     icon: CheckSquare,
     color: '#10b981',
     title: 'Meta Checklist',
-    description: 'Gerencie metas e checklists vinculados aos colaboradores, acompanhe o progresso e valide entregas.',
+    description: 'Gerencie metas e checklists vinculados aos colaboradores, e valide metas.',
     cta: 'Acessar módulo',
     href: '/gestao-funcionarios/meta-checklist',
   },
