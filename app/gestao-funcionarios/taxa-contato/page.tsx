@@ -17,7 +17,6 @@ import { useSession } from 'next-auth/react'
 import api from '@/lib/api'
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
-// CORRIGIDO: Rotas atualizadas para o módulo gestao-funcionarios
 const navItems = [
   { section: 'Gestão de Funcionários' },
   { label: 'Dashboard', href: '/gestao-funcionarios', icon: LayoutDashboard },
@@ -55,10 +54,10 @@ const STATUS_CFG: Record<string, { label: string; color: string; bg: string; bor
 
 const STATUS_OPTIONS = [
   'ATIVO', 'FÉRIAS', 'FERIAS', 'AFASTADO', 'DESLIGADO', 'PENDENTE',
-  'ADM', 'ADMISSÃO PROX.MÊS', 'AF.AC.TRABALHO', 'AF.PREVIDÊNCIA', 
-  'AFASTAMENTO MEDICO', 'APOS. POR INCAPACIDADE PERMANENTE', 'ATESTADO', 
-  'AVISO PRÉVIO', 'BASE', 'CONTRATO DE TRABALHO SUSPENSO', 'DEMITIDO', 
-  'FISCAL', 'INSS', 'LICENÇA S/VENC', 'PRISÃO / CÁRCERE', 'PROMOVIDO', 
+  'ADM', 'ADMISSÃO PROX.MÊS', 'AF.AC.TRABALHO', 'AF.PREVIDÊNCIA',
+  'AFASTAMENTO MEDICO', 'APOS. POR INCAPACIDADE PERMANENTE', 'ATESTADO',
+  'AVISO PRÉVIO', 'BASE', 'CONTRATO DE TRABALHO SUSPENSO', 'DEMITIDO',
+  'FISCAL', 'INSS', 'LICENÇA S/VENC', 'PRISÃO / CÁRCERE', 'PROMOVIDO',
   'SUPERVISOR', 'TRANSFERIDO'
 ]
 
@@ -72,6 +71,26 @@ interface FuncaoItem {
   taxaDeContato: boolean
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Normaliza regional (METROPOLITANA → METRO) */
+function normRegional(r: string): string {
+  return r === 'METROPOLITANA' ? 'METRO' : r
+}
+
+/**
+ * Recebe o campo `regional` do usuário (pode ser "NORTE", "NORTE,SUL", etc.)
+ * e retorna um array de regionais normalizadas.
+ */
+function parseUserRegionais(regional: string | undefined | null): string[] {
+  if (!regional) return []
+  return regional
+    .split(',')
+    .map(r => normRegional(r.trim()))
+    .filter(Boolean)
+}
+
+// ─── StatusBadge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const key = (status || 'PENDENTE').toUpperCase()
   const cfg = STATUS_CFG[key] ?? { label: status, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' }
@@ -84,6 +103,7 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+// ─── StatusSelector ───────────────────────────────────────────────────────────
 function StatusSelector({ row, onStatusChange, canEdit }: {
   row: any
   onStatusChange: (id: string, newStatus: string) => void
@@ -181,6 +201,7 @@ function StatusSelector({ row, onStatusChange, canEdit }: {
   )
 }
 
+// ─── FilterSelect ─────────────────────────────────────────────────────────────
 function FilterSelect({ label, value, onChange, options, placeholder = 'Todos' }: any) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -196,6 +217,7 @@ function FilterSelect({ label, value, onChange, options, placeholder = 'Todos' }
   )
 }
 
+// ─── ChipFilter ───────────────────────────────────────────────────────────────
 function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
   if (options.length === 0) return null
   return (
@@ -217,7 +239,7 @@ function ChipFilter({ label, options, value, onChange, renderLabel }: any) {
   )
 }
 
-// CORRIGIDO: Removida opção de excluir, apenas editar
+// ─── ActionMenu ───────────────────────────────────────────────────────────────
 function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
@@ -236,14 +258,13 @@ function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // CORRIGIDO: Calcula posição fixa para garantir que o menu fique sempre acima da tabela
   function handleOpen() {
     if (!btnRef.current) return
     const rect = btnRef.current.getBoundingClientRect()
-    const menuHeight = 52 // altura aproximada com só 1 item
+    const menuHeight = 52
     const spaceBelow = window.innerHeight - rect.bottom
     const top = spaceBelow > menuHeight + 8 ? rect.bottom + 4 : rect.top - menuHeight - 4
-    const left = rect.right - 160 // 160 = largura do menu
+    const left = rect.right - 160
     setMenuPos({ top, left })
     setOpen(o => !o)
   }
@@ -258,7 +279,6 @@ function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
         <MoreVertical size={15} />
       </button>
 
-      {/* CORRIGIDO: menu em position:fixed com z-index altíssimo, fora do fluxo da tabela */}
       {open && (
         <div
           ref={menuRef}
@@ -277,6 +297,7 @@ function ActionMenu({ row, onEdit }: { row: any; onEdit: (row: any) => void }) {
   )
 }
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface DynamicOptions {
   areas: string[]
   situacoes: string[]
@@ -288,7 +309,7 @@ interface DynamicOptions {
   ufToRegionais: Record<string, Set<string>>
 }
 
-// CORRIGIDO: Adicionado campo email do colaborador no modal de edição
+// ─── EditModal ────────────────────────────────────────────────────────────────
 function EditModal({
   row,
   onClose,
@@ -317,7 +338,7 @@ function EditModal({
     supervisor:      row?.supervisor      ?? '',
     chapaSupervisor: row?.chapaSupervisor ?? '',
     email:           row?.email           ?? '',
-    emailColaborador: row?.emailColaborador ?? '', // NOVO: email do colaborador
+    emailColaborador: row?.emailColaborador ?? '',
   }
   const [form, setForm] = useState(INITIAL_FORM)
 
@@ -405,12 +426,11 @@ function EditModal({
   const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all appearance-none cursor-pointer pr-8'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-10 px-3 text-[13px] outline-none transition-all'
   const inputCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-10 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
-  const labelCls   = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
-  const viewCls    = 'text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1'
+  const labelCls    = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
   function ViewValue({ value }: { value: string }) {
     return value
-      ? <p className={viewCls}>{value}</p>
+      ? <p className="text-[13px] font-semibold text-[#1a2535] min-h-[22px] py-1">{value}</p>
       : <p className="text-slate-300 font-normal italic text-[12px] py-1">—</p>
   }
 
@@ -442,7 +462,6 @@ function EditModal({
           </div>
         </div>
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
-          {/* Seção Colaborador */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">
               Colaborador {editMode && <span className="text-red-400">*</span>}
@@ -513,7 +532,6 @@ function EditModal({
                     </div>
                   )}
                 </div>
-                {/* NOVO: E-mail do colaborador editável */}
                 <div className="col-span-2">
                   <label className={labelCls}>E-mail do colaborador</label>
                   <input
@@ -540,7 +558,6 @@ function EditModal({
                   <label className={labelCls}>Matrícula</label>
                   <ViewValue value={form.chapa} />
                 </div>
-                {/* NOVO: E-mail do colaborador visível */}
                 <div className="col-span-2">
                   <label className={labelCls}>E-mail do colaborador</label>
                   <ViewValue value={form.emailColaborador} />
@@ -550,7 +567,6 @@ function EditModal({
           </div>
           <div className="border-t border-slate-50" />
 
-          {/* Seção Supervisor */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Supervisor (opcional)</p>
             {editMode ? (
@@ -619,7 +635,6 @@ function EditModal({
                     </div>
                   )}
                 </div>
-                {/* E-mail supervisor editável */}
                 <div className="col-span-2">
                   <label className={labelCls}>E-mail do supervisor</label>
                   <input
@@ -650,7 +665,6 @@ function EditModal({
           </div>
           <div className="border-t border-slate-50" />
 
-          {/* Seção Lotação */}
           <div>
             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-3">Lotação</p>
             {editMode ? (
@@ -802,7 +816,7 @@ function EditModal({
   )
 }
 
-// ─── GerenciarFuncoesModal ─────────────────────────────────────────────────────
+// ─── GerenciarFuncoesModal ────────────────────────────────────────────────────
 function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
   const [funcoes, setFuncoes] = useState<FuncaoItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -1037,6 +1051,113 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ─── EmailAutocomplete ────────────────────────────────────────────────────────
+function EmailAutocomplete({
+  value,
+  onChange,
+  repo,
+  placeholder = 'email@empresa.com',
+  className = '',
+}: {
+  value: string
+  onChange: (v: string) => void
+  repo: any[]
+  placeholder?: string
+  className?: string
+}) {
+  const [open, setOpen]     = useState(false)
+  const [busca, setBusca]   = useState(value)
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 })
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dropRef  = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setBusca(value) }, [value])
+
+  const sugestoes = useMemo(() => {
+    const t = busca.trim().toLowerCase()
+    if (!t || t.length < 2) return []
+    return [...new Set(
+      repo.map(c => c.email).filter((e): e is string => !!e && e.toLowerCase().includes(t))
+    )].slice(0, 8)
+  }, [busca, repo])
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (
+        inputRef.current && !inputRef.current.contains(target) &&
+        dropRef.current  && !dropRef.current.contains(target)
+      ) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  function calcPos() {
+    if (!inputRef.current) return
+    const rect = inputRef.current.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - rect.bottom
+    const dropH = Math.min(sugestoes.length * 40, 192)
+    const top = spaceBelow > dropH + 8 ? rect.bottom + 4 : rect.top - dropH - 4
+    setDropPos({ top, left: rect.left, width: rect.width })
+  }
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    setBusca(v)
+    onChange(v)
+    calcPos()
+    setOpen(true)
+  }
+
+  function handleFocus() {
+    calcPos()
+    if (sugestoes.length > 0) setOpen(true)
+  }
+
+  function handleSelect(email: string) {
+    setBusca(email)
+    onChange(email)
+    setOpen(false)
+  }
+
+  return (
+    <div style={{ position: 'relative' }} className={className}>
+      <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+      <input
+        ref={inputRef}
+        type="email"
+        value={busca}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 pl-9 pr-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all"
+        onChange={handleInput}
+        onFocus={handleFocus}
+      />
+      {open && sugestoes.length > 0 && (
+        <div
+          ref={dropRef}
+          className="bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-fadeIn"
+          style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
+        >
+          {sugestoes.map((email, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 px-3 py-2.5 hover:bg-blue-50 cursor-pointer text-[12px] border-b border-slate-50 last:border-0"
+              onMouseDown={() => handleSelect(email)}
+            >
+              <Mail size={11} className="text-slate-400 shrink-0" />
+              <span className="text-slate-700 truncate">{email}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── AssociarModal ────────────────────────────────────────────────────────────
 function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional, userUf, onClose, onSaved }: {
   userRole: string
   userName: string
@@ -1048,42 +1169,100 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
   onSaved: (updated: any) => void
 }) {
   const isSupervisor = userRole === 'supervisor'
+  const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
+
+  // CORREÇÃO: suporte a múltiplas regionais separadas por vírgula
+  const userRegionaisNorm = useMemo(() => parseUserRegionais(userRegional), [userRegional])
 
   const [allData, setAllData] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [busca, setBusca] = useState('')
   const [selected, setSelected] = useState<any>(null)
 
-  const [novoSupervisor, setNovoSupervisor] = useState('')
+  const [novoSupervisor,      setNovoSupervisor     ] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
-  const [novaArea, setNovaArea] = useState('')
-  const [novaBase, setNovaBase] = useState('')
+  const [novoEmailSupervisor, setNovoEmailSupervisor] = useState('')
+  const [novoSupSelecionado,  setNovoSupSelecionado ] = useState<any>(null)
+  const [nomeSupPesquisa,     setNomeSupPesquisa    ] = useState('')
+  const [matSupPesquisa,      setMatSupPesquisa     ] = useState('')
+  const [showSupNome,         setShowSupNome        ] = useState(false)
+  const [showSupMat,          setShowSupMat         ] = useState(false)
+  const [colaboradoresRepo,   setColaboradoresRepo  ] = useState<any[]>([])
+
+  const [novaArea,     setNovaArea    ] = useState('')
+  const [novaBase,     setNovaBase    ] = useState('')
+  const [novaFilial,   setNovaFilial  ] = useState('')
+  const [novaRegional, setNovaRegional] = useState('')
 
   const [isSaving, setIsSaving] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [success,  setSuccess ] = useState(false)
 
-  const inputCls = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all'
-  const labelCls = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
+  const inputCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all'
+  const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-9 px-3 text-[13px] outline-none transition-all'
+  const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all appearance-none cursor-pointer'
+  const labelCls    = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
   useEffect(() => {
     api.get('/taxa-contato/todos')
       .then(res => setAllData(res.data))
       .catch(() => setAllData([]))
       .finally(() => setLoadingData(false))
-  }, [])
+    if (!isSupervisor) {
+      api.get('/base-gente/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
+    }
+  }, [isSupervisor])
 
+  const areaOptions     = useMemo(() => [...new Set(allData.map(d => d.area).filter(Boolean))].sort() as string[], [allData])
+  const baseOptions     = useMemo(() => [...new Set(allData.map(d => d.base).filter(Boolean))].sort() as string[], [allData])
+  const filialOptions   = useMemo(() => [...new Set(allData.map(d => d.filial).filter(Boolean))].sort() as string[], [allData])
+  const regionalOptions = useMemo(() => {
+    const filialRef = novaFilial || userUf
+    if (!filialRef) return [...new Set(allData.map(d => d.regional).filter(Boolean))].sort() as string[]
+    return [...new Set(allData.filter(d => d.filial === filialRef).map(d => d.regional).filter(Boolean))].sort() as string[]
+  }, [allData, novaFilial, userUf])
+
+  // CORREÇÃO: gerente/coord filtra pela filial do usuário (todas as regionais daquela filial)
   const filteredColabs = useMemo(() => {
     const t = busca.toLowerCase().trim()
-    if (!t) return allData.slice(0, 25)
-    return allData.filter(d =>
+    let base = allData
+    if (isGerenteOuCoordenador && userUf) {
+      base = allData.filter(d => d.filial === userUf)
+    }
+    if (!t) return base.slice(0, 25)
+    return base.filter(d =>
       d.nome?.toLowerCase().includes(t) || d.chapa?.includes(t) || d.funcao?.toLowerCase().includes(t)
     ).slice(0, 25)
-  }, [allData, busca])
+  }, [allData, busca, isGerenteOuCoordenador, userUf])
 
   function handleSelectColab(colab: any) {
     setSelected(colab)
     setNovaArea(colab.area ?? '')
     setNovaBase(colab.base ?? '')
+    setNovaFilial(colab.filial ?? '')
+    setNovaRegional(colab.regional ?? '')
+  }
+
+  const supsFiltradosNome = useMemo(() => {
+    const t = nomeSupPesquisa.trim().toLowerCase()
+    if (t.length < 2) return []
+    return colaboradoresRepo.filter(c => String(c.nome || '').toLowerCase().includes(t)).slice(0, 8)
+  }, [nomeSupPesquisa, colaboradoresRepo])
+
+  const supsFiltradosMat = useMemo(() => {
+    const t = matSupPesquisa.trim()
+    if (!t) return []
+    return colaboradoresRepo.filter(c => String(c.chapa || '').includes(t)).slice(0, 8)
+  }, [matSupPesquisa, colaboradoresRepo])
+
+  function selecionarNovoSupervisor(item: any) {
+    setNovoSupSelecionado(item)
+    setNomeSupPesquisa(item.nome)
+    setMatSupPesquisa(item.chapa)
+    setNovoSupervisor(item.nome)
+    setNovaChapaSupervisor(item.chapa)
+    setNovoEmailSupervisor(item.email ?? '')
+    setShowSupNome(false)
+    setShowSupMat(false)
   }
 
   async function handleSave() {
@@ -1101,11 +1280,13 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
         : {
             supervisorName: novoSupervisor.toUpperCase(),
             chapaSupervisor: novaChapaSupervisor,
-            supervisorEmail: '',
+            supervisorEmail: novoEmailSupervisor,
           }
 
-      payload.area = novaArea.toUpperCase()
-      payload.base = novaBase.toUpperCase()
+      if (novaArea)     payload.area     = novaArea
+      if (novaBase)     payload.base     = novaBase
+      if (novaFilial)   payload.filial   = novaFilial
+      if (novaRegional) payload.regional = novaRegional
 
       const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
@@ -1117,7 +1298,42 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
     }
   }
 
-  const canSave = selected && (isSupervisor || novoSupervisor.trim().length > 0)
+  const canSave = selected && (isSupervisor || novoSupSelecionado !== null)
+
+  function ColabStatusBadge({ colab }: { colab: any }) {
+    if (isSupervisor) {
+      if (colab.chapaSupervisor === userChapa) {
+        return (
+          <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shrink-0">
+            <UserCheck size={9} /> Sua Equipe
+          </span>
+        )
+      }
+      if (colab.supervisor) {
+        return <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold shrink-0">Outro Supervisor</span>
+      }
+      return <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold shrink-0">Disponível</span>
+    }
+
+    if (colab.supervisor) {
+      return (
+        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold shrink-0">
+          {colab.regional || 'Com Supervisor'}
+        </span>
+      )
+    }
+    return <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold shrink-0">Disponível</span>
+  }
+
+  function isColabBloqueado(colab: any): boolean {
+    if (isSupervisor) return colab.chapaSupervisor === userChapa
+    return false
+  }
+
+  // Label de subtítulo para o modal — mostra as regionais do usuário
+  const subtituloModal = isGerenteOuCoordenador
+    ? `Filial: ${UF_LABELS[userUf] ?? userUf}${userRegionaisNorm.length > 0 ? ` · ${userRegionaisNorm.join(', ')}` : ''}`
+    : 'Vincule o colaborador à sua gestão'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
@@ -1129,7 +1345,7 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
             </div>
             <div>
               <p className="text-[15px] font-bold text-[#1a2535]">Associar Colaborador</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Vincule o colaborador à sua gestão</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{subtituloModal}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
@@ -1140,37 +1356,44 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
           {!selected ? (
             <div>
-              <label className={labelCls}>Buscar colaborador</label>
+              <label className={labelCls}>
+                Buscar colaborador
+                {isGerenteOuCoordenador && userUf && (
+                  <span className="ml-2 normal-case font-normal text-[#094780]">
+                    · Filial {UF_LABELS[userUf] ?? userUf} · todas as regionais
+                  </span>
+                )}
+              </label>
               <div className="relative mb-2">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input className={inputCls + " pl-9"} placeholder="Nome ou matrícula..." value={busca} onChange={e => setBusca(e.target.value)} />
+                <input className={inputCls + ' pl-9'} placeholder="Nome ou matrícula..." value={busca} onChange={e => setBusca(e.target.value)} autoFocus />
               </div>
               <div className="border border-slate-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
-                {filteredColabs.map(c => {
-                  const jaEhDaEquipe = c.chapaSupervisor === userChapa
+                {loadingData ? (
+                  <div className="py-8 text-center text-[12px] text-slate-400 flex items-center justify-center gap-2">
+                    <Loader2 size={14} className="animate-spin" /> Carregando...
+                  </div>
+                ) : filteredColabs.length === 0 ? (
+                  <div className="py-8 text-center text-[12px] text-slate-400">
+                    Nenhum colaborador encontrado{isGerenteOuCoordenador ? ` na filial ${UF_LABELS[userUf] ?? userUf}` : ''}
+                  </div>
+                ) : filteredColabs.map(c => {
+                  const bloqueado = isColabBloqueado(c)
                   return (
                     <button
                       key={c.id}
-                      onClick={() => !jaEhDaEquipe && handleSelectColab(c)}
-                      disabled={jaEhDaEquipe}
+                      onClick={() => !bloqueado && handleSelectColab(c)}
+                      disabled={bloqueado}
                       className={cn(
-                        "w-full px-4 py-3 text-left border-b last:border-0 flex items-center justify-between transition-all",
-                        jaEhDaEquipe ? "bg-slate-50 cursor-not-allowed opacity-70" : "hover:bg-slate-50 cursor-pointer"
+                        'w-full px-4 py-3 text-left border-b last:border-0 flex items-center justify-between transition-all gap-2',
+                        bloqueado ? 'bg-slate-50 cursor-not-allowed opacity-70' : 'hover:bg-slate-50 cursor-pointer'
                       )}
                     >
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold uppercase">{c.nome}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[13px] font-bold uppercase truncate">{c.nome}</span>
                         <span className="text-[10px] text-slate-400">Mat. {c.chapa} • {c.funcao}</span>
                       </div>
-                      {jaEhDaEquipe ? (
-                        <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                          <UserCheck size={10} /> Sua Equipe
-                        </span>
-                      ) : c.supervisor ? (
-                        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Outro Supervisor</span>
-                      ) : (
-                        <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">Disponível</span>
-                      )}
+                      <ColabStatusBadge colab={c} />
                     </button>
                   )
                 })}
@@ -1183,8 +1406,9 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                 <p className="text-[13px] font-bold text-emerald-900 uppercase">{selected.nome}</p>
                 <button onClick={() => setSelected(null)} className="text-[10px] text-emerald-600 underline mt-1">Trocar colaborador</button>
               </div>
+
               <div className="space-y-3">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Conferência de Supervisor</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Supervisor</p>
                 {isSupervisor ? (
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
                     <div className="flex justify-between items-center mb-2">
@@ -1215,27 +1439,127 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
+                    <div style={{ position: 'relative' }}>
+                      <label className={labelCls}>Nome <span className="text-red-400">*</span></label>
+                      <input
+                        type="text"
+                        value={nomeSupPesquisa}
+                        placeholder="Buscar supervisor..."
+                        className={cn(inputSelCls, novoSupSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
+                        onChange={e => {
+                          setNomeSupPesquisa(e.target.value.replace(/[0-9]/g, ''))
+                          setNovoSupSelecionado(null)
+                          setNovoSupervisor(e.target.value)
+                          setNovaChapaSupervisor('')
+                          setNovoEmailSupervisor('')
+                          setMatSupPesquisa('')
+                          setShowSupNome(true)
+                        }}
+                        onFocus={() => setShowSupNome(true)}
+                        onBlur={() => setTimeout(() => setShowSupNome(false), 200)}
+                      />
+                      {novoSupSelecionado && <CheckCircle size={13} className="absolute right-3 top-[38px] text-emerald-500 pointer-events-none" />}
+                      {showSupNome && supsFiltradosNome.length > 0 && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                          {supsFiltradosNome.map((c, i) => (
+                            <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarNovoSupervisor(c)}>
+                              <p className="font-bold text-slate-700 uppercase">{c.nome}</p>
+                              <p className="text-slate-400">Chapa: {c.chapa} {c.email && `· ${c.email}`}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <label className={labelCls}>Matrícula</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={matSupPesquisa}
+                        placeholder="Buscar chapa..."
+                        className={cn(inputSelCls, novoSupSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
+                        onChange={e => {
+                          setMatSupPesquisa(e.target.value.replace(/[^0-9]/g, ''))
+                          setNovoSupSelecionado(null)
+                          setNovoSupervisor('')
+                          setNovaChapaSupervisor(e.target.value)
+                          setNovoEmailSupervisor('')
+                          setNomeSupPesquisa('')
+                          setShowSupMat(true)
+                        }}
+                        onFocus={() => setShowSupMat(true)}
+                        onBlur={() => setTimeout(() => setShowSupMat(false), 200)}
+                      />
+                      {showSupMat && supsFiltradosMat.length > 0 && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-[200] bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                          {supsFiltradosMat.map((c, i) => (
+                            <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarNovoSupervisor(c)}>
+                              <p className="font-bold text-slate-700">{c.chapa}</p>
+                              <p className="text-slate-400 uppercase">{c.nome}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="col-span-2">
-                      <label className={labelCls}>Nome do Supervisor</label>
-                      <input className={inputCls} value={novoSupervisor} onChange={e => setNovoSupervisor(e.target.value)} />
+                      <label className={labelCls}>E-mail do supervisor</label>
+                      <EmailAutocomplete
+                        value={novoEmailSupervisor}
+                        onChange={setNovoEmailSupervisor}
+                        repo={colaboradoresRepo}
+                      />
                     </div>
-                    <div>
-                      <label className={labelCls}>Chapa Supervisor</label>
-                      <input className={inputCls} value={novaChapaSupervisor} onChange={e => setNovaChapaSupervisor(e.target.value)} />
-                    </div>
+                    {!novoSupSelecionado && (nomeSupPesquisa || matSupPesquisa) && (
+                      <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                        <AlertCircle size={11} /> Selecione um supervisor da lista
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
+
               <div className="pt-2 space-y-3">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ajuste de Lotação</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Área</label>
-                    <input className={inputCls} value={novaArea} onChange={e => setNovaArea(e.target.value)} />
+                    <div className="relative">
+                      <select value={novaArea} onChange={e => setNovaArea(e.target.value)} className={selectCls}>
+                        <option value="">Selecione...</option>
+                        {areaOptions.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
                   </div>
                   <div>
                     <label className={labelCls}>Base</label>
-                    <input className={inputCls} value={novaBase} onChange={e => setNovaBase(e.target.value)} />
+                    <div className="relative">
+                      <select value={novaBase} onChange={e => setNovaBase(e.target.value)} className={selectCls}>
+                        <option value="">Selecione...</option>
+                        {baseOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Filial (UF)</label>
+                    <div className="relative">
+                      <select value={novaFilial} onChange={e => { setNovaFilial(e.target.value); setNovaRegional('') }} className={selectCls}>
+                        <option value="">Selecione...</option>
+                        {filialOptions.map(f => <option key={f} value={f}>{UF_LABELS[f] ?? f}</option>)}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Regional</label>
+                    <div className="relative">
+                      <select value={novaRegional} onChange={e => setNovaRegional(e.target.value)} className={selectCls}>
+                        <option value="">Selecione...</option>
+                        {regionalOptions.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1246,7 +1570,8 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
         <div className="px-6 py-4 border-t border-slate-100 flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-[13px] font-medium">Cancelar</button>
           <button onClick={handleSave} disabled={!canSave || isSaving}
-            className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all', canSave ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-200 text-slate-400')}>
+            className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all flex items-center justify-center gap-2',
+              canSave ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
             {isSaving ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Confirmar Associação'}
           </button>
         </div>
@@ -1255,26 +1580,34 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
   )
 }
 
-function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
+// ─── DesassociarModal ─────────────────────────────────────────────────────────
+function DesassociarModal({ userRole, userName, userChapa, userRegional, userUf, onClose, onSaved }: {
   userRole: string
   userName: string
   userChapa: string
+  userRegional: string
+  userUf: string
   onClose: () => void
   onSaved: (updated: any) => void
 }) {
   const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
   const isSupervisor = userRole === 'supervisor'
 
-  const [allData,      setAllData    ] = useState<any[]>([])
+  // CORREÇÃO: suporte a múltiplas regionais separadas por vírgula
+  const userRegionaisNorm = useMemo(() => parseUserRegionais(userRegional), [userRegional])
+
+  const [allData,     setAllData    ] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [busca,        setBusca      ] = useState('')
-  const [selected,      setSelected   ] = useState<any>(null)
+  const [busca,       setBusca      ] = useState('')
+  const [selected,    setSelected   ] = useState<any>(null)
 
   const [novoSupervisor,      setNovoSupervisor     ] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
-  const [novaArea,            setNovaArea           ] = useState('')
-  const [novaBase,            setNovaBase           ] = useState('')
-  const [novaRegional,        setNovaRegional       ] = useState('')
+  const [novoEmailSupervisor, setNovoEmailSupervisor] = useState('')
+  const [novaArea,    setNovaArea   ] = useState('')
+  const [novaBase,    setNovaBase   ] = useState('')
+  const [novaRegional,setNovaRegional] = useState('')
+  const [novaFilial,  setNovaFilial ] = useState('')
 
   const [colaboradoresRepo,  setColaboradoresRepo ] = useState<any[]>([])
   const [novoSupSelecionado, setNovoSupSelecionado] = useState<any>(null)
@@ -1286,8 +1619,8 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   const [isSaving, setIsSaving] = useState(false)
   const [success,  setSuccess ] = useState(false)
 
-  const inputCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] focus:bg-white transition-all'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-9 px-3 text-[13px] outline-none transition-all'
+  const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all appearance-none cursor-pointer'
   const labelCls    = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
   useEffect(() => {
@@ -1295,10 +1628,36 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     api.get('/base-gente/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
   }, [])
 
+  const areaOptions     = useMemo(() => [...new Set(allData.map(d => d.area).filter(Boolean))].sort() as string[], [allData])
+  const baseOptions     = useMemo(() => [...new Set(allData.map(d => d.base).filter(Boolean))].sort() as string[], [allData])
+  const filialOptions   = useMemo(() => [...new Set(allData.map(d => d.filial).filter(Boolean))].sort() as string[], [allData])
+  const regionalOptions = useMemo(() => {
+    const filialRef = novaFilial || userUf
+    if (!filialRef) return [...new Set(allData.map(d => d.regional).filter(Boolean))].sort() as string[]
+    return [...new Set(allData.filter(d => d.filial === filialRef).map(d => d.regional).filter(Boolean))].sort() as string[]
+  }, [allData, novaFilial, userUf])
+
+  // CORREÇÃO: gerente/coord filtra colaboradores de TODAS as suas regionais
   const dataFiltrada = useMemo(() => {
-    if (isSupervisor) return allData.filter(d => d.chapaSupervisor === userChapa || d.supervisor?.toUpperCase() === userName.toUpperCase())
+    if (isSupervisor) {
+      return allData.filter(d =>
+        d.chapaSupervisor === userChapa ||
+        d.supervisor?.toUpperCase() === userName.toUpperCase()
+      )
+    }
+    if (isGerenteOuCoordenador) {
+      return allData.filter(d => {
+        if (!d.supervisor) return false
+        const filialOk = userUf ? d.filial === userUf : true
+        // Se o usuário tem múltiplas regionais, aceita colaboradores de qualquer uma delas
+        const regionalOk = userRegionaisNorm.length > 0
+          ? userRegionaisNorm.includes(normRegional(d.regional ?? ''))
+          : true
+        return filialOk && regionalOk
+      })
+    }
     return allData.filter(d => !!d.supervisor)
-  }, [allData, isSupervisor, userName, userChapa])
+  }, [allData, isSupervisor, isGerenteOuCoordenador, userName, userChapa, userRegionaisNorm, userUf])
 
   const filteredColabs = useMemo(() => {
     const t = busca.toLowerCase().trim()
@@ -1326,6 +1685,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     setMatSupPesquisa(item.chapa)
     setNovoSupervisor(item.nome)
     setNovaChapaSupervisor(item.chapa)
+    setNovoEmailSupervisor(item.email ?? '')
     setShowSupNome(false)
     setShowSupMat(false)
   }
@@ -1334,9 +1694,11 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
     setSelected(colab)
     setNovaArea(colab.area ?? '')
     setNovaBase(colab.base ?? '')
+    setNovaFilial(colab.filial ?? '')
     setNovaRegional(colab.regional ?? '')
     setNovoSupervisor('')
     setNovaChapaSupervisor('')
+    setNovoEmailSupervisor('')
     setNovoSupSelecionado(null)
     setNomeSupPesquisa('')
     setMatSupPesquisa('')
@@ -1349,16 +1711,24 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
       const payload: any = {
         supervisorName:  novoSupervisor.toUpperCase(),
         chapaSupervisor: novaChapaSupervisor,
-        supervisorEmail: novoSupSelecionado?.email ?? '',
+        supervisorEmail: novoEmailSupervisor,
       }
       if (isGerenteOuCoordenador) {
         if (novaArea)     payload.area     = novaArea
         if (novaBase)     payload.base     = novaBase
         if (novaRegional) payload.regional = novaRegional
+        if (novaFilial)   payload.filial   = novaFilial
       }
       const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
-      setTimeout(() => onSaved(res.data ?? { ...selected, supervisor: novoSupervisor, chapaSupervisor: novaChapaSupervisor, regional: novaRegional || selected.regional }), 1000)
+      setTimeout(() => onSaved(res.data ?? {
+        ...selected,
+        supervisor: novoSupervisor,
+        chapaSupervisor: novaChapaSupervisor,
+        email: novoEmailSupervisor,
+        regional: novaRegional || selected.regional,
+        filial: novaFilial || selected.filial,
+      }), 1000)
     } catch (e: any) {
       alert(e.response?.data?.message || 'Erro ao processar.')
     } finally {
@@ -1367,6 +1737,11 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
   }
 
   const canSave = selected !== null && novoSupSelecionado !== null
+
+  // Label do subtítulo do modal — exibe todas as regionais do usuário
+  const subtituloModal = isSupervisor
+    ? 'Transfira colaboradores da sua equipe para outro supervisor'
+    : `${UF_LABELS[userUf] ?? userUf}${userRegionaisNorm.length > 0 ? ` · ${userRegionaisNorm.join(', ')}` : ''}`
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#111827]/60 backdrop-blur-md p-0 sm:p-6">
@@ -1378,9 +1753,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
             </div>
             <div>
               <p className="text-[15px] font-bold text-[#1a2535]">Transferir Colaborador</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {isSupervisor ? 'Transfira colaboradores da sua equipe para outro supervisor' : 'Transfira colaboradores para um novo supervisor'}
-              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{subtituloModal}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
@@ -1391,7 +1764,14 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
         <div className="overflow-y-auto px-6 py-5 flex-1 space-y-5">
           <div>
             <label className={labelCls}>
-              {isSupervisor ? 'Colaboradores da sua equipe' : 'Buscar colaborador associado — toda a base'}
+              {isSupervisor
+                ? 'Colaboradores da sua equipe'
+                : `Colaboradores · ${UF_LABELS[userUf] ?? userUf}${userRegionaisNorm.length > 0 ? ` · ${userRegionaisNorm.join(', ')}` : ''}`}
+              {!loadingData && (
+                <span className="ml-2 normal-case font-normal text-slate-400">
+                  ({dataFiltrada.length} encontrado{dataFiltrada.length !== 1 ? 's' : ''})
+                </span>
+              )}
             </label>
             <div className="relative mb-2">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -1410,11 +1790,15 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                 </div>
               ) : filteredColabs.length === 0 ? (
                 <div className="py-8 text-center text-[12px] text-slate-400 font-medium">
-                  {isSupervisor ? 'Você não possui colaboradores associados' : 'Nenhum colaborador com supervisor encontrado'}
+                  {isSupervisor
+                    ? 'Você não possui colaboradores associados'
+                    : `Nenhum colaborador encontrado · ${UF_LABELS[userUf] ?? userUf}${userRegionaisNorm.length > 0 ? ` · ${userRegionaisNorm.join(', ')}` : ''}`}
                 </div>
               ) : filteredColabs.map(c => (
                 <button key={c.id} onClick={() => handleSelectColab(c)}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0', selected?.id === c.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-slate-50')}>
+                  className={cn('w-full flex items-center gap-3 px-4 py-3 text-left transition-all border-b border-slate-50 last:border-0',
+                    selected?.id === c.id ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-slate-50'
+                  )}>
                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-[11px] font-bold text-slate-500">
                     {c.nome?.charAt(0)}
                   </div>
@@ -1453,7 +1837,15 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                     <label className={labelCls}>Nome</label>
                     <input type="text" value={nomeSupPesquisa} placeholder="Buscar supervisor..."
                       className={cn(inputSelCls, novoSupSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
-                      onChange={e => { setNomeSupPesquisa(e.target.value.replace(/[0-9]/g, '')); setNovoSupSelecionado(null); setNovoSupervisor(e.target.value); setNovaChapaSupervisor(''); setMatSupPesquisa(''); setShowSupNome(true) }}
+                      onChange={e => {
+                        setNomeSupPesquisa(e.target.value.replace(/[0-9]/g, ''))
+                        setNovoSupSelecionado(null)
+                        setNovoSupervisor(e.target.value)
+                        setNovaChapaSupervisor('')
+                        setNovoEmailSupervisor('')
+                        setMatSupPesquisa('')
+                        setShowSupNome(true)
+                      }}
                       onFocus={() => setShowSupNome(true)}
                       onBlur={() => setTimeout(() => setShowSupNome(false), 200)}
                     />
@@ -1463,7 +1855,7 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                         {supsFiltradosNome.map((c, i) => (
                           <div key={i} className="p-3 hover:bg-blue-50 cursor-pointer text-xs border-b last:border-0" onMouseDown={() => selecionarNovoSupervisor(c)}>
                             <p className="font-bold text-slate-700 uppercase">{c.nome}</p>
-                            <p className="text-slate-400">Chapa: {c.chapa}</p>
+                            <p className="text-slate-400">Chapa: {c.chapa} {c.email && `· ${c.email}`}</p>
                           </div>
                         ))}
                       </div>
@@ -1473,7 +1865,15 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                     <label className={labelCls}>Matrícula</label>
                     <input type="text" inputMode="numeric" value={matSupPesquisa} placeholder="Buscar chapa..."
                       className={cn(inputSelCls, novoSupSelecionado ? 'border-emerald-500 bg-emerald-50/30' : 'border-[#e3e8ef] focus:border-[#094780] focus:bg-white')}
-                      onChange={e => { setMatSupPesquisa(e.target.value.replace(/[^0-9]/g, '')); setNovoSupSelecionado(null); setNovoSupervisor(''); setNovaChapaSupervisor(e.target.value); setNomeSupPesquisa(''); setShowSupMat(true) }}
+                      onChange={e => {
+                        setMatSupPesquisa(e.target.value.replace(/[^0-9]/g, ''))
+                        setNovoSupSelecionado(null)
+                        setNovoSupervisor('')
+                        setNovaChapaSupervisor(e.target.value)
+                        setNovoEmailSupervisor('')
+                        setNomeSupPesquisa('')
+                        setShowSupMat(true)
+                      }}
                       onFocus={() => setShowSupMat(true)}
                       onBlur={() => setTimeout(() => setShowSupMat(false), 200)}
                     />
@@ -1488,6 +1888,16 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                       </div>
                     )}
                   </div>
+
+                  <div className="col-span-2">
+                    <label className={labelCls}>E-mail do supervisor</label>
+                    <EmailAutocomplete
+                      value={novoEmailSupervisor}
+                      onChange={setNovoEmailSupervisor}
+                      repo={colaboradoresRepo}
+                    />
+                  </div>
+
                   {!novoSupSelecionado && (nomeSupPesquisa || matSupPesquisa) && (
                     <p className="col-span-2 mt-0.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
                       <AlertCircle size={11} /> Selecione um supervisor da lista
@@ -1500,17 +1910,48 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
                 <div className="space-y-3">
                   <div>
                     <label className={labelCls}>Regional de destino</label>
-                    <input className={inputCls} placeholder="Ex: METRO, NORTE, SUL..." value={novaRegional} onChange={e => setNovaRegional(e.target.value.toUpperCase())} />
-                    <p className="text-[10px] text-slate-400 mt-1">Regional atual: <strong>{selected.regional || '—'}</strong></p>
+                    <div className="relative">
+                      <select value={novaRegional} onChange={e => setNovaRegional(e.target.value)} className={selectCls}>
+                        <option value="">Selecione...</option>
+                        {regionalOptions.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Regional atual: <strong>{selected.regional || '—'}</strong>
+                    </p>
                   </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Nova área</label>
-                      <input className={inputCls} placeholder="Ex: Comercial..." value={novaArea} onChange={e => setNovaArea(e.target.value)} />
+                      <div className="relative">
+                        <select value={novaArea} onChange={e => setNovaArea(e.target.value)} className={selectCls}>
+                          <option value="">Selecione...</option>
+                          {areaOptions.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                        <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
                     </div>
                     <div>
                       <label className={labelCls}>Nova base</label>
-                      <input className={inputCls} placeholder="Ex: Teresina..." value={novaBase} onChange={e => setNovaBase(e.target.value)} />
+                      <div className="relative">
+                        <select value={novaBase} onChange={e => setNovaBase(e.target.value)} className={selectCls}>
+                          <option value="">Selecione...</option>
+                          {baseOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Nova filial (UF)</label>
+                      <div className="relative">
+                        <select value={novaFilial} onChange={e => { setNovaFilial(e.target.value); setNovaRegional('') }} className={selectCls}>
+                          <option value="">Selecione...</option>
+                          {filialOptions.map(f => <option key={f} value={f}>{UF_LABELS[f] ?? f}</option>)}
+                        </select>
+                        <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1524,7 +1965,12 @@ function DesassociarModal({ userRole, userName, userChapa, onClose, onSaved }: {
           <button onClick={handleSave} disabled={!canSave || isSaving || success}
             className={cn('flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all flex items-center justify-center gap-2',
               canSave && !success ? 'bg-[#094780] text-white hover:bg-[#0a5494]' : 'bg-slate-200 text-slate-400 cursor-not-allowed')}>
-            {success ? <><CheckCircle size={14} /> Concluído!</> : isSaving ? <Loader2 size={14} className="animate-spin" /> : <><UserCheck size={14} /> Confirmar transferência</>}
+            {success
+              ? <><CheckCircle size={14} /> Concluído!</>
+              : isSaving
+                ? <Loader2 size={14} className="animate-spin" />
+                : <><UserCheck size={14} /> Confirmar transferência</>
+            }
           </button>
         </div>
       </div>
@@ -1542,29 +1988,32 @@ export default function TaxaContatoPage() {
   const canManageAssociation = isSupervisor || isGerenteOuCoordenador
   const canEditStatus = isAdmin || isGerenteOuCoordenador || isSupervisor
 
-  const [data,      setData   ] = useState<any[]>([])
+  // CORREÇÃO: array de regionais do usuário logado (suporte a múltiplas)
+  const userRegionaisNorm = useMemo(() => parseUserRegionais(userData?.regional), [userData?.regional])
+
+  const [data,    setData  ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [busca,            setBusca          ] = useState('')
-  const [campoBusca,       setCampoBusca     ] = useState('todos')
-  const [filtroArea,       setFiltroArea     ] = useState('')
-  const [filtroStatus,     setFiltroStatus   ] = useState('')
-  const [filtroBase,       setFiltroBase     ] = useState('')
-  const [filtroFuncao,     setFiltroFuncao   ] = useState('')
-  const [filtroUf,         setFiltroUf       ] = useState<string[]>([])
-  const [filtroRegional,   setFiltroRegional ] = useState<string[]>([])
-  const [filtroMes,        setFiltroMes      ] = useState('')
-  const [mesesOptions,     setMesesOptions   ] = useState<{value: string, label: string}[]>([])
+  const [busca,          setBusca         ] = useState('')
+  const [campoBusca,     setCampoBusca    ] = useState('todos')
+  const [filtroArea,     setFiltroArea    ] = useState('')
+  const [filtroStatus,   setFiltroStatus  ] = useState('')
+  const [filtroBase,     setFiltroBase    ] = useState('')
+  const [filtroFuncao,   setFiltroFuncao  ] = useState('')
+  const [filtroUf,       setFiltroUf      ] = useState<string[]>([])
+  const [filtroRegional, setFiltroRegional] = useState<string[]>([])
+  const [filtroMes,      setFiltroMes     ] = useState('')
+  const [mesesOptions,   setMesesOptions  ] = useState<{value: string, label: string}[]>([])
 
   const [sortField,   setSortField  ] = useState<SortField>('nome')
   const [sortDir,     setSortDir    ] = useState<SortDir>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize,    setPageSize   ] = useState(10)
 
-  const [editTarget,            setEditTarget           ] = useState<any>(null)
-  const [showGerenciarFuncoes,  setShowGerenciarFuncoes ] = useState(false) 
-  const [showAssociar,          setShowAssociar         ] = useState(false)
-  const [showDesassociar,       setShowDesassociar      ] = useState(false)
+  const [editTarget,           setEditTarget          ] = useState<any>(null)
+  const [showGerenciarFuncoes, setShowGerenciarFuncoes] = useState(false)
+  const [showAssociar,         setShowAssociar        ] = useState(false)
+  const [showDesassociar,      setShowDesassociar     ] = useState(false)
 
   useEffect(() => {
     async function loadCompetencias() {
@@ -1574,7 +2023,7 @@ export default function TaxaContatoPage() {
         setMesesOptions(opts)
         if (opts.length > 0) setFiltroMes(opts[0].value)
       } catch (err) {
-        console.error("Erro ao carregar meses do banco:", err)
+        console.error('Erro ao carregar meses do banco:', err)
       }
     }
     loadCompetencias()
@@ -1605,33 +2054,38 @@ export default function TaxaContatoPage() {
       }
     })
     return {
-      locais:        Array.from(locais).sort(),
-      areas:          Array.from(areas).sort(),
-      situacoes:      Array.from(situacoes).sort(),
-      bases:          Array.from(bases).sort(),
-      funcoes:        Array.from(funcoes).sort(),
-      ufs:            Array.from(ufs).sort(),
-      regionais:      Array.from(regionais).sort(),
+      locais:       Array.from(locais).sort(),
+      areas:        Array.from(areas).sort(),
+      situacoes:    Array.from(situacoes).sort(),
+      bases:        Array.from(bases).sort(),
+      funcoes:      Array.from(funcoes).sort(),
+      ufs:          Array.from(ufs).sort(),
+      regionais:    Array.from(regionais).sort(),
       ufToRegionais,
     }
   }, [data])
 
+  // CORREÇÃO: regionaisDisponiveis suporta múltiplas regionais do usuário
   const regionaisDisponiveis = useMemo(() => {
     let baseRegionais: string[]
-    if (isAdmin) baseRegionais = dynamicOptions.regionais
-    else if (['gerente', 'coordenador'].includes(userData?.role)) {
-      const r = userData.regional === 'METROPOLITANA' ? 'METRO' : userData.regional
-      baseRegionais = dynamicOptions.regionais.filter((x: string) => x === r)
+
+    if (isAdmin) {
+      baseRegionais = dynamicOptions.regionais
+    } else if (isGerenteOuCoordenador) {
+      // Filtra apenas as regionais que o usuário tem acesso (pode ser mais de uma)
+      baseRegionais = dynamicOptions.regionais.filter(r => userRegionaisNorm.includes(r))
     } else {
       baseRegionais = []
     }
+
     if (filtroUf.length === 0) return baseRegionais
+
     const regionaisDasUfsSelecionadas = new Set<string>()
     filtroUf.forEach(uf => {
-      dynamicOptions.ufToRegionais[uf]?.forEach((r: string) => regionaisDasUfsSelecionadas.add(r))
+      dynamicOptions.ufToRegionais[uf]?.forEach(r => regionaisDasUfsSelecionadas.add(r))
     })
-    return baseRegionais.filter((r: string) => regionaisDasUfsSelecionadas.has(r))
-  }, [dynamicOptions, filtroUf, isAdmin, userData])
+    return baseRegionais.filter(r => regionaisDasUfsSelecionadas.has(r))
+  }, [dynamicOptions, filtroUf, isAdmin, isGerenteOuCoordenador, userRegionaisNorm])
 
   const ufsVisiveis = useMemo(() => {
     if (isAdmin) return dynamicOptions.ufs
@@ -1642,7 +2096,7 @@ export default function TaxaContatoPage() {
     if (filtroUf.length === 0) return
     const regionaisDasUfsSelecionadas = new Set<string>()
     filtroUf.forEach(uf => {
-      dynamicOptions.ufToRegionais[uf]?.forEach((r: string) => regionaisDasUfsSelecionadas.add(r))
+      dynamicOptions.ufToRegionais[uf]?.forEach(r => regionaisDasUfsSelecionadas.add(r))
     })
     const novasRegionais = filtroRegional.filter(r => regionaisDasUfsSelecionadas.has(r))
     if (novasRegionais.length !== filtroRegional.length) setFiltroRegional(novasRegionais)
@@ -1747,7 +2201,7 @@ export default function TaxaContatoPage() {
       if (filtroStatus  && (s.codsituacao || '').toUpperCase() !== filtroStatus) return false
       if (filtroBase    && s.base !== filtroBase) return false
       if (filtroFuncao  && s.funcao !== filtroFuncao) return false
-      if (filtroUf.length > 0       && !filtroUf.includes(s.filial))          return false
+      if (filtroUf.length > 0       && !filtroUf.includes(s.filial))         return false
       if (filtroRegional.length > 0 && !filtroRegional.includes(s.regional)) return false
       return true
     }).sort((a, b) => {
@@ -1761,9 +2215,10 @@ export default function TaxaContatoPage() {
     })
   }, [data, busca, campoBusca, filtroArea, filtroStatus, filtroBase, filtroFuncao, filtroUf, filtroRegional, sortField, sortDir])
 
-  const paginated   = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-  const totalPages  = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const mesLabel    = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
+  const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const mesLabel   = mesesOptions.find(m => m.value === filtroMes)?.label ?? filtroMes
+
   const userFullName = userData?.nomeCompleto || userData?.name || ''
   const userChapa    = userData?.chapa ?? ''
   const userRegional = userData?.regional ?? ''
@@ -1956,7 +2411,6 @@ export default function TaxaContatoPage() {
                         Data {sortField === 'data' && (sortDir === 'asc' ? '↑' : '↓')}
                       </th>
                       <th>Situação</th>
-                      {/* CORRIGIDO: Coluna de ações visível somente para admin */}
                       {isAdmin && <th style={{ width: 52 }} />}
                     </tr>
                   </thead>
@@ -2016,7 +2470,6 @@ export default function TaxaContatoPage() {
                             canEdit={canEditStatus}
                           />
                         </td>
-                        {/* CORRIGIDO: ActionMenu sem excluir, com menu em position:fixed */}
                         {isAdmin && (
                           <td>
                             <ActionMenu row={s} onEdit={setEditTarget} />
@@ -2088,6 +2541,8 @@ export default function TaxaContatoPage() {
           userRole={userData?.role}
           userName={userFullName}
           userChapa={userChapa}
+          userRegional={userRegional}
+          userUf={userData?.uf ?? ''}
           onClose={() => setShowDesassociar(false)}
           onSaved={handleAssociacaoSaved}
         />
