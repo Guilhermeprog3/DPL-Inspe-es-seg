@@ -971,7 +971,7 @@ function GerenciarFuncoesModal({ onClose }: { onClose: () => void }) {
                 key={f}
                 onClick={() => setFiltroAtiva(f)}
                 className={cn(
-                  'px-3 h-8 rounded-lg text-[11.5px] font-bold transition-all border',
+                  'zip px-3 h-8 rounded-lg text-[11.5px] font-bold transition-all border',
                   filtroAtiva === f
                     ? f === 'ativas'
                       ? 'bg-emerald-500 text-white border-emerald-500'
@@ -1076,11 +1076,14 @@ function EmailAutocomplete({
   const sugestoes = useMemo(() => {
     const t = busca.trim().toLowerCase()
     if (!t || t.length < 2) return []
-    return [...new Set(
-      repo.map(c => c.email).filter((e): e is string => !!e && e.toLowerCase().includes(t))
-    )].slice(0, 8)
+    
+    return Array.from(
+      new Set(
+        repo.map(c => c.email).filter((e): e is string => !!e && e.toLowerCase().includes(t))
+      )
+    ).slice(0, 8)
   }, [busca, repo])
-
+  
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
@@ -1169,7 +1172,7 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
   onSaved: (updated: any) => void
 }) {
   const isSupervisor = userRole === 'supervisor'
-  const isGerenteOuCoordenador = userRole === 'gerente' || userRole === 'coordenador'
+  const isGerenteOuCoordenador = userRole === 'gentle' || userRole === 'gerente' || userRole === 'coordenador'
 
   // CORREÇÃO: suporte a múltiplas regionais separadas por vírgula
   const userRegionaisNorm = useMemo(() => parseUserRegionais(userRegional), [userRegional])
@@ -1199,7 +1202,7 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
 
   const inputCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all'
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-9 px-3 text-[13px] outline-none transition-all'
-  const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all appearance-none cursor-pointer'
+  const selectCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all appearance-none cursor-pointer'
   const labelCls    = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
   useEffect(() => {
@@ -1212,13 +1215,13 @@ function AssociarModal({ userRole, userName, userChapa, userEmail, userRegional,
     }
   }, [isSupervisor])
 
-  const areaOptions     = useMemo(() => [...new Set(allData.map(d => d.area).filter(Boolean))].sort() as string[], [allData])
-  const baseOptions     = useMemo(() => [...new Set(allData.map(d => d.base).filter(Boolean))].sort() as string[], [allData])
-  const filialOptions   = useMemo(() => [...new Set(allData.map(d => d.filial).filter(Boolean))].sort() as string[], [allData])
+  const areaOptions     = useMemo(() => Array.from(new Set(allData.map(d => d.area).filter(Boolean))).sort() as string[], [allData])
+  const baseOptions     = useMemo(() => Array.from(new Set(allData.map(d => d.base).filter(Boolean))).sort() as string[], [allData])
+  const filialOptions   = useMemo(() => Array.from(new Set(allData.map(d => d.filial).filter(Boolean))).sort() as string[], [allData])
   const regionalOptions = useMemo(() => {
     const filialRef = novaFilial || userUf
-    if (!filialRef) return [...new Set(allData.map(d => d.regional).filter(Boolean))].sort() as string[]
-    return [...new Set(allData.filter(d => d.filial === filialRef).map(d => d.regional).filter(Boolean))].sort() as string[]
+    if (!filialRef) return Array.from(new Set(allData.map(d => d.regional).filter(Boolean))).sort() as string[]
+    return Array.from(new Set(allData.filter(d => d.filial === filialRef).map(d => d.regional).filter(Boolean))).sort() as string[]
   }, [allData, novaFilial, userUf])
 
   // CORREÇÃO: gerente/coord filtra pela filial do usuário (todas as regionais daquela filial)
@@ -1596,10 +1599,10 @@ function DesassociarModal({ userRole, userName, userChapa, userRegional, userUf,
   // CORREÇÃO: suporte a múltiplas regionais separadas por vírgula
   const userRegionaisNorm = useMemo(() => parseUserRegionais(userRegional), [userRegional])
 
-  const [allData,     setAllData    ] = useState<any[]>([])
+  const [allData,      setAllData    ] = useState<any[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [busca,       setBusca      ] = useState('')
-  const [selected,    setSelected   ] = useState<any>(null)
+  const [busca,        setBusca      ] = useState('')
+  const [selected,     setSelected   ] = useState<any>(null)
 
   const [novoSupervisor,      setNovoSupervisor     ] = useState('')
   const [novaChapaSupervisor, setNovaChapaSupervisor] = useState('')
@@ -1620,7 +1623,7 @@ function DesassociarModal({ userRole, userName, userChapa, userRegional, userUf,
   const [success,  setSuccess ] = useState(false)
 
   const inputSelCls = 'w-full bg-[#f8fafc] border rounded-lg h-9 px-3 text-[13px] outline-none transition-all'
-  const selectCls   = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all appearance-none cursor-pointer'
+  const selectCls    = 'w-full bg-[#f8fafc] border border-[#e3e8ef] rounded-lg h-9 px-3 text-[13px] outline-none focus:border-[#094780] transition-all appearance-none cursor-pointer'
   const labelCls    = 'text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block'
 
   useEffect(() => {
@@ -1628,13 +1631,13 @@ function DesassociarModal({ userRole, userName, userChapa, userRegional, userUf,
     api.get('/base-gente/recentes').then(r => setColaboradoresRepo(r.data)).catch(console.error)
   }, [])
 
-  const areaOptions     = useMemo(() => [...new Set(allData.map(d => d.area).filter(Boolean))].sort() as string[], [allData])
-  const baseOptions     = useMemo(() => [...new Set(allData.map(d => d.base).filter(Boolean))].sort() as string[], [allData])
-  const filialOptions   = useMemo(() => [...new Set(allData.map(d => d.filial).filter(Boolean))].sort() as string[], [allData])
+  const areaOptions     = useMemo(() => Array.from(new Set(allData.map(d => d.area).filter(Boolean))).sort() as string[], [allData])
+  const baseOptions     = useMemo(() => Array.from(new Set(allData.map(d => d.base).filter(Boolean))).sort() as string[], [allData])
+  const filialOptions   = useMemo(() => Array.from(new Set(allData.map(d => d.filial).filter(Boolean))).sort() as string[], [allData])
   const regionalOptions = useMemo(() => {
     const filialRef = novaFilial || userUf
-    if (!filialRef) return [...new Set(allData.map(d => d.regional).filter(Boolean))].sort() as string[]
-    return [...new Set(allData.filter(d => d.filial === filialRef).map(d => d.regional).filter(Boolean))].sort() as string[]
+    if (!filialRef) return Array.from(new Set(allData.map(d => d.regional).filter(Boolean))).sort() as string[]
+    return Array.from(new Set(allData.filter(d => d.filial === filialRef).map(d => d.regional).filter(Boolean))).sort() as string[]
   }, [allData, novaFilial, userUf])
 
   // CORREÇÃO: gerente/coord filtra colaboradores de TODAS as suas regionais
@@ -1714,10 +1717,10 @@ function DesassociarModal({ userRole, userName, userChapa, userRegional, userUf,
         supervisorEmail: novoEmailSupervisor,
       }
       if (isGerenteOuCoordenador) {
-        if (novaArea)     payload.area     = novaArea
-        if (novaBase)     payload.base     = novaBase
+        if (novaArea)      payload.area     = novaArea
+        if (novaBase)      payload.base     = novaBase
         if (novaRegional) payload.regional = novaRegional
-        if (novaFilial)   payload.filial   = novaFilial
+        if (novaFilial)    payload.filial   = novaFilial
       }
       const res = await api.patch(`/taxa-contato/${selected.id}/assumir`, payload)
       setSuccess(true)
@@ -1994,26 +1997,26 @@ export default function TaxaContatoPage() {
   const [data,    setData  ] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [busca,          setBusca         ] = useState('')
-  const [campoBusca,     setCampoBusca    ] = useState('todos')
-  const [filtroArea,     setFiltroArea    ] = useState('')
-  const [filtroStatus,   setFiltroStatus  ] = useState('')
-  const [filtroBase,     setFiltroBase    ] = useState('')
-  const [filtroFuncao,   setFiltroFuncao  ] = useState('')
-  const [filtroUf,       setFiltroUf      ] = useState<string[]>([])
+  const [busca,           setBusca         ] = useState('')
+  const [campoBusca,      setCampoBusca    ] = useState('todos')
+  const [filtroArea,      setFiltroArea    ] = useState('')
+  const [filtroStatus,    setFiltroStatus  ] = useState('')
+  const [filtroBase,      setFiltroBase    ] = useState('')
+  const [filtroFuncao,    setFiltroFuncao  ] = useState('')
+  const [filtroUf,        setFiltroUf      ] = useState<string[]>([])
   const [filtroRegional, setFiltroRegional] = useState<string[]>([])
   const [filtroMes,      setFiltroMes     ] = useState('')
   const [mesesOptions,   setMesesOptions  ] = useState<{value: string, label: string}[]>([])
 
   const [sortField,   setSortField  ] = useState<SortField>('nome')
-  const [sortDir,     setSortDir    ] = useState<SortDir>('asc')
+  const [sortDir,      setSortDir    ] = useState<SortDir>('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize,    setPageSize   ] = useState(10)
 
-  const [editTarget,           setEditTarget          ] = useState<any>(null)
+  const [editTarget,            setEditTarget          ] = useState<any>(null)
   const [showGerenciarFuncoes, setShowGerenciarFuncoes] = useState(false)
-  const [showAssociar,         setShowAssociar        ] = useState(false)
-  const [showDesassociar,      setShowDesassociar     ] = useState(false)
+  const [showAssociar,          setShowAssociar         ] = useState(false)
+  const [showDesassociar,       setShowDesassociar     ] = useState(false)
 
   useEffect(() => {
     async function loadCompetencias() {
